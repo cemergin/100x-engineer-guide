@@ -1,0 +1,1658 @@
+# =============================================================================
+# The 100x Engineer Course — Complete Course Outline
+# =============================================================================
+# ~90 modules across 3 spiral loops
+# Running example: TicketPulse (concert ticketing platform)
+# Each module: 45-90 minutes of interactive reading + hands-on
+#
+# Tiers:
+#   🟢 Core       — everyone completes these
+#   🟡 Deep Dive  — for those who want more depth
+#   🔴 Expert     — staff+ level material
+#
+# Exercise types:
+#   🤔 Reflect  🔍 Explore  🛠️ Build  🐛 Debug
+#   📐 Design   💡 Insight  🚀 Deploy  📊 Observe
+#
+# TicketPulse evolution:
+#   Loop 1: Simple monolith with basic features
+#   Loop 2: Microservices with real infrastructure
+#   Loop 3: Global, real-time, intelligent platform
+# =============================================================================
+
+course:
+  title: "The 100x Engineer Course"
+  version: "1.0"
+  running_example: "TicketPulse — a concert ticketing platform"
+  total_modules: 90
+  estimated_hours: "90-135 hours"
+  loops:
+    - name: "Foundation — Build the Mental Model"
+      modules: "L1-M01 through L1-M30"
+    - name: "Practice — Scale and Break Things"
+      modules: "L2-M31 through L2-M60"
+    - name: "Mastery — Design for the Real World"
+      modules: "L3-M61 through L3-M90"
+
+# =============================================================================
+# LOOP 1: FOUNDATION — BUILD THE MENTAL MODEL (Modules 01-30)
+# =============================================================================
+# Theme: "Understand what exists and why"
+# TicketPulse state: Simple monolith -> basic features working
+# Scaffolding: Heavy (starter code, guided steps, generous hints)
+# =============================================================================
+
+modules:
+
+  # ---------------------------------------------------------------------------
+  # Section 1A: The Starting Line (Modules 01-04)
+  # ---------------------------------------------------------------------------
+
+  - id: L1-M01
+    title: "Course Setup & TicketPulse Kickoff"
+    tier: "🟢 Core"
+    duration: "60 min"
+    source_chapters: []
+    ticketpulse: "Clone the monolith repo, run docker compose up, see the app serving events and tickets in the browser for the first time."
+    summary: "Clone the TicketPulse repo, start the full stack locally with Docker Compose, and explore the codebase structure to build a mental map of the project."
+    exercises:
+      - type: "🚀 Deploy"
+        description: "Clone the TicketPulse repository, run docker compose up, and verify the app is running at localhost:3000."
+      - type: "🔍 Explore"
+        description: "Walk through the directory structure — identify where routes, models, migrations, and config live. Draw a quick map of the codebase."
+      - type: "🤔 Reflect"
+        description: "Read the README and identify three things you don't understand yet. Write them down — you'll revisit them later."
+    runs_locally: true
+    prereqs: []
+
+  - id: L1-M02
+    title: "Your Dev Environment"
+    tier: "🟢 Core"
+    duration: "60 min"
+    source_chapters: [12]
+    ticketpulse: "Your local dev setup is now optimized for working on TicketPulse — fast file search, fuzzy history, and a configured editor."
+    summary: "Set up a modern terminal with zsh, fzf, and ripgrep, configure your editor with essential extensions, and establish your git identity."
+    exercises:
+      - type: "🔍 Explore"
+        description: "Install fzf, ripgrep, bat, and eza. Search the TicketPulse codebase with rg and feel the speed difference over grep."
+      - type: "🛠️ Build"
+        description: "Configure your .zshrc with useful aliases, set up VS Code (or Vim) with language server support, and configure git with your name, email, and default branch."
+      - type: "🤔 Reflect"
+        description: "Time yourself finding a function definition with your old tools vs your new tools. Note the difference."
+    runs_locally: true
+    prereqs: []
+
+  - id: L1-M03
+    title: "Git Beyond the Basics"
+    tier: "🟢 Core"
+    duration: "60 min"
+    source_chapters: [12]
+    ticketpulse: "You can now confidently manage TicketPulse's git history — rewriting, recovering, and bisecting when things go wrong."
+    summary: "Master interactive rebase, git bisect, and reflog by intentionally breaking and recovering the TicketPulse repo."
+    exercises:
+      - type: "🔍 Explore"
+        description: "Use interactive rebase to squash three messy commits into one clean commit. Reorder commits. Drop a commit."
+      - type: "🐛 Debug"
+        description: "A pre-planted bug exists in the TicketPulse history. Use git bisect to find the exact commit that introduced it."
+      - type: "🛠️ Build"
+        description: "Intentionally force-push the wrong branch, then use git reflog to recover the lost commits."
+    runs_locally: true
+    prereqs: [L1-M01]
+
+  - id: L1-M04
+    title: "How the Internet Actually Works"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [21]
+    ticketpulse: "You now understand every hop a request takes from a user's browser to TicketPulse's server and back."
+    summary: "Trace a complete HTTP request from browser to server and back, inspecting DNS, TCP, TLS, and HTTP headers along the way."
+    exercises:
+      - type: "🔍 Explore"
+        description: "Run curl -v against the TicketPulse API. Read every header line. Identify the status code, content type, cache headers, and cookies."
+      - type: "🔍 Explore"
+        description: "Use tcpdump or Wireshark to capture a TicketPulse request at the packet level. Identify the TCP handshake, HTTP request, and response."
+      - type: "🤔 Reflect"
+        description: "Draw the full lifecycle of a request: DNS resolution, TCP connect, TLS handshake (if applicable), HTTP request, server processing, HTTP response. Label the time each phase takes."
+    runs_locally: true
+    prereqs: []
+
+  # ---------------------------------------------------------------------------
+  # Section 1B: Data Foundations (Modules 05-10)
+  # ---------------------------------------------------------------------------
+
+  - id: L1-M05
+    title: "PostgreSQL From Zero"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [2, 24]
+    ticketpulse: "TicketPulse now has a proper relational schema — events, venues, tickets, and users tables with constraints and relationships."
+    summary: "Design the core TicketPulse database schema, write fundamental queries, and learn to read EXPLAIN output."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Design and create the events, venues, tickets, and users tables with proper types, constraints, foreign keys, and NOT NULL where appropriate."
+      - type: "🔍 Explore"
+        description: "Use db-fiddle.com or psql to write SELECT, INSERT, UPDATE, DELETE queries against your schema. Practice WHERE, ORDER BY, LIMIT."
+      - type: "🔍 Explore"
+        description: "Run EXPLAIN on a query that fetches all tickets for an event. Read the output — identify Seq Scan vs Index Scan, estimated rows, and cost."
+    runs_locally: true
+    prereqs: [L1-M01]
+
+  - id: L1-M06
+    title: "SQL That Actually Matters"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [24]
+    ticketpulse: "TicketPulse can now answer business questions: top-selling events, revenue by venue, weekly trends."
+    summary: "Write production-grade SQL using JOINs, CTEs, window functions, and aggregations to power TicketPulse's reporting."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Write the 'top 10 selling events this week' query using JOINs and GROUP BY with aggregate functions."
+      - type: "🛠️ Build"
+        description: "Use a CTE to calculate running totals of ticket sales per event. Use a window function (ROW_NUMBER, RANK) to rank events by revenue."
+      - type: "🔍 Explore"
+        description: "Write a query that shows each venue's percentage of total revenue using window functions (SUM OVER)."
+    runs_locally: true
+    prereqs: [L1-M05]
+
+  - id: L1-M07
+    title: "Indexing & Query Performance"
+    tier: "🟢 Core"
+    duration: "60 min"
+    source_chapters: [24]
+    ticketpulse: "TicketPulse queries are now fast — hot paths have proper indexes and you can prove it with EXPLAIN ANALYZE."
+    summary: "Add indexes to TicketPulse's database and measure the before/after impact using EXPLAIN ANALYZE."
+    exercises:
+      - type: "🔍 Explore"
+        description: "Run EXPLAIN ANALYZE on the 'find events by date range' query before adding any indexes. Record the execution time and plan."
+      - type: "🛠️ Build"
+        description: "Add B-tree indexes on frequently queried columns (event date, venue ID, ticket status). Add a composite index for common multi-column queries."
+      - type: "📊 Observe"
+        description: "Re-run EXPLAIN ANALYZE on the same queries. Compare execution time, note the switch from Seq Scan to Index Scan, and document the improvement."
+    runs_locally: true
+    prereqs: [L1-M06]
+
+  - id: L1-M08
+    title: "Data Modeling Decisions"
+    tier: "🟡 Deep Dive"
+    duration: "60 min"
+    source_chapters: [2]
+    ticketpulse: "You've evaluated TicketPulse's data model trade-offs and made intentional normalization decisions."
+    summary: "Analyze normalization vs denormalization trade-offs for TicketPulse and make deliberate data modeling choices."
+    exercises:
+      - type: "🤔 Reflect"
+        description: "Should venue address be embedded in the events table or kept in a separate venues table? Write out the pros and cons of each approach for TicketPulse's read and write patterns."
+      - type: "📐 Design"
+        description: "Design an optimized schema for the ticket purchase flow. Consider: do we store computed fields like total_revenue on events, or always compute them? Document your decision and reasoning."
+      - type: "🔍 Explore"
+        description: "Look at a real-world ticketing schema (Eventbrite's API docs or similar). Compare their modeling choices to yours."
+    runs_locally: true
+    prereqs: [L1-M05]
+
+  - id: L1-M09
+    title: "NoSQL: When and Why"
+    tier: "🟡 Deep Dive"
+    duration: "60 min"
+    source_chapters: [2]
+    ticketpulse: "TicketPulse now uses Redis for session storage and you understand when to reach for NoSQL vs relational."
+    summary: "Explore Redis and DynamoDB, add Redis-based session storage to TicketPulse, and understand when NoSQL fits."
+    exercises:
+      - type: "🔍 Explore"
+        description: "Connect to Redis CLI. Practice SET, GET, HSET, HGET, EXPIRE, TTL. Understand the data model differences from Postgres."
+      - type: "🚀 Deploy"
+        description: "Add Redis to TicketPulse's docker-compose.yml. Configure the app to store user sessions in Redis instead of in-memory."
+      - type: "🤔 Reflect"
+        description: "For each TicketPulse data type (events, tickets, sessions, analytics), evaluate: would this be better in Postgres, Redis, or DynamoDB? Why?"
+    runs_locally: true
+    prereqs: [L1-M05]
+
+  - id: L1-M10
+    title: "Caching Strategies"
+    tier: "🟢 Core"
+    duration: "60 min"
+    source_chapters: [2]
+    ticketpulse: "TicketPulse's hot queries (event listings, venue info) are now cached in Redis, dramatically reducing database load."
+    summary: "Implement cache-aside pattern for TicketPulse's event listings using Redis and measure cache hit ratios."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Implement cache-aside for the GET /events endpoint: check Redis first, on miss query Postgres and populate cache with a TTL."
+      - type: "🐛 Debug"
+        description: "Introduce a cache invalidation bug (update an event but forget to invalidate cache). Observe stale data. Fix it with proper invalidation on write."
+      - type: "📊 Observe"
+        description: "Add logging to track cache hits vs misses. Run a load test and observe the hit ratio climbing. Measure response time improvement."
+    runs_locally: true
+    prereqs: [L1-M09]
+
+  # ---------------------------------------------------------------------------
+  # Section 1C: Building the API (Modules 11-16)
+  # ---------------------------------------------------------------------------
+
+  - id: L1-M11
+    title: "REST API Design"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [25]
+    ticketpulse: "TicketPulse has a clean REST API with 5 core endpoints for events, tickets, and orders — tested and documented."
+    summary: "Design and implement TicketPulse's REST API with proper resource naming, HTTP methods, status codes, and pagination."
+    exercises:
+      - type: "📐 Design"
+        description: "Design the TicketPulse API contract: list events, get event details, create order, get order, list tickets for event. Define URLs, methods, request/response shapes."
+      - type: "🛠️ Build"
+        description: "Implement the 5 endpoints. Use proper HTTP status codes (200, 201, 400, 404, 500). Add pagination to list endpoints."
+      - type: "🔍 Explore"
+        description: "Test every endpoint with curl or httpie. Verify correct status codes, response headers (Content-Type, Location for 201), and error responses."
+    runs_locally: true
+    prereqs: [L1-M05]
+
+  - id: L1-M12
+    title: "Error Handling That Doesn't Suck"
+    tier: "🟢 Core"
+    duration: "60 min"
+    source_chapters: [25]
+    ticketpulse: "TicketPulse returns consistent, structured error responses with error codes, messages, and request tracing."
+    summary: "Implement consistent error handling middleware with structured error codes, validation errors, and proper HTTP semantics."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Create error middleware that catches all exceptions and returns a consistent JSON shape: {error: {code, message, details, requestId}}."
+      - type: "🛠️ Build"
+        description: "Add input validation to the create-order endpoint. Return 400 with field-level error details when validation fails."
+      - type: "🐛 Debug"
+        description: "The starter code has an endpoint that leaks a stack trace to the client. Find it and fix it so internal errors return a safe message."
+    runs_locally: true
+    prereqs: [L1-M11]
+
+  - id: L1-M13
+    title: "Authentication & Authorization"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [5]
+    ticketpulse: "TicketPulse has JWT-based auth with signup, login, protected routes, and role-based access (user vs admin)."
+    summary: "Add JWT authentication and role-based authorization to TicketPulse with signup, login, and protected routes."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Implement POST /auth/signup and POST /auth/login endpoints that issue JWTs. Hash passwords with bcrypt."
+      - type: "🛠️ Build"
+        description: "Create auth middleware that validates JWTs on protected routes. Add role-based checks: only admins can create events, any authenticated user can purchase tickets."
+      - type: "🐛 Debug"
+        description: "Test edge cases: expired token, tampered token, missing token, invalid role. Verify each returns the correct error response."
+    runs_locally: true
+    prereqs: [L1-M11]
+
+  - id: L1-M14
+    title: "Your First Deployment"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [7, 12]
+    ticketpulse: "TicketPulse is containerized with a multi-stage Dockerfile and runs as a full stack via docker compose (app + Postgres + Redis)."
+    summary: "Containerize TicketPulse with a multi-stage Dockerfile and orchestrate the full stack with docker compose."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Write a multi-stage Dockerfile: stage 1 installs dependencies and builds, stage 2 copies only the production artifacts into a slim image."
+      - type: "🚀 Deploy"
+        description: "Update docker-compose.yml with app, postgres, and redis services. Configure health checks, volume mounts for data persistence, and environment variables."
+      - type: "🔍 Explore"
+        description: "Run docker image ls and compare your multi-stage image size to a naive single-stage build. Inspect layers with docker history."
+    runs_locally: true
+    prereqs: [L1-M01]
+
+  - id: L1-M15
+    title: "CI/CD Pipeline"
+    tier: "🟢 Core"
+    duration: "60 min"
+    source_chapters: [7, 15]
+    ticketpulse: "Every push to TicketPulse's repo triggers an automated pipeline: lint, test, build, and deploy."
+    summary: "Set up a GitHub Actions CI/CD pipeline for TicketPulse with lint, test, build, and deploy stages."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Create .github/workflows/ci.yml with four jobs: lint (eslint/prettier), test (run test suite), build (docker build), deploy (placeholder for now)."
+      - type: "🚀 Deploy"
+        description: "Push a commit that fails linting. Watch the pipeline fail. Fix the lint error, push again, watch it pass."
+      - type: "🤔 Reflect"
+        description: "Should the deploy step run on every push, or only on merges to main? Configure branch protection rules accordingly."
+    runs_locally: true
+    prereqs: [L1-M14]
+
+  - id: L1-M16
+    title: "Testing Fundamentals"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [8]
+    ticketpulse: "TicketPulse has a test suite covering unit tests for business logic and integration tests for the ticket purchase flow."
+    summary: "Add unit tests and integration tests to TicketPulse, including a full end-to-end test of the ticket purchase flow using testcontainers."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Write unit tests for the ticket pricing logic (discounts, fees, tax calculation). Mock the database layer."
+      - type: "🛠️ Build"
+        description: "Write an integration test for the full purchase flow: create event, list events, purchase ticket, verify order. Use testcontainers to spin up a real Postgres."
+      - type: "🤔 Reflect"
+        description: "Categorize each test you wrote: is it a unit test, integration test, or end-to-end test? Draw the testing pyramid for TicketPulse."
+    runs_locally: true
+    prereqs: [L1-M11]
+
+  # ---------------------------------------------------------------------------
+  # Section 1D: Architecture Fundamentals (Modules 17-22)
+  # ---------------------------------------------------------------------------
+
+  - id: L1-M17
+    title: "How Distributed Systems Fail"
+    tier: "🟢 Core"
+    duration: "60 min"
+    source_chapters: [1]
+    ticketpulse: "You've seen TicketPulse break under failure conditions and understand CAP theorem through lived experience."
+    summary: "Experience CAP theorem firsthand by injecting failures into TicketPulse and observing how the system behaves when the database is slow or Redis is down."
+    exercises:
+      - type: "🐛 Debug"
+        description: "Add artificial latency to the Postgres connection (use toxiproxy or a sleep in middleware). Observe what happens to API response times and user experience."
+      - type: "🐛 Debug"
+        description: "Kill the Redis container while TicketPulse is running. Does the app crash? Degrade? Return errors? Document what you observe."
+      - type: "🤔 Reflect"
+        description: "For TicketPulse ticket purchases, which matters more: consistency (never sell more tickets than available) or availability (always accept requests)? Write your reasoning."
+    runs_locally: true
+    prereqs: [L1-M10]
+
+  - id: L1-M18
+    title: "Consistency Models in Practice"
+    tier: "🟡 Deep Dive"
+    duration: "60 min"
+    source_chapters: [1]
+    ticketpulse: "You've observed eventual consistency in action — writes to the primary take time to appear on replicas."
+    summary: "Demonstrate eventual consistency with TicketPulse by writing to a Postgres primary and reading from a replica, observing replication lag."
+    exercises:
+      - type: "🔍 Explore"
+        description: "Set up a Postgres primary-replica configuration in docker compose. Write a ticket purchase to the primary, immediately read from the replica. Observe the lag."
+      - type: "🐛 Debug"
+        description: "Simulate a scenario where a user buys a ticket (writes to primary) but then sees the ticket as still available (reads from stale replica). How would you fix this?"
+      - type: "🤔 Reflect"
+        description: "Map TicketPulse's operations to consistency requirements: which reads MUST hit the primary? Which can tolerate staleness? Document the trade-offs."
+    runs_locally: true
+    prereqs: [L1-M17]
+
+  - id: L1-M19
+    title: "Architecture Patterns Overview"
+    tier: "🟢 Core"
+    duration: "60 min"
+    source_chapters: [3]
+    ticketpulse: "You can place TicketPulse on the architecture spectrum and articulate why it's currently a monolith and where it should go next."
+    summary: "Tour the architecture spectrum from monolith to serverless and evaluate where TicketPulse sits today and where it should evolve."
+    exercises:
+      - type: "🔍 Explore"
+        description: "Read about four architecture patterns: monolith, modular monolith, microservices, serverless. For each, list one real company that uses it and why."
+      - type: "🤔 Reflect"
+        description: "Where is TicketPulse on this spectrum right now? What are the pain points you've already felt? What would trigger a move to the next pattern?"
+      - type: "📐 Design"
+        description: "Sketch what TicketPulse would look like as a modular monolith: identify 3-4 modules, define their boundaries, and show how they communicate internally."
+    runs_locally: true
+    prereqs: [L1-M14]
+
+  - id: L1-M20
+    title: "Domain-Driven Design Basics"
+    tier: "🟢 Core"
+    duration: "60 min"
+    source_chapters: [3]
+    ticketpulse: "TicketPulse has clearly identified bounded contexts: Events, Ticketing, Payments, and Users — each with defined responsibilities."
+    summary: "Identify bounded contexts in TicketPulse using DDD principles and draw the context map showing how domains interact."
+    exercises:
+      - type: "📐 Design"
+        description: "Identify TicketPulse's bounded contexts (Events, Ticketing, Payments, Users). For each, list the entities, value objects, and key operations."
+      - type: "📐 Design"
+        description: "Draw a context map: how do these contexts communicate? Which relationships are customer-supplier? Which are shared kernel? Which are anti-corruption layer?"
+      - type: "🤔 Reflect"
+        description: "Look at the current TicketPulse codebase. Where do bounded context boundaries get violated? Find a place where payment logic leaks into the events module."
+    runs_locally: true
+    prereqs: [L1-M19]
+
+  - id: L1-M21
+    title: "Event-Driven Thinking"
+    tier: "🟢 Core"
+    duration: "60 min"
+    source_chapters: [3]
+    ticketpulse: "You've identified which TicketPulse operations should be synchronous (ticket reservation) vs asynchronous (email notifications, analytics)."
+    summary: "Introduce domain events to TicketPulse and decide which operations should be synchronous vs asynchronous."
+    exercises:
+      - type: "📐 Design"
+        description: "List all meaningful events in TicketPulse: EventCreated, TicketPurchased, OrderRefunded, UserRegistered, etc. Define the payload for each."
+      - type: "🤔 Reflect"
+        description: "For each event, decide: should downstream processing be synchronous (in the same request) or asynchronous (via a queue)? Justify each decision."
+      - type: "🛠️ Build"
+        description: "Implement a simple in-process event bus in the monolith. When a ticket is purchased, emit TicketPurchased. Have a listener that logs the event."
+    runs_locally: true
+    prereqs: [L1-M20]
+
+  - id: L1-M22
+    title: "Introduction to Message Queues"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [13]
+    ticketpulse: "TicketPulse now publishes purchase events to a message queue and a consumer processes them asynchronously to send email notifications."
+    summary: "Add a message queue to TicketPulse for async email notifications on ticket purchase using RabbitMQ or Redis Streams."
+    exercises:
+      - type: "🚀 Deploy"
+        description: "Add RabbitMQ (or Redis Streams) to docker-compose.yml. Verify the management UI is accessible."
+      - type: "🛠️ Build"
+        description: "Publish a TicketPurchased message to the queue when a ticket is bought. Create a consumer service that reads from the queue and logs a 'sending email' message."
+      - type: "🐛 Debug"
+        description: "Kill the consumer while messages are being published. Restart it. Verify that queued messages are still processed (durability). What happens with at-least-once delivery?"
+    runs_locally: true
+    prereqs: [L1-M21]
+
+  # ---------------------------------------------------------------------------
+  # Section 1E: Security & Reliability Basics (Modules 23-27)
+  # ---------------------------------------------------------------------------
+
+  - id: L1-M23
+    title: "OWASP Top 10"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [5]
+    ticketpulse: "You've found and fixed real vulnerabilities in TicketPulse: SQL injection, XSS, and CSRF."
+    summary: "Find and fix OWASP Top 10 vulnerabilities intentionally planted in the TicketPulse starter code."
+    exercises:
+      - type: "🐛 Debug"
+        description: "Find the SQL injection vulnerability in the event search endpoint. Exploit it to dump the users table. Fix it with parameterized queries."
+      - type: "🐛 Debug"
+        description: "Find the XSS vulnerability in the event description field. Inject a script tag, see it execute. Fix it with proper output encoding."
+      - type: "🐛 Debug"
+        description: "Identify the CSRF vulnerability in the ticket purchase flow. Demonstrate how an attacker page could trigger a purchase. Fix it with CSRF tokens."
+    runs_locally: true
+    prereqs: [L1-M13]
+
+  - id: L1-M24
+    title: "Secrets Management"
+    tier: "🟢 Core"
+    duration: "45 min"
+    source_chapters: [5, 20]
+    ticketpulse: "TicketPulse's secrets are out of the codebase — no hardcoded database passwords, JWT secrets, or API keys."
+    summary: "Move all hardcoded secrets in TicketPulse to environment variables and .env files with proper gitignore rules."
+    exercises:
+      - type: "🐛 Debug"
+        description: "Grep the TicketPulse codebase for hardcoded secrets (DB passwords, JWT secrets, API keys). List every instance."
+      - type: "🛠️ Build"
+        description: "Create a .env.example with placeholder values and a .env (gitignored) with real values. Update the app to read from process.env."
+      - type: "🤔 Reflect"
+        description: "What happens when a secret is accidentally committed to git? Walk through the remediation steps: rotate the secret, use git filter-branch or BFG to remove it from history."
+    runs_locally: true
+    prereqs: [L1-M14]
+
+  - id: L1-M25
+    title: "Logging & Observability 101"
+    tier: "🟢 Core"
+    duration: "60 min"
+    source_chapters: [4]
+    ticketpulse: "TicketPulse produces structured JSON logs with request IDs, making it possible to trace a request through the system."
+    summary: "Add structured JSON logging with request IDs to TicketPulse and pipe logs to a viewer for search and filtering."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Replace console.log with a structured logger (pino or winston). Output JSON logs with timestamp, level, requestId, message, and context fields."
+      - type: "🛠️ Build"
+        description: "Add request ID middleware: generate a UUID per request, attach it to all log lines for that request. Return it in the X-Request-ID response header."
+      - type: "📊 Observe"
+        description: "Pipe TicketPulse logs to a log viewer (e.g., pino-pretty in dev, or Loki/Grafana in docker compose). Search for a specific request by ID across all log lines."
+    runs_locally: true
+    prereqs: [L1-M12]
+
+  - id: L1-M26
+    title: "SLOs & Error Budgets"
+    tier: "🟡 Deep Dive"
+    duration: "45 min"
+    source_chapters: [4]
+    ticketpulse: "TicketPulse has defined SLOs for availability, latency, and error rate — and you understand what 99.9% actually means."
+    summary: "Define SLOs for TicketPulse and calculate what 99.9% availability means in real downtime minutes."
+    exercises:
+      - type: "🤔 Reflect"
+        description: "Define three SLOs for TicketPulse: availability (% of successful requests), latency (p99 < Xms), and error rate (% of 5xx responses). What targets make sense for a ticketing system?"
+      - type: "💡 Insight"
+        description: "Calculate: 99.9% availability = how many minutes of downtime per month? Per year? How does this compare to 99.99%? Fill in the table."
+      - type: "📐 Design"
+        description: "Define the error budget policy: if TicketPulse burns through 50% of its monthly error budget in a week, what actions should trigger? Write the policy."
+    runs_locally: true
+    prereqs: [L1-M25]
+
+  - id: L1-M27
+    title: "Dependency & Environment Management"
+    tier: "🟡 Deep Dive"
+    duration: "45 min"
+    source_chapters: [20]
+    ticketpulse: "TicketPulse's dev environment is reproducible — any team member can clone and run with zero manual setup."
+    summary: "Set up a reproducible dev environment for TicketPulse using mise or asdf, ensuring identical tool versions across machines."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Create a .tool-versions or mise.toml file pinning Node.js, Python, and Postgres CLI versions for TicketPulse."
+      - type: "🔍 Explore"
+        description: "Delete your global Node.js, rely only on the version managed by mise. Verify the correct version activates when you cd into the TicketPulse directory."
+      - type: "🤔 Reflect"
+        description: "What would happen if one developer uses Node 18 and another uses Node 22? List three categories of bugs this could cause."
+    runs_locally: true
+    prereqs: [L1-M02]
+
+  # ---------------------------------------------------------------------------
+  # Section 1F: Language & Paradigm Exposure (Modules 28-30)
+  # ---------------------------------------------------------------------------
+
+  - id: L1-M28
+    title: "The Language Landscape"
+    tier: "🟡 Deep Dive"
+    duration: "60 min"
+    source_chapters: [11]
+    ticketpulse: "You've seen the same HTTP server in four languages and understand how language choice affects performance and developer experience."
+    summary: "Read and run the same HTTP server implemented in Go, Python, TypeScript, and Rust, then benchmark them."
+    exercises:
+      - type: "🔍 Explore"
+        description: "Read the same 'hello world' HTTP server in Go, Python, TypeScript, and Rust. Note the differences in verbosity, type systems, and error handling."
+      - type: "🚀 Deploy"
+        description: "Run all four servers locally. Use wrk or hey to benchmark each: requests/sec, latency distribution, memory usage."
+      - type: "🤔 Reflect"
+        description: "If you were starting TicketPulse from scratch, which language would you pick and why? Consider: team expertise, ecosystem, performance needs, hiring."
+    runs_locally: true
+    prereqs: []
+
+  - id: L1-M29
+    title: "Concurrency Models"
+    tier: "🟡 Deep Dive"
+    duration: "60 min"
+    source_chapters: [6]
+    ticketpulse: "You understand why TicketPulse's Node.js event loop behaves differently from Go's goroutines under heavy load."
+    summary: "Visualize and compare threads, event loops, and goroutines by spawning 10K concurrent requests against different server implementations."
+    exercises:
+      - type: "🔍 Explore"
+        description: "Spawn 10,000 concurrent requests against the Python (threaded), Node.js (event loop), and Go (goroutine) servers. Monitor CPU, memory, and response times."
+      - type: "🐛 Debug"
+        description: "Add a 100ms sleep (simulating I/O) to each handler. Re-run the benchmark. Which concurrency model handles I/O-bound work best? Which struggles?"
+      - type: "💡 Insight"
+        description: "Draw a diagram of how each concurrency model handles 100 simultaneous requests: thread-per-request, event loop with callback queue, goroutines with scheduler."
+    runs_locally: true
+    prereqs: [L1-M28]
+
+  - id: L1-M30
+    title: "Loop 1 Capstone: TicketPulse v1 Complete"
+    tier: "🟢 Core"
+    duration: "90 min"
+    source_chapters: [1, 2, 3, 4, 5, 7, 8, 12, 13, 21, 24, 25]
+    ticketpulse: "TicketPulse v1 is a working monolith with Postgres, Redis, REST API, JWT auth, CI/CD, structured logging, and a test suite."
+    summary: "Review everything you built in Loop 1, draw the complete architecture diagram, identify bottlenecks, and plan what needs to change for 100x scale."
+    exercises:
+      - type: "📐 Design"
+        description: "Draw the full TicketPulse v1 architecture diagram: client, API server, Postgres, Redis, message queue, email consumer. Label all connections with protocols and data flows."
+      - type: "🤔 Reflect"
+        description: "List the top 5 bottlenecks in TicketPulse v1. For each, explain why it's a bottleneck and what architectural change would address it."
+      - type: "📐 Design"
+        description: "Write a one-page plan for TicketPulse v2: which services to extract first, what infrastructure to add, what the target architecture looks like. This is your roadmap for Loop 2."
+    runs_locally: true
+    prereqs: [L1-M16, L1-M22, L1-M25]
+
+  # =============================================================================
+  # LOOP 2: PRACTICE — SCALE AND BREAK THINGS (Modules 31-60)
+  # =============================================================================
+  # Theme: "Apply, debug, and make trade-off decisions"
+  # TicketPulse state: Breaking apart the monolith, adding real infrastructure
+  # Scaffolding: Medium (less hand-holding, more decision-making)
+  # =============================================================================
+
+  # ---------------------------------------------------------------------------
+  # Section 2A: Breaking Apart the Monolith (Modules 31-36)
+  # ---------------------------------------------------------------------------
+
+  - id: L2-M31
+    title: "The Strangler Fig"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [3]
+    ticketpulse: "The Payments bounded context is now a separate service, extracted from the monolith using the Strangler Fig pattern."
+    summary: "Extract the Payments service from TicketPulse's monolith using the Strangler Fig pattern with an API gateway routing requests."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Create a new payments service with its own codebase and Dockerfile. Move payment-related endpoints and logic out of the monolith."
+      - type: "🛠️ Build"
+        description: "Set up an API gateway (nginx or Traefik) that routes /api/payments/* to the new service and everything else to the monolith."
+      - type: "🐛 Debug"
+        description: "The monolith still has code that directly queries payment tables. Find these coupling points and refactor them to call the payments service API instead."
+    runs_locally: true
+    prereqs: [L1-M30]
+
+  - id: L2-M32
+    title: "Service Communication"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [3, 21]
+    ticketpulse: "TicketPulse services communicate via REST for simple queries and gRPC for high-throughput internal calls."
+    summary: "Implement both REST and gRPC communication between TicketPulse services and compare latency and developer experience."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Define a gRPC proto file for the Payments service (ProcessPayment, GetPaymentStatus). Generate client/server code and connect it to the ticket service."
+      - type: "🔍 Explore"
+        description: "Benchmark REST vs gRPC for the same call (process payment): measure latency, payload size, and throughput under load."
+      - type: "🤔 Reflect"
+        description: "When should TicketPulse use REST, gRPC, or events for service-to-service communication? Create a decision matrix with criteria."
+    runs_locally: true
+    prereqs: [L2-M31]
+
+  - id: L2-M33
+    title: "Kafka Deep Dive"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [13]
+    ticketpulse: "TicketPulse events flow through Kafka — TicketPurchased, EventCreated, and more — with proper topics, partitions, and consumer groups."
+    summary: "Replace the simple message queue with Kafka for TicketPulse's event streaming and explore topics, partitions, and consumer groups."
+    exercises:
+      - type: "🚀 Deploy"
+        description: "Add Kafka and Zookeeper (or KRaft) to docker-compose.yml. Verify the broker is running. Add Kafka UI for visual exploration."
+      - type: "🛠️ Build"
+        description: "Create topics for TicketPulse events (ticket-purchases, event-updates). Produce TicketPurchased events from the ticket service. Consume them in the email notification service."
+      - type: "📊 Observe"
+        description: "Use Kafka UI to inspect topics, partitions, consumer group lag, and message contents. Produce 1000 messages and watch consumer lag metrics."
+    runs_locally: true
+    prereqs: [L1-M22]
+
+  - id: L2-M34
+    title: "The Saga Pattern"
+    tier: "🟢 Core"
+    duration: "90 min"
+    source_chapters: [3, 13]
+    ticketpulse: "Ticket purchase is now a distributed saga: reserve ticket, process payment, confirm booking — with compensation on failure."
+    summary: "Implement an orchestrated saga for ticket purchase that coordinates across services with compensation when payment fails."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Implement the ticket purchase saga: (1) reserve ticket in ticket service, (2) process payment in payment service, (3) confirm booking. Use an orchestrator to coordinate."
+      - type: "🐛 Debug"
+        description: "Simulate payment failure mid-saga. Verify the compensation runs: ticket reservation is released, user is notified. What if compensation also fails?"
+      - type: "📐 Design"
+        description: "Compare orchestrated vs choreographed sagas for this use case. Draw both sequence diagrams. Which is better for TicketPulse and why?"
+    runs_locally: true
+    prereqs: [L2-M32, L2-M33]
+
+  - id: L2-M35
+    title: "Database Per Service"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [2, 3]
+    ticketpulse: "Each TicketPulse service now owns its database — no more shared tables between services."
+    summary: "Split the monolith database so each service owns its data, implementing a migration strategy and CDC for data synchronization."
+    exercises:
+      - type: "📐 Design"
+        description: "Decide which tables belong to which service. Handle shared data: does the ticket service need venue info? How does it get it without querying the events DB?"
+      - type: "🛠️ Build"
+        description: "Create separate Postgres databases for each service in docker compose. Write migration scripts to move data. Set up CDC (Debezium or logical replication) for cross-service data needs."
+      - type: "🐛 Debug"
+        description: "A report query that used to JOIN across events and tickets tables no longer works. Redesign it to work across service boundaries."
+    runs_locally: true
+    prereqs: [L2-M31]
+
+  - id: L2-M36
+    title: "API Gateway & BFF"
+    tier: "🟡 Deep Dive"
+    duration: "60 min"
+    source_chapters: [25]
+    ticketpulse: "TicketPulse has an API gateway handling routing, auth verification, and rate limiting for all backend services."
+    summary: "Add a proper API gateway to TicketPulse that routes requests, verifies auth, and provides a Backend-for-Frontend layer."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Configure the API gateway to route /api/events to events service, /api/payments to payments service, /api/tickets to tickets service. Add auth token verification at the gateway level."
+      - type: "🛠️ Build"
+        description: "Create a BFF endpoint that aggregates data from multiple services: GET /bff/event-detail/:id returns event info + ticket availability + pricing in a single response."
+      - type: "🤔 Reflect"
+        description: "What are the trade-offs of verifying auth at the gateway vs at each service? What about a mobile BFF vs web BFF — when would you need separate ones?"
+    runs_locally: true
+    prereqs: [L2-M31]
+
+  # ---------------------------------------------------------------------------
+  # Section 2B: Performance & Databases (Modules 37-42)
+  # ---------------------------------------------------------------------------
+
+  - id: L2-M37
+    title: "PostgreSQL Internals"
+    tier: "🟡 Deep Dive"
+    duration: "60 min"
+    source_chapters: [24]
+    ticketpulse: "You understand how Postgres MVCC, WAL, and vacuum affect TicketPulse's performance under write-heavy ticket purchase loads."
+    summary: "Explore PostgreSQL internals — MVCC, WAL, and vacuum — and understand how they affect TicketPulse under heavy write loads."
+    exercises:
+      - type: "🔍 Explore"
+        description: "Open two psql sessions. Start a transaction in one, update a ticket row, read it from the other session. Observe MVCC in action — the second session sees the old version."
+      - type: "📊 Observe"
+        description: "Run a load test that creates many ticket purchases. Query pg_stat_user_tables to see dead tuples accumulating. Watch VACUUM run and reclaim space."
+      - type: "💡 Insight"
+        description: "Explain in your own words: why does Postgres keep old row versions? What would happen if VACUUM never ran? How does this relate to TicketPulse's write patterns?"
+    runs_locally: true
+    prereqs: [L1-M07]
+
+  - id: L2-M38
+    title: "Connection Pooling"
+    tier: "🟢 Core"
+    duration: "60 min"
+    source_chapters: [24]
+    ticketpulse: "TicketPulse uses PgBouncer for connection pooling, preventing connection exhaustion under load."
+    summary: "Add PgBouncer to TicketPulse and demonstrate the difference in connection handling under concurrent load."
+    exercises:
+      - type: "🐛 Debug"
+        description: "Set Postgres max_connections to 20. Run a load test with 50 concurrent users. Watch connections get exhausted and requests fail."
+      - type: "🛠️ Build"
+        description: "Add PgBouncer to docker-compose.yml. Configure it with transaction pooling mode. Point TicketPulse at PgBouncer instead of Postgres directly."
+      - type: "📊 Observe"
+        description: "Re-run the same load test. Monitor connection count on Postgres (still ~20) vs active clients on PgBouncer (50+). Document the improvement."
+    runs_locally: true
+    prereqs: [L1-M07]
+
+  - id: L2-M39
+    title: "Advanced SQL for Analytics"
+    tier: "🟡 Deep Dive"
+    duration: "60 min"
+    source_chapters: [24]
+    ticketpulse: "TicketPulse has a powerful analytics query layer: revenue dashboards, cohort analysis, and time-series reporting."
+    summary: "Write advanced SQL for TicketPulse's reporting needs using window functions, CTEs, JSON aggregation, and time-series queries."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Write the revenue dashboard query: daily revenue by venue, with running 7-day average, month-over-month comparison, and percentage change — all in a single SQL query."
+      - type: "🛠️ Build"
+        description: "Use JSON aggregation (json_agg, json_build_object) to return event details with nested ticket type arrays in a single query."
+      - type: "🔍 Explore"
+        description: "Write a cohort analysis query: for users who signed up each week, what percentage purchased a ticket within 7 days? Use CTEs and window functions."
+    runs_locally: true
+    prereqs: [L1-M06]
+
+  - id: L2-M40
+    title: "Search Engineering"
+    tier: "🟡 Deep Dive"
+    duration: "75 min"
+    source_chapters: [22]
+    ticketpulse: "TicketPulse has full-text search with autocomplete — users can find concerts by artist, venue, date, or genre."
+    summary: "Add Elasticsearch to TicketPulse for full-text search with autocomplete across events, artists, and venues."
+    exercises:
+      - type: "🚀 Deploy"
+        description: "Add Elasticsearch to docker-compose.yml. Create an index for TicketPulse events with appropriate mappings (text, keyword, date fields)."
+      - type: "🛠️ Build"
+        description: "Index all events into Elasticsearch. Implement a search endpoint that supports full-text queries, filters (date range, venue, genre), and autocomplete suggestions."
+      - type: "🔍 Explore"
+        description: "Compare search quality: search for 'jazz in brooklyn' using Postgres LIKE, Postgres full-text search (tsvector), and Elasticsearch. Which returns the best results?"
+    runs_locally: true
+    prereqs: [L2-M35]
+
+  - id: L2-M41
+    title: "The N+1 Problem"
+    tier: "🟢 Core"
+    duration: "45 min"
+    source_chapters: [2, 24]
+    ticketpulse: "You've found and fixed N+1 query problems in TicketPulse, reducing page load queries from 101 to 2."
+    summary: "Find and fix N+1 query problems in TicketPulse by enabling query logging, spotting the pattern, and fixing with eager loading."
+    exercises:
+      - type: "🐛 Debug"
+        description: "Enable query logging in TicketPulse. Hit the 'list events with ticket counts' endpoint. Count the number of SQL queries executed. You'll find an N+1."
+      - type: "🛠️ Build"
+        description: "Fix the N+1 with eager loading (JOIN) or batched queries (WHERE id IN (...)). Verify the query count drops from N+1 to 1-2."
+      - type: "📊 Observe"
+        description: "Measure response time before and after the fix with 100 events in the database. Document the improvement."
+    runs_locally: true
+    prereqs: [L1-M07]
+
+  - id: L2-M42
+    title: "Graph Databases"
+    tier: "🔴 Expert"
+    duration: "60 min"
+    source_chapters: [24]
+    ticketpulse: "TicketPulse has social features powered by Neo4j — friends attending events, artist connections, and recommendations."
+    summary: "Model TicketPulse's social features in Neo4j and write Cypher queries for friend-based event recommendations."
+    exercises:
+      - type: "🔍 Explore"
+        description: "Spin up Neo4j in docker compose. Create nodes for Users, Events, and Artists. Create relationships: ATTENDING, FRIENDS_WITH, PERFORMS_AT."
+      - type: "🛠️ Build"
+        description: "Write Cypher queries: 'find friends attending event X', 'recommend events based on friends' attendance', 'find artists connected to artists I like.'"
+      - type: "🤔 Reflect"
+        description: "Could you implement these queries in Postgres with recursive CTEs? Try it. Compare the complexity and performance of the SQL approach vs Cypher."
+    runs_locally: true
+    prereqs: [L1-M06]
+
+  # ---------------------------------------------------------------------------
+  # Section 2C: Infrastructure & Operations (Modules 43-48)
+  # ---------------------------------------------------------------------------
+
+  - id: L2-M43
+    title: "Kubernetes Fundamentals"
+    tier: "🟢 Core"
+    duration: "90 min"
+    source_chapters: [7]
+    ticketpulse: "TicketPulse runs on a local Kubernetes cluster with Deployments, Services, and Ingress for all services."
+    summary: "Deploy TicketPulse to a local Kubernetes cluster using kind or minikube with proper Deployments, Services, and Ingress."
+    exercises:
+      - type: "🚀 Deploy"
+        description: "Create a local Kubernetes cluster with kind or minikube. Write Deployment manifests for each TicketPulse service (events, tickets, payments)."
+      - type: "🛠️ Build"
+        description: "Create Service resources for internal communication and an Ingress resource for external HTTP routing. Configure environment variables via ConfigMaps and Secrets."
+      - type: "🐛 Debug"
+        description: "Intentionally set the wrong container image tag. Use kubectl describe pod, kubectl logs, and kubectl get events to diagnose and fix the issue."
+    runs_locally: true
+    prereqs: [L1-M14]
+
+  - id: L2-M44
+    title: "Terraform & IaC"
+    tier: "🟡 Deep Dive"
+    duration: "75 min"
+    source_chapters: [7, 12]
+    ticketpulse: "TicketPulse's infrastructure is defined as code — reproducible, version-controlled, and reviewable."
+    summary: "Define TicketPulse's infrastructure as code using Terraform and practice the plan/apply workflow."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Write Terraform configuration for TicketPulse: define the Kubernetes namespace, deployments, and services using the Kubernetes provider (no cloud account needed)."
+      - type: "🚀 Deploy"
+        description: "Run terraform init, terraform plan (review the changes), terraform apply (create the resources). Verify everything is running."
+      - type: "🐛 Debug"
+        description: "Manually change a resource in Kubernetes (kubectl scale). Run terraform plan and observe the drift. Use terraform apply to bring it back to desired state."
+    runs_locally: true
+    prereqs: [L2-M43]
+
+  - id: L2-M45
+    title: "Monitoring Stack"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [18]
+    ticketpulse: "TicketPulse has a full monitoring stack: Prometheus scraping metrics, Grafana dashboards showing request rate, error rate, and latency."
+    summary: "Set up Prometheus and Grafana for TicketPulse and build dashboards for the RED metrics (Rate, Errors, Duration)."
+    exercises:
+      - type: "🚀 Deploy"
+        description: "Add Prometheus and Grafana to docker-compose.yml. Instrument TicketPulse services with a metrics library (prom-client or equivalent). Configure Prometheus to scrape them."
+      - type: "🛠️ Build"
+        description: "Create a Grafana dashboard with three panels: request rate (requests/sec by endpoint), error rate (5xx percentage), and latency (p50, p95, p99 histograms)."
+      - type: "📊 Observe"
+        description: "Run a load test against TicketPulse. Watch the dashboards in real time. Identify which endpoint is slowest and which has the highest error rate."
+    runs_locally: true
+    prereqs: [L1-M25]
+
+  - id: L2-M46
+    title: "Distributed Tracing"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [18]
+    ticketpulse: "You can trace a single ticket purchase request as it flows across 3 TicketPulse services, seeing exactly where time is spent."
+    summary: "Add OpenTelemetry distributed tracing to TicketPulse services and visualize cross-service request flows in Jaeger."
+    exercises:
+      - type: "🚀 Deploy"
+        description: "Add Jaeger to docker-compose.yml. Install OpenTelemetry SDK in each TicketPulse service. Configure trace export to Jaeger."
+      - type: "🛠️ Build"
+        description: "Instrument the ticket purchase flow: trace propagation from API gateway to events service to payments service. Add custom spans for database queries and external calls."
+      - type: "📊 Observe"
+        description: "Purchase a ticket and find the trace in Jaeger. Identify the slowest span. Is it the database query, the payment processing, or the network hop between services?"
+    runs_locally: true
+    prereqs: [L2-M31, L1-M25]
+
+  - id: L2-M47
+    title: "Alerting & On-Call"
+    tier: "🟡 Deep Dive"
+    duration: "60 min"
+    source_chapters: [4]
+    ticketpulse: "TicketPulse has alerting rules that fire when SLOs are violated, with clear escalation policies."
+    summary: "Configure alerting rules for TicketPulse SLO violations and design an on-call policy for a small team."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Create Prometheus alerting rules: error rate > 1% for 5 minutes, p99 latency > 2s for 5 minutes, any service instance down for 1 minute."
+      - type: "🛠️ Build"
+        description: "Configure Alertmanager with notification channels (Slack webhook or email). Set up alert grouping and silence rules."
+      - type: "🤔 Reflect"
+        description: "Write the on-call policy: what's worth paging for at 3 AM vs what can wait until morning? Classify each TicketPulse alert as page-worthy or not."
+    runs_locally: true
+    prereqs: [L2-M45]
+
+  - id: L2-M48
+    title: "Chaos Engineering"
+    tier: "🟡 Deep Dive"
+    duration: "75 min"
+    source_chapters: [4]
+    ticketpulse: "You've intentionally broken TicketPulse in multiple ways and know exactly how (and whether) it degrades gracefully."
+    summary: "Break TicketPulse on purpose — kill services, inject latency, fill disks — and evaluate whether the system degrades gracefully."
+    exercises:
+      - type: "🐛 Debug"
+        description: "Kill the payments service while a purchase is in progress. Does the user see an error? Does the ticket get stuck in 'reserved' state? Is there a timeout?"
+      - type: "🐛 Debug"
+        description: "Inject 5-second latency into the database connection. Watch cascading slowness. Identify which services have timeouts and which hang forever."
+      - type: "📊 Observe"
+        description: "Run a chaos experiment: kill one of three replica pods during a load test. Watch the Grafana dashboards. Does the error rate spike? How quickly do requests shift to healthy pods?"
+    runs_locally: true
+    prereqs: [L2-M45, L2-M46]
+
+  # ---------------------------------------------------------------------------
+  # Section 2D: Advanced Patterns (Modules 49-55)
+  # ---------------------------------------------------------------------------
+
+  - id: L2-M49
+    title: "Circuit Breakers & Resilience"
+    tier: "🟢 Core"
+    duration: "60 min"
+    source_chapters: [4]
+    ticketpulse: "TicketPulse has circuit breakers on service-to-service calls — when payments is down, the circuit opens and fails fast."
+    summary: "Add circuit breakers to TicketPulse's service calls so failures in one service don't cascade to others."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Implement a circuit breaker for the ticket service's call to the payment service. Configure thresholds: open after 5 failures in 30 seconds, half-open after 10 seconds."
+      - type: "📊 Observe"
+        description: "Kill the payments service. Watch the circuit breaker trip: first few requests fail slowly (timeout), then subsequent requests fail fast (circuit open). Watch it recover when payments comes back."
+      - type: "🤔 Reflect"
+        description: "What should the user experience be when the circuit is open? Design a fallback: queue the purchase for later processing? Show a 'try again in a few minutes' message?"
+    runs_locally: true
+    prereqs: [L2-M31]
+
+  - id: L2-M50
+    title: "Rate Limiting"
+    tier: "🟢 Core"
+    duration: "60 min"
+    source_chapters: [22, 25]
+    ticketpulse: "TicketPulse's API has rate limiting that protects against abuse while allowing legitimate traffic during ticket rushes."
+    summary: "Implement token bucket rate limiting with Redis for TicketPulse's API and test it under simulated ticket rush conditions."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Implement a token bucket rate limiter using Redis. Apply it to the ticket purchase endpoint: 10 requests per minute per user, 1000 requests per minute globally."
+      - type: "🐛 Debug"
+        description: "Simulate a ticket rush: 5000 users hitting the purchase endpoint simultaneously. Observe rate limiting in action. Verify legitimate users get through while the rate is capped."
+      - type: "📐 Design"
+        description: "Design a tiered rate limiting strategy: different limits for anonymous users, authenticated users, and partner API keys. How would you implement priority queueing during a rush?"
+    runs_locally: true
+    prereqs: [L1-M10, L1-M11]
+
+  - id: L2-M51
+    title: "CQRS in Practice"
+    tier: "🟡 Deep Dive"
+    duration: "75 min"
+    source_chapters: [3]
+    ticketpulse: "TicketPulse separates read and write models — writes go through domain logic, reads hit a denormalized view store."
+    summary: "Implement CQRS for TicketPulse by separating the write model (normalized, event-sourced) from the read model (denormalized, optimized for queries)."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Create a denormalized read model for event listings (event + venue + ticket counts + pricing all in one table/document). Populate it from domain events."
+      - type: "🛠️ Build"
+        description: "Update the read model asynchronously when events are published. Verify that the event listing API now reads from the denormalized store instead of JOINing across tables."
+      - type: "🤔 Reflect"
+        description: "What consistency trade-offs does CQRS introduce? How long can the read model be stale before users notice? When is CQRS overkill?"
+    runs_locally: true
+    prereqs: [L2-M33, L2-M35]
+
+  - id: L2-M52
+    title: "Data Pipelines"
+    tier: "🟡 Deep Dive"
+    duration: "75 min"
+    source_chapters: [2, 13]
+    ticketpulse: "TicketPulse has an analytics pipeline: changes in Postgres flow through Kafka to a data warehouse for business reporting."
+    summary: "Build an analytics data pipeline for TicketPulse using CDC from Postgres through Kafka to a data warehouse."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Set up Debezium to capture changes from TicketPulse's Postgres database and publish them to Kafka topics."
+      - type: "🛠️ Build"
+        description: "Create a consumer that reads from Kafka and loads data into a separate analytics database (a second Postgres instance or ClickHouse) with a star schema."
+      - type: "📊 Observe"
+        description: "Purchase some tickets, then query the analytics database. Verify that the data pipeline delivered the events within seconds. Measure end-to-end latency."
+    runs_locally: true
+    prereqs: [L2-M33, L2-M35]
+
+  - id: L2-M53
+    title: "Feature Flags"
+    tier: "🟢 Core"
+    duration: "60 min"
+    source_chapters: [7]
+    ticketpulse: "TicketPulse can safely roll out new features to a percentage of users using feature flags, with instant kill-switch capability."
+    summary: "Add a feature flag system to TicketPulse for safe rollouts, canary releases, and instant feature kill-switches."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Implement a feature flag system: flags stored in Redis or a config file, evaluated per request. Create flags for 'new-checkout-flow' and 'premium-search.'"
+      - type: "🛠️ Build"
+        description: "Roll out the 'new-checkout-flow' flag to 10% of users, then 50%, then 100%. Implement a percentage-based rollout using consistent hashing on user ID."
+      - type: "🐛 Debug"
+        description: "The new checkout flow has a bug in production. Use the feature flag to instantly disable it for all users without deploying. Verify the old flow takes over."
+    runs_locally: true
+    prereqs: [L2-M31]
+
+  - id: L2-M54
+    title: "Zero-Downtime Migrations"
+    tier: "🟢 Core"
+    duration: "60 min"
+    source_chapters: [13, 24]
+    ticketpulse: "You can migrate TicketPulse's database schema without any downtime using the expand-and-contract pattern."
+    summary: "Perform a zero-downtime schema migration on TicketPulse using the expand-and-contract pattern."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Migrate the 'tickets' table: rename a column (e.g., 'price' to 'base_price'). Use expand-and-contract: add new column, dual-write, backfill, switch reads, drop old column."
+      - type: "🐛 Debug"
+        description: "Simulate a migration failure mid-way (new column exists but backfill is incomplete). Verify the app still works with the old column. Complete the migration."
+      - type: "🤔 Reflect"
+        description: "Why can't you just rename a column in a single ALTER TABLE? Walk through what happens if a request hits during the rename. Document the expand-and-contract steps."
+    runs_locally: true
+    prereqs: [L1-M07]
+
+  - id: L2-M55
+    title: "Webhooks"
+    tier: "🟡 Deep Dive"
+    duration: "60 min"
+    source_chapters: [25]
+    ticketpulse: "TicketPulse can notify partner systems of ticket sales via webhooks with HMAC signing, retry logic, and delivery tracking."
+    summary: "Add webhook delivery to TicketPulse for notifying partner systems of ticket sales, with signing and retry logic."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Implement webhook registration: partners can register a URL to receive TicketPurchased events. Store registrations in the database."
+      - type: "🛠️ Build"
+        description: "Deliver webhooks with HMAC-SHA256 signing (so partners can verify authenticity), exponential backoff retry (1s, 2s, 4s, 8s), and delivery status tracking."
+      - type: "🐛 Debug"
+        description: "Set up a webhook endpoint that returns 500 intermittently. Verify the retry logic works. Check the delivery log to see attempts and final success/failure status."
+    runs_locally: true
+    prereqs: [L2-M33]
+
+  # ---------------------------------------------------------------------------
+  # Section 2E: Security & Quality (Modules 56-60)
+  # ---------------------------------------------------------------------------
+
+  - id: L2-M56
+    title: "Advanced Authentication"
+    tier: "🟡 Deep Dive"
+    duration: "75 min"
+    source_chapters: [5]
+    ticketpulse: "TicketPulse supports 'Login with Google' via OAuth2/OIDC in addition to email/password authentication."
+    summary: "Add OAuth2/OIDC support to TicketPulse with a 'Login with Google' flow alongside existing JWT auth."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Implement the OAuth2 authorization code flow: redirect to Google, handle callback, exchange code for tokens, create/link user account."
+      - type: "🔍 Explore"
+        description: "Inspect the ID token from Google. Decode the JWT, examine the claims (sub, email, name, iss, aud, exp). Verify the signature."
+      - type: "🤔 Reflect"
+        description: "Compare session-based auth, JWT auth, and OAuth2/OIDC. When would you use each? What are the security implications of storing JWTs in localStorage vs httpOnly cookies?"
+    runs_locally: true
+    prereqs: [L1-M13]
+
+  - id: L2-M57
+    title: "TLS & Encryption Deep Dive"
+    tier: "🟡 Deep Dive"
+    duration: "60 min"
+    source_chapters: [21]
+    ticketpulse: "You understand every step of the TLS handshake and can configure, inspect, and debug TLS for TicketPulse."
+    summary: "Configure TLS for TicketPulse, understand the TLS handshake step by step, and debug certificate issues."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Generate a self-signed TLS certificate for TicketPulse. Configure the API gateway to terminate TLS. Verify HTTPS works with curl -k."
+      - type: "🔍 Explore"
+        description: "Use openssl s_client -connect to inspect the TLS handshake. Identify the protocol version, cipher suite, certificate chain, and expiration date."
+      - type: "🐛 Debug"
+        description: "Intentionally misconfigure TLS (expired cert, wrong hostname, incomplete chain). Use openssl and curl to diagnose each error. Fix them one by one."
+    runs_locally: true
+    prereqs: [L1-M04]
+
+  - id: L2-M58
+    title: "Debugging in Production"
+    tier: "🟢 Core"
+    duration: "90 min"
+    source_chapters: [18]
+    ticketpulse: "You've diagnosed a simulated TicketPulse outage using only logs, metrics, and traces — the tools available in production."
+    summary: "Debug a simulated TicketPulse production outage using only logs, metrics, and traces — no access to the codebase."
+    exercises:
+      - type: "🐛 Debug"
+        description: "A simulated incident: ticket purchases are failing for 30% of users. You have access to Grafana, Jaeger, and log search. Find the root cause using only these tools."
+      - type: "🐛 Debug"
+        description: "A second incident: latency has spiked to 10 seconds. The dashboards show it started at a specific time. Correlate with deployment logs, trace data, and metrics to identify the change that caused it."
+      - type: "🛠️ Build"
+        description: "Write the incident timeline: when it started, when it was detected, what you checked, what you found, and how you'd fix it. This is your first postmortem draft."
+    runs_locally: true
+    prereqs: [L2-M45, L2-M46]
+
+  - id: L2-M59
+    title: "Technical Writing"
+    tier: "🟡 Deep Dive"
+    duration: "60 min"
+    source_chapters: [27]
+    ticketpulse: "You've written three key engineering documents for TicketPulse: an RFC, a runbook, and a postmortem."
+    summary: "Write real engineering documents for TicketPulse: an RFC for a new feature, a runbook for a common incident, and a postmortem."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Write an RFC for adding a waitlist feature to TicketPulse: problem statement, proposed solution, alternatives considered, rollout plan, and open questions."
+      - type: "🛠️ Build"
+        description: "Write a runbook for 'database connection pool exhaustion': symptoms, verification steps, mitigation steps, escalation path, and prevention."
+      - type: "🛠️ Build"
+        description: "Write a postmortem for the simulated incident from module 58: timeline, root cause, impact, action items with owners and due dates."
+    runs_locally: true
+    prereqs: [L2-M58]
+
+  - id: L2-M60
+    title: "Loop 2 Capstone: TicketPulse v2 Complete"
+    tier: "🟢 Core"
+    duration: "90 min"
+    source_chapters: [1, 2, 3, 4, 7, 13, 18, 24, 25]
+    ticketpulse: "TicketPulse v2 is a microservices platform with Kafka, Kubernetes, monitoring, tracing, circuit breakers, and a full CI/CD pipeline."
+    summary: "Conduct a full system review of TicketPulse v2: architecture diagram, risk assessment, load test, and postmortem for what breaks."
+    exercises:
+      - type: "📐 Design"
+        description: "Draw the complete TicketPulse v2 architecture: all services, databases, Kafka topics, API gateway, monitoring stack. Use C4 model notation (context, container, component)."
+      - type: "🐛 Debug"
+        description: "Run a full load test simulating a ticket rush: 1000 concurrent users over 5 minutes. Monitor all dashboards. Identify what breaks first."
+      - type: "📊 Observe"
+        description: "After the load test, collect metrics: peak throughput, p99 latency, error rate, resource utilization. Write the postmortem for what broke and the plan for Loop 3 improvements."
+    runs_locally: true
+    prereqs: [L2-M34, L2-M45, L2-M46, L2-M49]
+
+  # =============================================================================
+  # LOOP 3: MASTERY — DESIGN FOR THE REAL WORLD (Modules 61-90)
+  # =============================================================================
+  # Theme: "Architect, lead, and operate at scale"
+  # TicketPulse state: Going global, going real-time, going intelligent
+  # Scaffolding: Light (you drive, we advise)
+  # =============================================================================
+
+  # ---------------------------------------------------------------------------
+  # Section 3A: Global Scale Architecture (Modules 61-66)
+  # ---------------------------------------------------------------------------
+
+  - id: L3-M61
+    title: "Multi-Region Design"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [1, 13]
+    ticketpulse: "You've designed TicketPulse for global deployment with a multi-region strategy, data replication plan, and consistency trade-off decisions."
+    summary: "Design TicketPulse for global deployment with multi-region architecture, data replication, and consistency trade-offs."
+    exercises:
+      - type: "📐 Design"
+        description: "Design the multi-region architecture for TicketPulse: which regions, how data replicates between them, which data is regional vs global, and how to handle cross-region consistency."
+      - type: "📐 Design"
+        description: "Define latency requirements per operation: event browsing (< 100ms), ticket purchase (< 500ms), search (< 200ms). Map these to data placement decisions."
+      - type: "🤔 Reflect"
+        description: "A user in Tokyo buys a ticket for an event in New York. Walk through the request path: which region handles the purchase? How does the other region learn about it? What if both regions sell the last ticket simultaneously?"
+    runs_locally: true
+    prereqs: [L2-M60]
+
+  - id: L3-M62
+    title: "Cloud Provider Deep Dive"
+    tier: "🟢 Core"
+    duration: "90 min"
+    source_chapters: [19, 31]
+    ticketpulse: "TicketPulse services are deployed to a real cloud provider with managed databases, container orchestration, and CDN."
+    summary: "Deploy TicketPulse to AWS or GCP using free-tier resources, comparing managed services to self-hosted alternatives."
+    exercises:
+      - type: "🚀 Deploy"
+        description: "Deploy one TicketPulse service to a cloud provider: use a managed container service (ECS/Cloud Run), managed database (RDS/Cloud SQL), and managed Redis (ElastiCache/Memorystore)."
+      - type: "🔍 Explore"
+        description: "Compare the cloud-managed services to your local docker-compose setup. What do you gain (auto-failover, backups, scaling)? What do you lose (cost, control, complexity)?"
+      - type: "💡 Insight"
+        description: "Price out running TicketPulse in the cloud at three scales: 1K, 100K, and 10M monthly users. Identify the biggest cost drivers at each scale."
+    runs_locally: false
+    online_playground: "AWS Free Tier / GCP Free Tier"
+    prereqs: [L2-M43]
+
+  - id: L3-M63
+    title: "Database at Scale"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [1, 24]
+    ticketpulse: "You've designed a sharding strategy for TicketPulse's data and configured read replicas for scaling read-heavy endpoints."
+    summary: "Design a sharding strategy and read replica configuration for TicketPulse to handle 100x the current data volume."
+    exercises:
+      - type: "📐 Design"
+        description: "Choose a shard key for TicketPulse's ticket data. Evaluate options: shard by venue (geographic locality), by event (hot partitions for popular events), by user (even distribution). Document trade-offs."
+      - type: "🛠️ Build"
+        description: "Configure Postgres read replicas. Route TicketPulse's read endpoints (event listings, search) to replicas and write endpoints (purchases) to the primary."
+      - type: "🐛 Debug"
+        description: "Simulate a hot shard: one event has 100x the traffic. The shard serving it is overloaded while others are idle. How would you rebalance? Design the solution."
+    runs_locally: true
+    prereqs: [L2-M37]
+
+  - id: L3-M64
+    title: "CDN & Edge Computing"
+    tier: "🟡 Deep Dive"
+    duration: "60 min"
+    source_chapters: [10, 21]
+    ticketpulse: "TicketPulse's static assets are served from a CDN and auth checks happen at the edge, reducing latency globally."
+    summary: "Serve TicketPulse static assets from a CDN and move lightweight logic to the edge for reduced latency."
+    exercises:
+      - type: "🚀 Deploy"
+        description: "Configure a CDN (CloudFront, Cloudflare, or a local simulation) to serve TicketPulse's static assets (images, CSS, JS). Set proper cache headers."
+      - type: "🛠️ Build"
+        description: "Write an edge function that validates JWT tokens before the request reaches the origin server. Reject invalid tokens at the edge with zero origin load."
+      - type: "📊 Observe"
+        description: "Measure latency from different simulated locations: with CDN vs without CDN. Calculate the bandwidth savings from edge caching."
+    runs_locally: true
+    prereqs: [L2-M36]
+
+  - id: L3-M65
+    title: "Consistent Hashing & Distributed Cache"
+    tier: "🔴 Expert"
+    duration: "75 min"
+    source_chapters: [22]
+    ticketpulse: "TicketPulse has a distributed cache layer using consistent hashing, so cache nodes can be added/removed with minimal key redistribution."
+    summary: "Build a distributed cache layer for TicketPulse using consistent hashing to minimize cache invalidation during node changes."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Implement a consistent hashing ring in code. Map TicketPulse cache keys to nodes. Add virtual nodes for better distribution."
+      - type: "🐛 Debug"
+        description: "Remove a cache node from the ring. Verify that only 1/N of keys are redistributed (not all keys). Compare to naive modulo hashing where all keys move."
+      - type: "📐 Design"
+        description: "Design the complete distributed caching strategy for TicketPulse: what to cache, TTLs, invalidation strategy, and how to handle cache stampede during a ticket rush."
+    runs_locally: true
+    prereqs: [L1-M10]
+
+  - id: L3-M66
+    title: "The Payment System"
+    tier: "🟢 Core"
+    duration: "90 min"
+    source_chapters: [23]
+    ticketpulse: "TicketPulse's payment system guarantees exactly-once processing with idempotency keys, a double-entry ledger, and reconciliation."
+    summary: "Design TicketPulse's payment system for exactly-once processing with idempotency keys, a ledger, and reconciliation."
+    exercises:
+      - type: "📐 Design"
+        description: "Design the payment system: idempotency keys for every transaction, a double-entry ledger (debit user, credit merchant), and a reconciliation process to catch discrepancies."
+      - type: "🛠️ Build"
+        description: "Implement idempotency keys: if a payment request is retried with the same key, return the original result without charging twice. Store the key and result in the database."
+      - type: "🐛 Debug"
+        description: "Simulate a network timeout during payment: the charge succeeds but the response is lost. The client retries. Verify the idempotency key prevents a double charge."
+    runs_locally: true
+    prereqs: [L2-M34]
+
+  # ---------------------------------------------------------------------------
+  # Section 3B: Real-Time & Advanced Features (Modules 67-72)
+  # ---------------------------------------------------------------------------
+
+  - id: L3-M67
+    title: "WebSockets & Real-Time"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [21]
+    ticketpulse: "TicketPulse shows live seat availability — when someone buys a ticket, all viewers see the seat update in real time."
+    summary: "Add live seat availability to TicketPulse using WebSockets and Redis Pub/Sub for real-time broadcasting across servers."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Implement a WebSocket server for TicketPulse. When a client opens the event page, establish a WebSocket connection and subscribe to updates for that event."
+      - type: "🛠️ Build"
+        description: "When a ticket is purchased, publish the update to Redis Pub/Sub. All WebSocket servers receive it and broadcast to connected clients. Seats update in real time."
+      - type: "🐛 Debug"
+        description: "Open the event page in 3 browser tabs. Buy a ticket in one tab. Verify the other tabs update within 1 second. What happens if the WebSocket disconnects? Implement auto-reconnect."
+    runs_locally: true
+    prereqs: [L1-M10, L2-M31]
+
+  - id: L3-M68
+    title: "The Ticket Rush Problem"
+    tier: "🟢 Core"
+    duration: "90 min"
+    source_chapters: [1, 6]
+    ticketpulse: "TicketPulse can handle 10K concurrent users competing for 500 tickets without overselling or crashing."
+    summary: "Design and implement a solution for 10K concurrent users buying 500 tickets — the classic ticket rush problem."
+    exercises:
+      - type: "📐 Design"
+        description: "Design the ticket rush architecture: virtual queue, optimistic locking or distributed locks, reservation with TTL, and purchase confirmation. Draw the sequence diagram."
+      - type: "🛠️ Build"
+        description: "Implement the solution: users enter a queue, get a turn token, reserve a ticket (with TTL), complete payment, confirm purchase. Use Redis for distributed locking."
+      - type: "🐛 Debug"
+        description: "Load test with 10K concurrent users and 500 tickets. Verify: exactly 500 tickets sold (no overselling), remaining users get a sold-out message, no deadlocks or stuck reservations."
+    runs_locally: true
+    prereqs: [L2-M50, L3-M67]
+
+  - id: L3-M69
+    title: "Notification System"
+    tier: "🟡 Deep Dive"
+    duration: "75 min"
+    source_chapters: [23]
+    ticketpulse: "TicketPulse has a multi-channel notification system with email, SMS, and push, featuring priority queues and deduplication."
+    summary: "Design and build TicketPulse's notification system with multiple channels, priority queues, deduplication, and delivery tracking."
+    exercises:
+      - type: "📐 Design"
+        description: "Design the notification system: email, SMS, and push channels. Priority queue (purchase confirmations > marketing > analytics). Deduplication by notification ID. Delivery status tracking."
+      - type: "🛠️ Build"
+        description: "Implement the notification service: consume events from Kafka, route to the correct channel, use priority queues (Redis sorted sets), deduplicate by hash, track delivery status."
+      - type: "📊 Observe"
+        description: "Send 1000 notifications. Monitor delivery rates per channel, average delivery latency, and failure rates. Build a dashboard for notification health."
+    runs_locally: true
+    prereqs: [L2-M33, L1-M22]
+
+  - id: L3-M70
+    title: "Recommendation Engine"
+    tier: "🟡 Deep Dive"
+    duration: "75 min"
+    source_chapters: [10, 22]
+    ticketpulse: "TicketPulse shows personalized 'events you might like' recommendations based on purchase history and event similarity."
+    summary: "Add personalized event recommendations to TicketPulse using collaborative filtering with embeddings."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Create event embeddings based on genre, artist, venue, and description. Use a simple embedding model or pre-computed vectors. Store them in a vector store (pgvector or similar)."
+      - type: "🛠️ Build"
+        description: "Implement collaborative filtering: 'users who bought tickets to X also bought tickets to Y.' Combine with content-based similarity for hybrid recommendations."
+      - type: "📊 Observe"
+        description: "Generate recommendations for 10 test users. Manually evaluate: are the recommendations sensible? Calculate precision@5 against a held-out test set of actual purchases."
+    runs_locally: true
+    prereqs: [L2-M40]
+
+  - id: L3-M71
+    title: "AI-Powered Features"
+    tier: "🟡 Deep Dive"
+    duration: "75 min"
+    source_chapters: [10, 14]
+    ticketpulse: "TicketPulse has AI-powered natural language search and an event discovery chatbot using RAG."
+    summary: "Add AI features to TicketPulse: natural language search using RAG and an AI chatbot for event discovery."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Implement RAG for event search: embed event descriptions, store in a vector DB, accept natural language queries ('find me jazz concerts near me this weekend'), retrieve relevant events, generate a natural language response."
+      - type: "🛠️ Build"
+        description: "Create a simple chatbot that can answer questions about events: 'What time does the jazz concert start?', 'Are there any seats left for Saturday's show?', 'What's the cheapest ticket available?'"
+      - type: "🤔 Reflect"
+        description: "Evaluate the AI features: when does the LLM give wrong answers? What guardrails are needed? How do you handle hallucinated events that don't exist? Design the safety layer."
+    runs_locally: true
+    prereqs: [L3-M70]
+
+  - id: L3-M72
+    title: "GraphQL API"
+    tier: "🟡 Deep Dive"
+    duration: "75 min"
+    source_chapters: [25]
+    ticketpulse: "TicketPulse has a GraphQL API layer optimized for the mobile app, with DataLoader for batching and subscriptions for real-time."
+    summary: "Add a GraphQL API layer to TicketPulse for the mobile app with schema design, DataLoader, and subscriptions."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Design and implement the GraphQL schema for TicketPulse: Event, Venue, Ticket, Order types with relationships. Implement resolvers that call the underlying REST services."
+      - type: "🛠️ Build"
+        description: "Add DataLoader to batch and cache database queries within a single request. Verify the N+1 problem is solved at the GraphQL layer."
+      - type: "🛠️ Build"
+        description: "Implement a GraphQL subscription for live ticket availability. When a ticket is purchased, subscribed clients receive the update in real time."
+    runs_locally: true
+    prereqs: [L2-M36, L3-M67]
+
+  # ---------------------------------------------------------------------------
+  # Section 3C: Operations & Leadership (Modules 73-80)
+  # ---------------------------------------------------------------------------
+
+  - id: L3-M73
+    title: "Incident Response Simulation"
+    tier: "🟢 Core"
+    duration: "90 min"
+    source_chapters: [4, 26]
+    ticketpulse: "You've run a full incident response drill for TicketPulse: detection, triage, mitigation, resolution, and postmortem."
+    summary: "Run a full TicketPulse incident response drill simulating a cascading failure with war room exercises and postmortem writing."
+    exercises:
+      - type: "🐛 Debug"
+        description: "Scenario: TicketPulse is experiencing cascading failures during a major event on-sale. The database is overloaded, causing timeout cascading to all services. Triage, mitigate, and resolve."
+      - type: "🛠️ Build"
+        description: "Run the war room exercise: assign roles (incident commander, communicator, investigator). Follow the incident response checklist. Communicate status updates every 5 minutes."
+      - type: "🛠️ Build"
+        description: "Write the full postmortem: incident summary, timeline, root cause analysis (5 Whys), impact assessment, action items with owners and deadlines, lessons learned."
+    runs_locally: true
+    prereqs: [L2-M58]
+
+  - id: L3-M74
+    title: "War Stories Analysis"
+    tier: "🟡 Deep Dive"
+    duration: "60 min"
+    source_chapters: [26]
+    ticketpulse: "You've studied 3 real-world outages and identified which failure modes TicketPulse is vulnerable to."
+    summary: "Study real-world outage postmortems and map their failure patterns to TicketPulse's potential vulnerabilities."
+    exercises:
+      - type: "💡 Insight"
+        description: "Read 3 public postmortems (e.g., Cloudflare, GitHub, Stripe). For each, summarize: what failed, why it wasn't caught, and how it was resolved."
+      - type: "💡 Insight"
+        description: "For each postmortem, evaluate: could this happen to TicketPulse? What specific component is vulnerable? Rate the likelihood (high/medium/low) and impact."
+      - type: "📐 Design"
+        description: "Based on your analysis, propose 3 preventive measures for TicketPulse that would address the most likely and highest-impact failure modes."
+    runs_locally: true
+    prereqs: [L3-M73]
+
+  - id: L3-M75
+    title: "Cost Optimization"
+    tier: "🟡 Deep Dive"
+    duration: "60 min"
+    source_chapters: [19, 31]
+    ticketpulse: "You've analyzed TicketPulse's cloud costs, identified waste, and proposed optimizations that would reduce the bill by 30%+."
+    summary: "Analyze TicketPulse's cloud costs, identify waste, right-size resources, and estimate savings from reserved capacity."
+    exercises:
+      - type: "📊 Observe"
+        description: "Review TicketPulse's cloud resource usage: CPU utilization per service, database IOPS, network transfer, storage. Identify resources that are over-provisioned."
+      - type: "💡 Insight"
+        description: "Calculate cost savings from: right-sizing instances (e.g., 4 vCPU to 2 vCPU), reserved instances for stable workloads, spot instances for batch jobs, and auto-scaling for variable traffic."
+      - type: "📐 Design"
+        description: "Create a cost optimization plan for TicketPulse with specific recommendations, estimated savings, and implementation effort. Prioritize by ROI."
+    runs_locally: true
+    prereqs: [L3-M62]
+
+  - id: L3-M76
+    title: "System Design Interview Practice"
+    tier: "🟢 Core"
+    duration: "90 min"
+    source_chapters: [23]
+    ticketpulse: "You can design systems from scratch using a structured framework — practiced on 3 classic problems."
+    summary: "Practice designing 3 systems from scratch using a structured framework: URL shortener, chat system, and notification system."
+    exercises:
+      - type: "📐 Design"
+        description: "Design a URL shortener: requirements gathering, capacity estimation, API design, database schema, encoding algorithm, caching strategy, and analytics."
+      - type: "📐 Design"
+        description: "Design a real-time chat system: WebSocket architecture, message storage, read receipts, online status, message search, and group chats."
+      - type: "📐 Design"
+        description: "Design a notification system: multi-channel delivery, priority queues, rate limiting, user preferences, template rendering, and delivery tracking. Compare to what you built for TicketPulse."
+    runs_locally: true
+    prereqs: [L2-M60]
+
+  - id: L3-M77
+    title: "Architecture Decision Records"
+    tier: "🟡 Deep Dive"
+    duration: "60 min"
+    source_chapters: [9, 27]
+    ticketpulse: "TicketPulse has 5 ADRs documenting key architectural decisions and their rationale, creating a decision history."
+    summary: "Write Architecture Decision Records for TicketPulse's 5 most important technical decisions."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Write ADR-001: Why we chose Kafka over SQS/RabbitMQ for event streaming. Include context, decision, consequences, and status."
+      - type: "🛠️ Build"
+        description: "Write 4 more ADRs: Postgres over DynamoDB, microservices over modular monolith, JWT over session-based auth, and Kubernetes over ECS. Follow the same template."
+      - type: "🤔 Reflect"
+        description: "Review your ADRs: if the team size doubled or the traffic 10x'd, would you make the same decisions? Annotate each ADR with 'would revisit at scale X' notes."
+    runs_locally: true
+    prereqs: [L2-M60]
+
+  - id: L3-M78
+    title: "DORA Metrics & Team Performance"
+    tier: "🟡 Deep Dive"
+    duration: "60 min"
+    source_chapters: [9]
+    ticketpulse: "You can measure TicketPulse's engineering performance using DORA metrics and identify specific improvement areas."
+    summary: "Measure TicketPulse's engineering performance using DORA metrics and create a plan to improve them."
+    exercises:
+      - type: "📊 Observe"
+        description: "Calculate TicketPulse's DORA metrics from git and deployment history: deployment frequency, lead time for changes, change failure rate, and time to restore service."
+      - type: "💡 Insight"
+        description: "Compare your metrics to the DORA benchmark categories (Elite, High, Medium, Low). Where does TicketPulse fall for each metric? What's the biggest gap?"
+      - type: "📐 Design"
+        description: "Create an improvement plan: for each metric below 'High' performance, identify the bottleneck and propose a specific change (process, tooling, or architecture) to improve it."
+    runs_locally: true
+    prereqs: [L2-M15]
+
+  - id: L3-M79
+    title: "Data Privacy & GDPR"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [30]
+    ticketpulse: "TicketPulse supports GDPR compliance: data export, right to deletion across all services, and consent management."
+    summary: "Implement GDPR data subject rights for TicketPulse: data export, right to deletion across all microservices, and consent tracking."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Implement the DSAR (Data Subject Access Request) export endpoint: collect all data for a user across all services (events attended, orders, payment history) and return as a downloadable JSON/CSV."
+      - type: "🛠️ Build"
+        description: "Implement right to deletion: when a user requests deletion, cascade the request to all services (users, tickets, payments, analytics). Handle references that must be anonymized rather than deleted (financial records)."
+      - type: "🐛 Debug"
+        description: "A deleted user still appears in analytics reports and cached data. Find all places user data persists (database, cache, Kafka topics, search index, logs) and ensure deletion is complete."
+    runs_locally: true
+    prereqs: [L2-M35]
+
+  - id: L3-M80
+    title: "Building Your Platform"
+    tier: "🔴 Expert"
+    duration: "60 min"
+    source_chapters: [7]
+    ticketpulse: "You've evaluated TicketPulse's developer experience and designed an internal developer platform with golden paths and self-service."
+    summary: "Evaluate TicketPulse's developer experience and design an internal developer platform with golden paths and self-service capabilities."
+    exercises:
+      - type: "📐 Design"
+        description: "Audit the TicketPulse developer experience: how long does it take a new developer to make their first commit? What are the pain points? Survey (or imagine surveying) the team."
+      - type: "📐 Design"
+        description: "Design golden paths for common tasks: 'create a new service', 'add a new API endpoint', 'set up monitoring for my service.' Create templates and scaffolding tools."
+      - type: "🛠️ Build"
+        description: "Implement one golden path: a script or template that scaffolds a new TicketPulse microservice with Dockerfile, CI pipeline, monitoring, logging, and health check — ready to deploy in under 5 minutes."
+    runs_locally: true
+    prereqs: [L2-M43, L2-M45]
+
+  # ---------------------------------------------------------------------------
+  # Section 3D: The Cutting Edge (Modules 81-87)
+  # ---------------------------------------------------------------------------
+
+  - id: L3-M81
+    title: "Durable Execution"
+    tier: "🟡 Deep Dive"
+    duration: "75 min"
+    source_chapters: [10]
+    ticketpulse: "TicketPulse's ticket purchase flow is now a durable workflow that survives server crashes and automatically retries."
+    summary: "Convert TicketPulse's ticket purchase saga into a durable workflow using Temporal or an equivalent framework."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Implement the ticket purchase as a Temporal workflow: reserve ticket activity, process payment activity, confirm booking activity. Each activity is independently retryable."
+      - type: "🐛 Debug"
+        description: "Kill the worker mid-workflow (after payment but before confirmation). Restart the worker. Verify the workflow resumes from exactly where it left off — no double charges."
+      - type: "🤔 Reflect"
+        description: "Compare the durable workflow to the saga pattern from L2-M34. What's easier? What's harder? When would you choose each approach?"
+    runs_locally: true
+    prereqs: [L2-M34]
+
+  - id: L3-M82
+    title: "Event Sourcing at Scale"
+    tier: "🔴 Expert"
+    duration: "75 min"
+    source_chapters: [2, 3]
+    ticketpulse: "TicketPulse's order system is fully event-sourced with an event store, projections, and snapshots for efficient replay."
+    summary: "Event-source TicketPulse's order system with an event store, projections, and snapshots for efficient state reconstruction."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Implement an event store for orders: every state change (OrderCreated, PaymentReceived, TicketsReserved, OrderConfirmed, OrderCancelled) is stored as an immutable event."
+      - type: "🛠️ Build"
+        description: "Build projections: a 'current orders' read model built by replaying events, and a 'revenue by day' analytics projection. Implement snapshots to avoid replaying the entire event history."
+      - type: "🐛 Debug"
+        description: "A projection is out of sync with the event store. Rebuild it by replaying all events from scratch. Verify it matches the snapshotted state. Measure rebuild time for 100K events."
+    runs_locally: true
+    prereqs: [L2-M51]
+
+  - id: L3-M83
+    title: "Advanced Kubernetes"
+    tier: "🔴 Expert"
+    duration: "75 min"
+    source_chapters: [7]
+    ticketpulse: "TicketPulse's Kubernetes deployment is production-grade: RBAC, network policies, pod security, resource limits, and HPA."
+    summary: "Harden TicketPulse's Kubernetes deployment with RBAC, network policies, pod security, resource limits, and autoscaling."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Configure RBAC: create service accounts for each TicketPulse service with minimal permissions. Verify the events service cannot access the payments service's secrets."
+      - type: "🛠️ Build"
+        description: "Add network policies: the payments service should only accept traffic from the API gateway and the ticket service. Block all other ingress. Test by attempting unauthorized access."
+      - type: "🛠️ Build"
+        description: "Configure Horizontal Pod Autoscaler (HPA) for the events service: scale from 2 to 10 pods based on CPU utilization. Run a load test and watch pods scale up and back down."
+    runs_locally: true
+    prereqs: [L2-M43]
+
+  - id: L3-M84
+    title: "Nix & Reproducible Builds"
+    tier: "🔴 Expert"
+    duration: "60 min"
+    source_chapters: [20]
+    ticketpulse: "TicketPulse's build is perfectly reproducible with Nix — the same inputs always produce the same outputs, on any machine."
+    summary: "Make TicketPulse's build perfectly reproducible using Nix flakes and direnv for identical environments across machines."
+    exercises:
+      - type: "🔍 Explore"
+        description: "Install Nix and create a flake.nix for TicketPulse that declares all dependencies (Node.js, Postgres client, Redis CLI, Docker). Enter the Nix shell and verify everything is available."
+      - type: "🛠️ Build"
+        description: "Set up direnv with use flake so that entering the TicketPulse directory automatically activates the Nix environment. No manual shell activation needed."
+      - type: "🤔 Reflect"
+        description: "Build TicketPulse in the Nix environment on your machine. Have a colleague (or a CI server) build it in the same Nix environment. Compare the outputs — they should be identical."
+    runs_locally: true
+    prereqs: [L1-M27]
+
+  - id: L3-M85
+    title: "Open Source Your Work"
+    tier: "🟡 Deep Dive"
+    duration: "60 min"
+    source_chapters: [28]
+    ticketpulse: "A TicketPulse component is ready for open source: proper README, contributing guide, license, CI, and issue templates."
+    summary: "Prepare a TicketPulse component for open source release with proper documentation, CI, licensing, and community guidelines."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Choose a TicketPulse component to open source (e.g., the rate limiter, the circuit breaker, or the webhook delivery library). Extract it into a standalone repository."
+      - type: "🛠️ Build"
+        description: "Write the README (problem, installation, usage, API reference, examples), CONTRIBUTING.md (setup, PR process, code style), and choose a LICENSE (MIT, Apache 2.0, etc.)."
+      - type: "🛠️ Build"
+        description: "Set up GitHub CI (lint, test, publish), issue templates (bug report, feature request), and PR template. Add a code of conduct. Make the repo ready for public contributions."
+    runs_locally: true
+    prereqs: [L1-M15]
+
+  - id: L3-M86
+    title: "AI-Powered Engineering Workflow"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [14, 17]
+    ticketpulse: "You've implemented a feature in TicketPulse using AI pair programming and can critically evaluate when AI accelerates vs slows you down."
+    summary: "Use Claude Code or GitHub Copilot to implement a TicketPulse feature and critically evaluate the AI-assisted engineering workflow."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Use an AI coding assistant to implement a new TicketPulse feature (e.g., waitlist for sold-out events). Let the AI generate code, then review and refine."
+      - type: "🤔 Reflect"
+        description: "Document the experience: where did the AI accelerate you? Where did it slow you down or produce wrong code? What prompting strategies worked best?"
+      - type: "💡 Insight"
+        description: "Compare the AI-generated code to what you would have written. Evaluate: correctness, edge case handling, test coverage, readability, and performance. Score each dimension."
+    runs_locally: true
+    prereqs: [L2-M60]
+
+  - id: L3-M87
+    title: "Mobile Backend Patterns"
+    tier: "🟡 Deep Dive"
+    duration: "75 min"
+    source_chapters: [10]
+    ticketpulse: "TicketPulse's backend supports mobile patterns: push notifications, offline-first sync, and efficient payload delivery."
+    summary: "Add mobile backend patterns to TicketPulse: push notifications, offline-first data sync, and optimized API responses."
+    exercises:
+      - type: "📐 Design"
+        description: "Design the mobile sync strategy: when the app comes online, how does it sync tickets, orders, and notifications? Handle conflicts (e.g., ticket bought offline that's now sold out)."
+      - type: "🛠️ Build"
+        description: "Implement push notification delivery for TicketPulse: integrate with FCM/APNs (or a mock), store device tokens, send purchase confirmations and event reminders."
+      - type: "🛠️ Build"
+        description: "Optimize API responses for mobile: implement sparse fieldsets (client chooses which fields to return), implement delta sync (only return changes since last sync timestamp)."
+    runs_locally: true
+    prereqs: [L3-M69, L3-M72]
+
+  # ---------------------------------------------------------------------------
+  # Section 3E: The Final Sprint (Modules 88-90)
+  # ---------------------------------------------------------------------------
+
+  - id: L3-M88
+    title: "The TicketPulse Architecture Review"
+    tier: "🟢 Core"
+    duration: "90 min"
+    source_chapters: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]
+    ticketpulse: "The full TicketPulse architecture is documented with C4 diagrams, and you can defend every technical decision to a review board."
+    summary: "Present the complete TicketPulse system architecture to a simulated review board with C4 diagrams, justifying every decision and defending trade-offs."
+    exercises:
+      - type: "📐 Design"
+        description: "Create the complete C4 diagram set for TicketPulse: Level 1 (System Context), Level 2 (Container), Level 3 (Component for the ticket purchase flow). Use proper notation."
+      - type: "📐 Design"
+        description: "Prepare a 15-minute architecture presentation: system overview, key design decisions (with ADRs), scalability plan, known weaknesses, and future roadmap."
+      - type: "🤔 Reflect"
+        description: "Anticipate review board questions: Why microservices at your scale? What's your disaster recovery plan? How do you handle a 100x traffic spike? What would you change if starting over? Write answers."
+    runs_locally: true
+    prereqs: [L3-M66, L3-M68, L3-M73]
+
+  - id: L3-M89
+    title: "Your Career Engineering Plan"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [29]
+    ticketpulse: "N/A — this module is about your career, not TicketPulse. But the skills you built here are your evidence."
+    summary: "Build your promotion packet, identify your staff+ archetype, and create a concrete career development plan for the next 12 months."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Write your brag document: list every significant thing you built or learned during this course. Categorize by impact: technical skill, architecture, leadership, operations."
+      - type: "🤔 Reflect"
+        description: "Identify your staff+ archetype: Tech Lead, Architect, Solver, or Right Hand. Which fits your strengths and interests? What gaps need filling?"
+      - type: "🛠️ Build"
+        description: "Create your 12-month career plan: 3 skills to deepen, 3 skills to acquire, 2 projects to lead, and 1 public contribution (talk, blog post, open source). Set quarterly milestones."
+    runs_locally: false
+    online_playground: "N/A — document-only module"
+    prereqs: []
+
+  - id: L3-M90
+    title: "Final Capstone: The 100x Engineer Retrospective"
+    tier: "🟢 Core"
+    duration: "90 min"
+    source_chapters: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]
+    ticketpulse: "TicketPulse is a globally-scalable, real-time, AI-powered concert ticketing platform. You built it from a single-file monolith."
+    summary: "Review everything you built across 90 modules, map your knowledge to the guide's glossary, identify your deepest areas and biggest gaps, and build a personal learning roadmap."
+    exercises:
+      - type: "🤔 Reflect"
+        description: "Map your knowledge to the course glossary (Appendix A). For each term, rate yourself: can explain to a junior (3), can apply in practice (2), have heard of it (1), still fuzzy (0)."
+      - type: "💡 Insight"
+        description: "Identify your 3 deepest areas (where you could teach others) and 3 biggest remaining gaps (where you need more practice). Be honest — this is for you, not for a grade."
+      - type: "🛠️ Build"
+        description: "Create your personal learning roadmap for the next 12 months: for each gap, identify a specific project, resource, or practice that would close it. Set deadlines and accountability mechanisms."
+    runs_locally: false
+    online_playground: "N/A — reflection and planning module"
+    prereqs: [L3-M88, L3-M89]

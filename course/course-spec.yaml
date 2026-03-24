@@ -1,0 +1,136 @@
+# Course Specification: The 100x Engineer Course
+# Generated: 2026-03-24
+
+title: "The 100x Engineer Course"
+subtitle: "From Solid Engineer to Technical Force Multiplier"
+slug: 100x-engineer
+
+description: |
+  An epic, interactive reading-and-doing course that walks engineers through every
+  major paradigm, tool, and skill in modern backend engineering. You won't master
+  everything — you'll touch everything, build mental models, and leave with the
+  "oh yeah, I've worked with that before" confidence that compounds into real expertise.
+
+  The running example throughout the course is TicketPulse — a concert ticketing
+  system that grows from a simple CRUD app into a globally distributed, real-time,
+  event-driven platform. Each module adds a new dimension to TicketPulse, giving
+  you hands-on exposure to every concept in context.
+
+audience:
+  primary: "Mid-to-senior engineers (2-8+ years) aiming for senior/staff"
+  secondary: "Junior engineers who want to accelerate beyond their years"
+  assumptions:
+    - "Can write code in at least one backend language"
+    - "Has deployed something to production at least once"
+    - "Comfortable with basic Git, CLI, and HTTP"
+  non_assumptions:
+    - "Does NOT assume deep distributed systems knowledge"
+    - "Does NOT assume specific language expertise"
+    - "Does NOT assume cloud platform experience"
+    - "Does NOT assume familiarity with any specific tool"
+
+learning_philosophy: |
+  - Interactive reading guide, not a bootcamp — teach with active learning
+  - Goal: "I've touched that before" familiarity, not 5 years of depth
+  - Every concept is anchored in the TicketPulse running example
+  - Skip-ahead friendly: every module has a prereq check at the top
+  - No gatekeeping: hints are generous, solutions are provided, struggle is optional
+  - Tiered depth: 🟢 Core (everyone), 🟡 Deep Dive (ambitious), 🔴 Expert (staff+ track)
+
+running_example:
+  name: "TicketPulse"
+  description: |
+    A concert ticketing platform that evolves across the course:
+    - Loop 1: Simple CRUD app (monolith, single DB, basic API)
+    - Loop 2: Scaled system (caching, queues, microservices, monitoring)
+    - Loop 3: Production-grade platform (multi-region, real-time, AI-powered recommendations)
+  why: |
+    Ticketing hits every backend concern naturally:
+    - High concurrency (ticket rush, 10K users in 60 seconds)
+    - Financial transactions (payments, refunds, exactly-once)
+    - Real-time features (seat availability, queue position, notifications)
+    - Search (find concerts by artist, venue, date, genre)
+    - Recommendations (events you might like)
+    - Data pipelines (analytics, reporting, fraud detection)
+    - Multi-tenancy (venues, promoters, artists as tenants)
+    - Mobile + web clients (different API needs)
+
+spiral_progression:
+  loops: 3
+  description: |
+    Each spiral loop revisits the same domains at increasing depth:
+    - Loop 1 (Foundation): Build understanding, touch every concept, heavy scaffolding
+    - Loop 2 (Practice): Apply concepts to real problems, medium scaffolding
+    - Loop 3 (Mastery): Design and debug at scale, minimal scaffolding
+
+  loop_1:
+    name: "Foundation — Build the Mental Model"
+    theme: "Understand what exists and why"
+    scaffolding: heavy
+    ticketpulse_state: "Simple monolith, single Postgres DB, basic REST API"
+
+  loop_2:
+    name: "Practice — Scale and Break Things"
+    theme: "Apply, debug, and make trade-off decisions"
+    scaffolding: medium
+    ticketpulse_state: "Microservices, caching, queues, monitoring, CI/CD"
+
+  loop_3:
+    name: "Mastery — Design for the Real World"
+    theme: "Architect, lead, and operate at scale"
+    scaffolding: light
+    ticketpulse_state: "Multi-region, real-time, AI-powered, globally distributed"
+
+exercise_format:
+  primary: "Interactive reading with inline reflection prompts and micro-exercises"
+  secondary: "Hands-on code exercises using TicketPulse as the base"
+  tertiary: "System design exercises (whiteboard-style architecture decisions)"
+  capstones: "End-of-loop capstone that integrates everything from that spiral"
+
+  live_principle: |
+    Engineers want to SEE things running. Every module should have at least one of:
+    - Something running locally (docker compose up, curl a real endpoint, watch logs scroll)
+    - Something deployed online (a live demo, a real service to poke at)
+    - A terminal session where they observe real behavior (not just read about it)
+    - A tool they install and use right now (not just learn about)
+
+    The TicketPulse repo should be runnable at each spiral loop checkpoint:
+    - Loop 1 checkpoint: `docker compose up` → working monolith at localhost:3000
+    - Loop 2 checkpoint: multi-service docker compose → microservices + queues + monitoring dashboards
+    - Loop 3 checkpoint: full platform with observability, feature flags, and load testing
+
+    Where possible, provide online playgrounds:
+    - SQL exercises: use db-fiddle.com or pgplayground.com links
+    - Architecture diagrams: Mermaid live editor links
+    - API testing: provide curl commands that hit real (or mock) endpoints
+    - Monitoring: include Grafana dashboard JSON exports they can import locally
+
+  types:
+    - "🤔 Reflection: 'Before reading on, how would YOU solve this?' prompts"
+    - "🔍 Explore: 'Open a terminal and run this command, observe what happens'"
+    - "🛠️ Build: 'Add this feature to TicketPulse' (starter code provided)"
+    - "🐛 Debug: 'This system is broken — find and fix the issue'"
+    - "📐 Design: 'Design the architecture for X, then compare with our solution'"
+    - "💡 Insight: 'Read this real-world postmortem/blog post, answer these questions'"
+    - "🚀 Deploy: 'Get this running locally / deploy to a free tier and see it live'"
+    - "📊 Observe: 'Open this dashboard/tool, generate traffic, watch the metrics change'"
+
+source_material:
+  primary:
+    - path: "part-1-foundations/"
+      description: "System design, data, architecture, reliability, security, networking, algorithms, DB internals"
+    - path: "part-2-applied-engineering/"
+      description: "Concurrency, DevOps, testing, leadership, emerging paradigms, system design cases, API design, career, privacy"
+    - path: "part-3-tooling-practice/"
+      description: "Languages, tooling, AI workflows, codebase org, Claude Code, dependency mgmt, writing, OSS"
+    - path: "part-4-cloud-operations/"
+      description: "Cloud integration, debugging/monitoring, AWS/Firebase, GCP, incident war stories"
+    - path: "appendices/"
+      description: "Essential resources, glossary"
+
+duration:
+  total: "~12 months part-time (2-3 hours/week)"
+  per_module: "45-90 minutes"
+  modules: "~90 modules across 3 loops"
+
+output_location: "/Users/cemergin/nelo/100x-engineer-guide/course/"
