@@ -1,10 +1,8 @@
 # L1-M30: Loop 1 Capstone
 
-> **Loop 1 (Foundation)** | Section 1F: Language Exposure + Capstone | Duration: 90 min | Tier: Core
+> **Loop 1 (Foundation)** | Section 1F: Language Exposure + Capstone | ⏱️ 90 min | 🟢 Core | Prerequisites: All previous modules (L1-M01 through L1-M29)
 >
-> **Prerequisites:** All previous modules (L1-M01 through L1-M29)
->
-> **What you'll build:** A complete architecture review of TicketPulse v1, a load test that finds the first bottleneck, an improvement plan for 10x and 100x scale, and a personal learning assessment for Loop 2.
+> **Source:** Chapters 11, 6 of the 100x Engineer Guide
 
 ---
 

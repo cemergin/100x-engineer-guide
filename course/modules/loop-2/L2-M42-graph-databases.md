@@ -1,6 +1,8 @@
 # L2-M42: Graph Databases
-> ⏱️ 60 min | 🟡 Deep Dive | Prerequisites: L2-M37, L2-M34 (Kafka)
-> Source: Chapter 24 of the 100x Engineer Guide
+
+> **Loop 2 (Practice)** | Section 2B: Performance & Databases | ⏱️ 60 min | 🟡 Deep Dive | Prerequisites: L2-M37, L2-M34 (Kafka)
+>
+> **Source:** Chapter 24 of the 100x Engineer Guide
 
 ## What You'll Learn
 - When graph databases solve problems that relational databases can't handle well

@@ -1,10 +1,8 @@
 # L2-M51a: Composition Over Inheritance & FP vs OOP
 
-> **Loop 2 (Applied)** | Section 2D: Advanced Patterns | Duration: 60 min | Tier: Deep Dive
+> **Loop 2 (Practice)** | Section 2D: Advanced Patterns | ⏱️ 60 min | 🟡 Deep Dive | Prerequisites: L1-M16a (SOLID Principles in Practice)
 >
-> **Prerequisites:** L1-M16a (SOLID Principles in Practice)
->
-> **What you'll build:** You will untangle TicketPulse's deep inheritance hierarchy by replacing it with composable middleware, then rewrite the pricing pipeline as a chain of pure functions. By the end, you will have a clear mental model for when to reach for OOP vs FP.
+> **Source:** Chapters 3, 22, 25, 32, 13 of the 100x Engineer Guide
 
 ---
 

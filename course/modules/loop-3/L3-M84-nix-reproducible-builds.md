@@ -1,7 +1,8 @@
 # L3-M84: Nix & Reproducible Builds
 
-> ⏱️ 45 min | 🟡 Deep Dive | Prerequisites: L2-M42
-> Source: Chapter 20 (Nix & NixOS, Flakes, direnv, CI reproducibility)
+> **Loop 3 (Mastery)** | Section 3D: The Cutting Edge | ⏱️ 45 min | 🟡 Deep Dive | Prerequisites: L2-M42
+>
+> **Source:** Chapter 20 of the 100x Engineer Guide
 
 ## What You'll Learn
 

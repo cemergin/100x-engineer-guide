@@ -1,10 +1,8 @@
 # L2-M49: Circuit Breakers & Resilience
 
-> **Loop 2 (Applied)** | Section 2D: Advanced Patterns | Duration: 60 min | Tier: Core
+> **Loop 2 (Practice)** | Section 2D: Advanced Patterns | ⏱️ 60 min | 🟢 Core | Prerequisites: L2-M39 (Kubernetes Basics), L2-M41 (Distributed Tracing)
 >
-> **Prerequisites:** L2-M39 (Kubernetes Basics), L2-M41 (Distributed Tracing)
->
-> **What you'll build:** You will protect TicketPulse from cascading failures by implementing a circuit breaker around the payment service, adding retry logic with exponential backoff, a fallback queue for degraded operation, and bulkhead isolation.
+> **Source:** Chapters 3, 22, 25, 32, 13 of the 100x Engineer Guide
 
 ---
 

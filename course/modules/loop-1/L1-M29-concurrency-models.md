@@ -1,10 +1,8 @@
 # L1-M29: Concurrency Models
 
-> **Loop 1 (Foundation)** | Section 1F: Language Exposure + Capstone | Duration: 60 min | Tier: Deep Dive
+> **Loop 1 (Foundation)** | Section 1F: Language Exposure + Capstone | ⏱️ 60 min | 🟡 Deep Dive | Prerequisites: L1-M28 (The Language Landscape)
 >
-> **Prerequisites:** L1-M28 (The Language Landscape)
->
-> **What you'll build:** You will push all four language servers to 10,000 concurrent connections, add a simulated 100ms database delay to expose concurrency differences, and compare how goroutines, the event loop, async/await, and tokio handle I/O-bound and CPU-bound workloads.
+> **Source:** Chapters 11, 6 of the 100x Engineer Guide
 
 ---
 

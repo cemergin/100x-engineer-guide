@@ -1,6 +1,8 @@
 # L1-M09: NoSQL: When and Why
-> ⏱️ 60 min | 🟢 Core | Prerequisites: L1-M05, L1-M06
-> Source: Chapter 2 of the 100x Engineer Guide
+
+> **Loop 1 (Foundation)** | Section 1B: Data & Databases | ⏱️ 60 min | 🟢 Core | Prerequisites: L1-M05, L1-M06
+>
+> **Source:** Chapters 2, 24 of the 100x Engineer Guide
 
 ## What You'll Learn
 - Redis fundamentals: data structures, commands, and use cases

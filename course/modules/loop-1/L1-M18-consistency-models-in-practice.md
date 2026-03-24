@@ -1,10 +1,8 @@
 # L1-M18: Consistency Models in Practice
 
-> **Loop 1 (Foundation)** | Section 1D: Architecture Fundamentals | Duration: 60 min | Tier: Core
+> **Loop 1 (Foundation)** | Section 1D: Architecture Fundamentals | ⏱️ 60 min | 🟢 Core | Prerequisites: L1-M17 (How Distributed Systems Fail)
 >
-> **Prerequisites:** L1-M17 (How Distributed Systems Fail)
->
-> **What you'll build:** A Postgres primary + read replica setup, observe replication lag in real time, and implement a read-your-writes pattern in TicketPulse so users always see their own recent purchases.
+> **Source:** Chapters 1, 3 of the 100x Engineer Guide
 
 ---
 

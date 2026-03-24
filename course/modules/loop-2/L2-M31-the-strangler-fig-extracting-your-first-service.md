@@ -1,10 +1,8 @@
 # L2-M31: The Strangler Fig — Extracting Your First Service
 
-> **Loop 2 (Practice)** | Section 2A: Breaking Apart the Monolith | Duration: 75 min | Tier: Core
+> **Loop 2 (Practice)** | Section 2A: Breaking Apart the Monolith | ⏱️ 75 min | 🟢 Core | Prerequisites: Loop 1 complete (TicketPulse monolith with Postgres, Redis, RabbitMQ, JWT auth, CI/CD, tests)
 >
-> **Prerequisites:** Loop 1 complete (TicketPulse monolith with Postgres, Redis, RabbitMQ, JWT auth, CI/CD, tests)
->
-> **What you'll build:** Evaluate which part of TicketPulse to extract first, extract the Payments service into its own independent service with its own Dockerfile, route traffic through a reverse proxy, and confront the new failure modes that come with network boundaries.
+> **Source:** Chapters 3, 21, 25 of the 100x Engineer Guide
 
 ---
 

@@ -1,10 +1,8 @@
 # L1-M21: Event-Driven Thinking
 
-> **Loop 1 (Foundation)** | Section 1D: Architecture Fundamentals | Duration: 60 min | Tier: Core
+> **Loop 1 (Foundation)** | Section 1D: Architecture Fundamentals | ⏱️ 60 min | 🟢 Core | Prerequisites: L1-M20 (Domain-Driven Design Basics)
 >
-> **Prerequisites:** L1-M20 (Domain-Driven Design Basics)
->
-> **What you'll build:** An in-process event emitter for TicketPulse, domain events for key business actions, listeners for cross-cutting concerns, and a concrete demonstration of why synchronous side effects kill API performance.
+> **Source:** Chapters 1, 3 of the 100x Engineer Guide
 
 ---
 

@@ -1,6 +1,8 @@
 # L1-M10: Caching Strategies
-> ⏱️ 60 min | 🟢 Core | Prerequisites: L1-M05, L1-M09
-> Source: Chapter 2 of the 100x Engineer Guide
+
+> **Loop 1 (Foundation)** | Section 1B: Data & Databases | ⏱️ 60 min | 🟢 Core | Prerequisites: L1-M05, L1-M09
+>
+> **Source:** Chapters 2, 24 of the 100x Engineer Guide
 
 ## What You'll Learn
 - Why caching matters and the cache-aside pattern

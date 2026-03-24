@@ -1,7 +1,8 @@
 # L3-M87: Mobile Backend Patterns
 
-> ⏱️ 45 min | 🟡 Deep Dive | Prerequisites: L2-M36, L3-M67
-> Source: Chapter 10 (Mobile Backend Patterns — Push Notifications, Offline-First, API Design for Mobile)
+> **Loop 3 (Mastery)** | Section 3D: The Cutting Edge | ⏱️ 45 min | 🟡 Deep Dive | Prerequisites: L2-M36, L3-M67
+>
+> **Source:** Chapter 10 of the 100x Engineer Guide
 
 ## What You'll Learn
 

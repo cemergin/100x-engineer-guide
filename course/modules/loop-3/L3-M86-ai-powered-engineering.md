@@ -1,7 +1,8 @@
 # L3-M86: AI-Powered Engineering Workflow
 
-> ⏱️ 60 min | 🟢 Core | Prerequisites: All prior modules
-> Source: Chapter 17 (Claude Code Mastery), Chapter 10 (AI-Native Engineering)
+> **Loop 3 (Mastery)** | Section 3D: The Cutting Edge | ⏱️ 60 min | 🟢 Core | Prerequisites: All prior modules
+>
+> **Source:** Chapters 17, 10 of the 100x Engineer Guide
 
 ## What You'll Learn
 

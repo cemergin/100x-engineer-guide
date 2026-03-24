@@ -1,7 +1,8 @@
 # L3-M74: War Stories Analysis
 
-> ⏱️ 60 min | 🟢 Core | Prerequisites: L3-M73 (Incident Response Simulation)
-> Source: Chapter 26 of the 100x Engineer Guide
+> **Loop 3 (Mastery)** | Section 3C: Operations & Leadership | ⏱️ 60 min | 🟢 Core | Prerequisites: L3-M73 (Incident Response Simulation)
+>
+> **Source:** Chapter 26 of the 100x Engineer Guide
 
 ## What You'll Learn
 

@@ -1,7 +1,8 @@
 # L3-M85: Open Source Your Work
 
-> ⏱️ 45 min | 🟢 Core | Prerequisites: L2-M34, L3-M67
-> Source: Chapter 28 (Code Reading & Open Source — Contribution Guide, Licensing, Building Your Profile)
+> **Loop 3 (Mastery)** | Section 3D: The Cutting Edge | ⏱️ 45 min | 🟢 Core | Prerequisites: L2-M34, L3-M67
+>
+> **Source:** Chapter 28 of the 100x Engineer Guide
 
 ## What You'll Learn
 

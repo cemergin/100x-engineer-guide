@@ -1,10 +1,8 @@
 # L1-M26: SLOs & Error Budgets
 
-> **Loop 1 (Foundation)** | Section 1E: Security & Reliability Basics | Duration: 45 min | Tier: Core
+> **Loop 1 (Foundation)** | Section 1E: Security & Reliability Basics | ⏱️ 45 min | 🟢 Core | Prerequisites: L1-M25 (Logging & Observability 101)
 >
-> **Prerequisites:** L1-M25 (Logging & Observability 101)
->
-> **What you'll build:** SLO definitions for TicketPulse covering availability, latency, and transaction success rate. You will calculate error budgets, build a simple SLI measurement script, and use the SLO framework to make a real engineering decision about shipping a risky feature.
+> **Source:** Chapters 5, 4, 20 of the 100x Engineer Guide
 
 ---
 

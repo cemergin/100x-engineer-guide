@@ -1,7 +1,8 @@
 # L3-M82: Event Sourcing at Scale
 
-> ⏱️ 75 min | 🔴 Expert | Prerequisites: L2-M34, L3-M81
-> Source: Chapter 10 (Event Sourcing), Chapter 1 (CQRS/Event Sourcing theory)
+> **Loop 3 (Mastery)** | Section 3D: The Cutting Edge | ⏱️ 75 min | 🔴 Expert | Prerequisites: L2-M34, L3-M81
+>
+> **Source:** Chapters 10, 3 of the 100x Engineer Guide
 
 ## What You'll Learn
 

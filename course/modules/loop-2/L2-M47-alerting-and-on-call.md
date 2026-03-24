@@ -1,7 +1,8 @@
 # L2-M47: Alerting & On-Call
 
-> ⏱️ 60 min | 🟢 Core | Prerequisites: L2-M45, L2-M46
-> Source: Chapters 4 and 18 of the 100x Engineer Guide
+> **Loop 2 (Practice)** | Section 2C: Infrastructure & Operations | ⏱️ 60 min | 🟢 Core | Prerequisites: L2-M45, L2-M46
+>
+> **Source:** Chapters 4, 18 of the 100x Engineer Guide
 
 ## What You'll Learn
 

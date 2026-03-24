@@ -1,7 +1,8 @@
 # L3-M78: DORA Metrics & Team Performance
 
-> ⏱️ 45 min | 🟢 Core | Prerequisites: L2-M43 (CI/CD), L3-M73 (Incident Response)
-> Source: Chapter 9 of the 100x Engineer Guide
+> **Loop 3 (Mastery)** | Section 3C: Operations & Leadership | ⏱️ 45 min | 🟢 Core | Prerequisites: L2-M43 (CI/CD), L3-M73 (Incident Response)
+>
+> **Source:** Chapter 9 of the 100x Engineer Guide
 
 ## What You'll Learn
 

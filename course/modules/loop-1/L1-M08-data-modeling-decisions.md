@@ -1,6 +1,8 @@
 # L1-M08: Data Modeling Decisions
-> ⏱️ 60 min | 🟢 Core | Prerequisites: L1-M05, L1-M06, L1-M07
-> Source: Chapters 2 & 24 of the 100x Engineer Guide
+
+> **Loop 1 (Foundation)** | Section 1B: Data & Databases | ⏱️ 60 min | 🟢 Core | Prerequisites: L1-M05, L1-M06, L1-M07
+>
+> **Source:** Chapters 2, 24 of the 100x Engineer Guide
 
 ## What You'll Learn
 - What normalization is and why the TicketPulse schema is in Third Normal Form (3NF)

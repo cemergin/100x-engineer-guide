@@ -1,10 +1,8 @@
 # L2-M32: Service Communication — REST vs gRPC vs Events
 
-> **Loop 2 (Practice)** | Section 2A: Breaking Apart the Monolith | Duration: 75 min | Tier: Core
+> **Loop 2 (Practice)** | Section 2A: Breaking Apart the Monolith | ⏱️ 75 min | 🟢 Core | Prerequisites: L2-M31 (Strangler Fig — Extracting Your First Service)
 >
-> **Prerequisites:** L2-M31 (Strangler Fig — Extracting Your First Service)
->
-> **What you'll build:** Rewrite the monolith-to-payment-service call as gRPC with Protocol Buffers, benchmark REST vs gRPC latency, build the notification service as a pure event consumer with no HTTP API, and develop a decision framework for when to use each communication pattern.
+> **Source:** Chapters 3, 21, 25 of the 100x Engineer Guide
 
 ---
 

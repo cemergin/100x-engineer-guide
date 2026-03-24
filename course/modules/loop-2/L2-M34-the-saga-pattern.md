@@ -1,10 +1,8 @@
 # L2-M34: The Saga Pattern
 
-> **Loop 2 (Practice)** | Section 2A: Breaking Apart the Monolith | Duration: 90 min | Tier: Deep Dive
+> **Loop 2 (Practice)** | Section 2A: Breaking Apart the Monolith | ⏱️ 90 min | 🟡 Deep Dive | Prerequisites: L2-M33 (Kafka Deep Dive), L2-M31 (Strangler Fig)
 >
-> **Prerequisites:** L2-M33 (Kafka Deep Dive), L2-M31 (Strangler Fig)
->
-> **What you'll build:** Design and implement an orchestrated saga for TicketPulse's ticket purchase flow. Handle distributed transaction failures with compensating actions. Inject failures at different steps and verify that the system recovers to a consistent state.
+> **Source:** Chapters 3, 21, 25 of the 100x Engineer Guide
 
 ---
 
@@ -417,7 +415,8 @@ export async function executePurchaseSaga(input: {
       ctx.status = 'COMPENSATING';
       console.log(`[saga:${ctx.sagaId}] Starting compensation (${completedSteps.length} steps to undo)`);
 
-      for (const completedStep of completedSteps.reverse()) {
+      // Spread to avoid mutating the original array
+      for (const completedStep of [...completedSteps].reverse()) {
         await completedStep.compensate(ctx);
       }
 

@@ -1,10 +1,8 @@
 # L1-M11: REST API Design
 
-> **Loop 1 (Foundation)** | Section 1C: Building the API | Duration: 75 min | Tier: Core
+> **Loop 1 (Foundation)** | Section 1C: Building the API | ⏱️ 75 min | 🟢 Core | Prerequisites: L1-M05 (SQL & Data Modeling)
 >
-> **Prerequisites:** L1-M05 (SQL & Data Modeling)
->
-> **What you'll build:** TicketPulse's complete REST API -- 5 endpoints covering events CRUD and ticket purchasing, tested with curl.
+> **Source:** Chapters 25, 5, 7, 8 of the 100x Engineer Guide
 
 ---
 

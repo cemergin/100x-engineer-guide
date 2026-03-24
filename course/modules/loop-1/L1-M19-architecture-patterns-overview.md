@@ -1,10 +1,8 @@
 # L1-M19: Architecture Patterns Overview
 
-> **Loop 1 (Foundation)** | Section 1D: Architecture Fundamentals | Duration: 60 min | Tier: Core
+> **Loop 1 (Foundation)** | Section 1D: Architecture Fundamentals | ⏱️ 60 min | 🟢 Core | Prerequisites: L1-M17 (How Distributed Systems Fail), L1-M18 (Consistency Models)
 >
-> **Prerequisites:** L1-M17 (How Distributed Systems Fail), L1-M18 (Consistency Models)
->
-> **What you'll build:** A structural analysis of TicketPulse's current monolithic architecture, a refactoring plan to enforce module boundaries (modular monolith), and an architecture diagram for what TicketPulse would look like at 100x scale.
+> **Source:** Chapters 1, 3 of the 100x Engineer Guide
 
 ---
 

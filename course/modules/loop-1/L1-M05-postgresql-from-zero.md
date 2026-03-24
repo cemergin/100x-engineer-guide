@@ -1,6 +1,8 @@
 # L1-M05: PostgreSQL From Zero
-> ⏱️ 75 min | 🟢 Core | Prerequisites: Docker basics, terminal comfort
-> Source: Chapters 2 & 24 of the 100x Engineer Guide
+
+> **Loop 1 (Foundation)** | Section 1B: Data & Databases | ⏱️ 75 min | 🟢 Core | Prerequisites: Docker basics, terminal comfort
+>
+> **Source:** Chapters 2, 24 of the 100x Engineer Guide
 
 ## What You'll Learn
 - How to run PostgreSQL in Docker and connect via `psql`

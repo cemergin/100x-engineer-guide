@@ -1,10 +1,8 @@
 # L3-M65: Consistent Hashing & Distributed Cache
 
-> **Loop 3 (Mastery)** | Section 3A: Global Scale Architecture | Duration: 75 min | Tier: Deep Dive
+> **Loop 3 (Mastery)** | Section 3A: Global Scale Architecture | ⏱️ 75 min | 🟡 Deep Dive | Prerequisites: L3-M64 (CDN & Edge Computing), L2-M37 (PostgreSQL Internals), L3-M63 (Database at Scale)
 >
-> **Prerequisites:** L3-M64 (CDN & Edge Computing), L2-M37 (PostgreSQL Internals), L3-M63 (Database at Scale)
->
-> **What you'll build:** Implement a consistent hashing ring from scratch. Simulate adding and removing nodes to observe key redistribution. Design TicketPulse's multi-layer cache architecture. Understand Redis Cluster internals. Implement cache stampede prevention.
+> **Source:** Chapters 1, 19, 31, 22, 23 of the 100x Engineer Guide
 
 ---
 

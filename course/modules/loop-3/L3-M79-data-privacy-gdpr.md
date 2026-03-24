@@ -1,7 +1,8 @@
 # L3-M79: Data Privacy & GDPR
 
-> ⏱️ 60 min | 🟢 Core | Prerequisites: L2-M55 (Security Fundamentals), L2-M34 (Saga Pattern)
-> Source: Chapter 30 of the 100x Engineer Guide
+> **Loop 3 (Mastery)** | Section 3C: Operations & Leadership | ⏱️ 60 min | 🟢 Core | Prerequisites: L2-M55 (Security Fundamentals), L2-M34 (Saga Pattern)
+>
+> **Source:** Chapter 30 of the 100x Engineer Guide
 
 ## What You'll Learn
 

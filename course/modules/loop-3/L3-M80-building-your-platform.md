@@ -1,7 +1,8 @@
 # L3-M80: Building Your Platform
 
-> ⏱️ 60 min | 🟡 Deep Dive | Prerequisites: All Loop 3 modules (operations, architecture, leadership)
-> Source: Chapter 9, Chapter 15 of the 100x Engineer Guide
+> **Loop 3 (Mastery)** | Section 3C: Operations & Leadership | ⏱️ 60 min | 🟡 Deep Dive | Prerequisites: All Loop 3 modules (operations, architecture, leadership)
+>
+> **Source:** Chapters 7, 30 of the 100x Engineer Guide
 
 ## What You'll Learn
 

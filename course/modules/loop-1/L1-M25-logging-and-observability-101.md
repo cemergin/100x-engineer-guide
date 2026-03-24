@@ -1,10 +1,8 @@
 # L1-M25: Logging & Observability 101
 
-> **Loop 1 (Foundation)** | Section 1E: Security & Reliability Basics | Duration: 60 min | Tier: Core
+> **Loop 1 (Foundation)** | Section 1E: Security & Reliability Basics | ⏱️ 60 min | 🟢 Core | Prerequisites: L1-M24 (Secrets Management)
 >
-> **Prerequisites:** L1-M24 (Secrets Management)
->
-> **What you'll build:** Structured JSON logging for TicketPulse with log levels, a request ID middleware that threads a unique ID through every log for a single request, a developer-only log viewer endpoint, and `jq` pipelines for filtering and analyzing logs.
+> **Source:** Chapters 5, 4, 20 of the 100x Engineer Guide
 
 ---
 

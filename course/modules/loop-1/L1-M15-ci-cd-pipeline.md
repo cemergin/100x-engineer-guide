@@ -1,10 +1,8 @@
 # L1-M15: CI/CD Pipeline
 
-> **Loop 1 (Foundation)** | Section 1C: Building the API | Duration: 60 min | Tier: Core
+> **Loop 1 (Foundation)** | Section 1C: Building the API | ⏱️ 60 min | 🟢 Core | Prerequisites: L1-M14 (Your First Deployment)
 >
-> **Prerequisites:** L1-M14 (Your First Deployment)
->
-> **What you'll build:** A complete GitHub Actions CI/CD pipeline for TicketPulse -- lint, type check, test, and build on every push. You will watch it run, watch it fail, fix it, and see it pass.
+> **Source:** Chapters 25, 5, 7, 8 of the 100x Engineer Guide
 
 ---
 

@@ -1,7 +1,8 @@
 # L1-M04: How the Internet Actually Works
 
-> **75 min** | **Core** | Prerequisites: L1-M01 (TicketPulse running), comfort with the terminal
-> Source: Chapter 21 of the 100x Engineer Guide
+> **Loop 1 (Foundation)** | Section 1A: Tooling & Environment | ⏱️ 75 min | 🟢 Core | Prerequisites: L1-M01 (TicketPulse running), comfort with the terminal
+>
+> **Source:** Chapters 12, 21 of the 100x Engineer Guide
 
 ## What You'll Learn
 - The complete journey of an HTTP request — from DNS resolution through TCP handshake, TLS negotiation, HTTP exchange, and back — with nothing hand-waved

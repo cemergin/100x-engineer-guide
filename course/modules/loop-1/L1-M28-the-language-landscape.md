@@ -1,10 +1,8 @@
 # L1-M28: The Language Landscape
 
-> **Loop 1 (Foundation)** | Section 1F: Language Exposure + Capstone | Duration: 60 min | Tier: Core
+> **Loop 1 (Foundation)** | Section 1F: Language Exposure + Capstone | ⏱️ 60 min | 🟢 Core | Prerequisites: L1-M11 (REST API Design)
 >
-> **Prerequisites:** L1-M11 (REST API Design)
->
-> **What you'll build:** The same TicketPulse `/api/events` endpoint implemented in four languages -- Go, Python (FastAPI), TypeScript (Express), and Rust (Axum). You will run all four locally, read the code side by side, benchmark them with `wrk`, and compare the trade-offs.
+> **Source:** Chapters 11, 6 of the 100x Engineer Guide
 
 ---
 

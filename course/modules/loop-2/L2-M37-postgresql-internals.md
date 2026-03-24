@@ -1,6 +1,8 @@
 # L2-M37: PostgreSQL Internals
-> ⏱️ 75 min | 🟡 Deep Dive | Prerequisites: L1-M05, L1-M07, L2-M31
-> Source: Chapter 24 of the 100x Engineer Guide
+
+> **Loop 2 (Practice)** | Section 2B: Performance & Databases | ⏱️ 75 min | 🟡 Deep Dive | Prerequisites: L1-M05, L1-M07, L2-M31
+>
+> **Source:** Chapter 24 of the 100x Engineer Guide
 
 ## What You'll Learn
 - How MVCC works under the hood — xmin, xmax, and tuple versioning

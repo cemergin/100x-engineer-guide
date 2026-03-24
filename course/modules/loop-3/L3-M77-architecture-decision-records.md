@@ -1,7 +1,8 @@
 # L3-M77: Architecture Decision Records
 
-> ⏱️ 60 min | 🟢 Core | Prerequisites: All Loop 2 modules (microservices, Kafka, databases, CQRS)
-> Source: Chapter 9 of the 100x Engineer Guide
+> **Loop 3 (Mastery)** | Section 3C: Operations & Leadership | ⏱️ 60 min | 🟢 Core | Prerequisites: All Loop 2 modules (microservices, Kafka, databases, CQRS)
+>
+> **Source:** Chapter 9 of the 100x Engineer Guide
 
 ## What You'll Learn
 

@@ -1,10 +1,8 @@
 # L2-M50: Rate Limiting
 
-> **Loop 2 (Applied)** | Section 2D: Advanced Patterns | Duration: 60 min | Tier: Core
+> **Loop 2 (Practice)** | Section 2D: Advanced Patterns | ⏱️ 60 min | 🟢 Core | Prerequisites: L2-M39 (Kubernetes Basics), L2-M43 (Alerting)
 >
-> **Prerequisites:** L2-M39 (Kubernetes Basics), L2-M43 (Alerting)
->
-> **What you'll build:** You will protect TicketPulse from traffic spikes by implementing a Redis-backed token bucket rate limiter with per-user and global limits, proper HTTP headers, sliding window comparison, and per-endpoint configuration.
+> **Source:** Chapters 3, 22, 25, 32, 13 of the 100x Engineer Guide
 
 ---
 

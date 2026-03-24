@@ -1,7 +1,8 @@
 # L3-M67: WebSockets & Real-Time
 
-> ⏱️ 75 min | 🟢 Core | Prerequisites: L1-M10, L2-M31
-> Source: Chapter 21 (WebSocket Protocol), Chapter 10 (Real-Time Systems)
+> **Loop 3 (Mastery)** | Section 3B: Real-Time & Advanced Features | ⏱️ 75 min | 🟢 Core | Prerequisites: L1-M10, L2-M31
+>
+> **Source:** Chapters 21, 10 of the 100x Engineer Guide
 
 ## What You'll Learn
 

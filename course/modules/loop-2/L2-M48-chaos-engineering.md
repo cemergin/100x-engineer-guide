@@ -1,7 +1,8 @@
 # L2-M48: Chaos Engineering
 
-> ⏱️ 60 min | 🟡 Deep Dive | Prerequisites: L2-M43, L2-M45, L2-M46, L2-M47, L2-M49
-> Source: Chapter 4 of the 100x Engineer Guide
+> **Loop 2 (Practice)** | Section 2C: Infrastructure & Operations | ⏱️ 60 min | 🟡 Deep Dive | Prerequisites: L2-M43, L2-M45, L2-M46, L2-M47, L2-M49
+>
+> **Source:** Chapter 4 of the 100x Engineer Guide
 
 ## What You'll Learn
 

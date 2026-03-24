@@ -1,10 +1,8 @@
 # L1-M16c: Design Patterns That Matter
 
-> **Loop 1 (Foundation)** | Section 1D: Software Engineering Principles | Duration: 75 min | Tier: Deep Dive
+> **Loop 1 (Foundation)** | Section 1C+: Software Engineering Principles | ⏱️ 75 min | 🟡 Deep Dive | Prerequisites: L1-M16a (SOLID Principles in Practice), L1-M16b (Clean Code & Design Principles)
 >
-> **Prerequisites:** L1-M16a (SOLID Principles in Practice), L1-M16b (Clean Code & Design Principles)
->
-> **What you'll build:** Five design patterns applied to real TicketPulse features -- Strategy for pricing, Observer for event-driven side effects, Repository for data access, Decorator for logging and caching, and Factory for notification delivery.
+> **Source:** Chapter 32 of the 100x Engineer Guide
 
 ---
 

@@ -1,10 +1,8 @@
 # L1-M27: Dependency & Environment Management
 
-> **Loop 1 (Foundation)** | Section 1E: Security & Reliability Basics | Duration: 60 min | Tier: Core
+> **Loop 1 (Foundation)** | Section 1E: Security & Reliability Basics | ⏱️ 60 min | 🟢 Core | Prerequisites: L1-M24 (Secrets Management)
 >
-> **Prerequisites:** L1-M24 (Secrets Management)
->
-> **What you'll build:** A fully reproducible development environment for TicketPulse -- pinned Node.js version via `.nvmrc`, automatic version switching with mise, lockfile discipline with `npm ci`, direnv for auto-activation, and a two-command onboarding workflow for new developers.
+> **Source:** Chapters 5, 4, 20 of the 100x Engineer Guide
 
 ---
 

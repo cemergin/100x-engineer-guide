@@ -1,6 +1,8 @@
 # L2-M40: Search Engineering
-> ⏱️ 75 min | 🟢 Core | Prerequisites: L2-M31, L2-M34 (Kafka)
-> Source: Chapter 24 & Chapter 22 of the 100x Engineer Guide
+
+> **Loop 2 (Practice)** | Section 2B: Performance & Databases | ⏱️ 75 min | 🟢 Core | Prerequisites: L2-M31, L2-M34 (Kafka)
+>
+> **Source:** Chapters 24, 22 of the 100x Engineer Guide
 
 ## What You'll Learn
 - How full-text search works (inverted indexes, tokenization, BM25 scoring)

@@ -1,7 +1,8 @@
 # L3-M73: Incident Response Simulation
 
-> ⏱️ 75 min | 🟢 Core | Prerequisites: L2-M58 (Debugging in Production), L2-M48-50 (Observability Stack)
-> Source: Chapter 26 of the 100x Engineer Guide
+> **Loop 3 (Mastery)** | Section 3C: Operations & Leadership | ⏱️ 75 min | 🟢 Core | Prerequisites: L2-M58 (Debugging in Production), L2-M48-50 (Observability Stack)
+>
+> **Source:** Chapter 26 of the 100x Engineer Guide
 
 ## What You'll Learn
 

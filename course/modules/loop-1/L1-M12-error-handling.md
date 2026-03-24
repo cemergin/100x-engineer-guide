@@ -1,10 +1,8 @@
 # L1-M12: Error Handling That Doesn't Suck
 
-> **Loop 1 (Foundation)** | Section 1C: Building the API | Duration: 60 min | Tier: Core
+> **Loop 1 (Foundation)** | Section 1C: Building the API | ⏱️ 60 min | 🟢 Core | Prerequisites: L1-M11 (REST API Design)
 >
-> **Prerequisites:** L1-M11 (REST API Design)
->
-> **What you'll build:** A consistent error handling system for TicketPulse -- structured error codes, validation that reports ALL issues at once, request ID tracing, and an error middleware that makes debugging a joy instead of a nightmare.
+> **Source:** Chapters 25, 5, 7, 8 of the 100x Engineer Guide
 
 ---
 

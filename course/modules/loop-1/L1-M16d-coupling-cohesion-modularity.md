@@ -1,10 +1,8 @@
 # L1-M16d: Coupling, Cohesion & Modularity
 
-> **Loop 1 (Foundation)** | Section 1D: Software Engineering Principles | Duration: 60 min | Tier: Deep Dive
+> **Loop 1 (Foundation)** | Section 1C+: Software Engineering Principles | ⏱️ 60 min | 🟡 Deep Dive | Prerequisites: L1-M16a (SOLID Principles), L1-M16c (Design Patterns)
 >
-> **Prerequisites:** L1-M16a (SOLID Principles), L1-M16c (Design Patterns)
->
-> **What you'll build:** You will install dependency-cruiser, visualize TicketPulse's dependency graph, identify and break a dependency cycle, reorganize a low-cohesion `utils/` directory, and design the ideal module boundaries for TicketPulse as a modular monolith.
+> **Source:** Chapter 32 of the 100x Engineer Guide
 
 ---
 

@@ -1,7 +1,8 @@
 # L3-M69: Notification System
 
-> ⏱️ 60 min | 🟢 Core | Prerequisites: L2-M33, L1-M22
-> Source: Chapter 23 (Notification System Case Study), Chapter 10 (Push Notifications)
+> **Loop 3 (Mastery)** | Section 3B: Real-Time & Advanced Features | ⏱️ 60 min | 🟢 Core | Prerequisites: L2-M33, L1-M22
+>
+> **Source:** Chapters 23, 10 of the 100x Engineer Guide
 
 ## What You'll Learn
 

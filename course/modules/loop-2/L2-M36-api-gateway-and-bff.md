@@ -1,10 +1,8 @@
 # L2-M36: API Gateway & BFF
 
-> **Loop 2 (Practice)** | Section 2A: Breaking Apart the Monolith | Duration: 60 min | Tier: Core
+> **Loop 2 (Practice)** | Section 2A: Breaking Apart the Monolith | ⏱️ 60 min | 🟢 Core | Prerequisites: L2-M35 (Database Per Service), L2-M31 (Strangler Fig)
 >
-> **Prerequisites:** L2-M35 (Database Per Service), L2-M31 (Strangler Fig)
->
-> **What you'll build:** Replace the simple nginx proxy from M31 with a full API gateway that handles routing, rate limiting, JWT validation, and correlation IDs. Design a Backend for Frontend (BFF) for TicketPulse's mobile app.
+> **Source:** Chapters 3, 21, 25 of the 100x Engineer Guide
 
 ---
 

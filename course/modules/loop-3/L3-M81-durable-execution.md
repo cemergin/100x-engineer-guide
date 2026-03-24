@@ -1,7 +1,8 @@
 # L3-M81: Durable Execution
 
-> ⏱️ 75 min | 🟡 Deep Dive | Prerequisites: L2-M34
-> Source: Chapter 10 (Durable Execution, Temporal, Restate, Inngest)
+> **Loop 3 (Mastery)** | Section 3D: The Cutting Edge | ⏱️ 75 min | 🟡 Deep Dive | Prerequisites: L2-M34
+>
+> **Source:** Chapter 10 of the 100x Engineer Guide
 
 ## What You'll Learn
 

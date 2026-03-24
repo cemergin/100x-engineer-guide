@@ -1,10 +1,8 @@
 # L1-M17: How Distributed Systems Fail
 
-> **Loop 1 (Foundation)** | Section 1D: Architecture Fundamentals | Duration: 75 min | Tier: Core
+> **Loop 1 (Foundation)** | Section 1D: Architecture Fundamentals | ⏱️ 75 min | 🟢 Core | Prerequisites: L1-M10 (Caching Strategies), L1-M14 (First Deployment)
 >
-> **Prerequisites:** L1-M10 (Caching Strategies), L1-M14 (First Deployment)
->
-> **What you'll build:** Fault injection into TicketPulse — kill Redis, add Postgres latency, simulate network partitions — and implement fallback behavior so the application degrades gracefully instead of crashing.
+> **Source:** Chapters 1, 3 of the 100x Engineer Guide
 
 ---
 

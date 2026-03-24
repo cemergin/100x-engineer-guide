@@ -1,10 +1,8 @@
 # L1-M16a: SOLID Principles in Practice
 
-> **Loop 1 (Foundation)** | Section 1D: Software Engineering Principles | Duration: 75 min | Tier: Core
+> **Loop 1 (Foundation)** | Section 1C+: Software Engineering Principles | ⏱️ 75 min | 🟢 Core | Prerequisites: L1-M16 (Testing Fundamentals)
 >
-> **Prerequisites:** L1-M16 (Testing Fundamentals)
->
-> **What you'll build:** You will take TicketPulse's monolithic OrderService -- riddled with SOLID violations -- and refactor it principle by principle. Each refactoring is a separate commit. Tests pass after every step.
+> **Source:** Chapter 32 of the 100x Engineer Guide
 
 ---
 

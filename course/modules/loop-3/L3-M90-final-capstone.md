@@ -1,7 +1,8 @@
 # L3-M90: The 100x Engineer Retrospective
 
-> ⏱️ 90 min | 🟢 Core | Prerequisites: All 89 prior modules
-> Source: The entire guide. Every chapter. Every module. Everything you have built.
+> **Loop 3 (Mastery)** | Section 3E: The Final Sprint | ⏱️ 90 min | 🟢 Core | Prerequisites: All 89 prior modules
+>
+> **Source:** All chapters of the 100x Engineer Guide
 
 ## What This Module Is
 
@@ -26,14 +27,14 @@ Go through the domains below. For each one, honestly assess yourself:
 | Domain | Status | Key Module(s) |
 |--------|--------|---------------|
 | **Distributed Systems** | | |
-| CAP theorem and its practical implications | | L1-M01 |
-| Consistency models (strong, eventual, causal) | | L1-M01 |
-| Consensus algorithms (Raft, Paxos concepts) | | L1-M01 |
+| CAP theorem and its practical implications | | L1-M17 |
+| Consistency models (strong, eventual, causal) | | L1-M18 |
+| Consensus algorithms (Raft, Paxos concepts) | | L1-M17 |
 | Distributed transactions (2PC, saga pattern) | | L2-M34 |
 | **Databases** | | |
-| B-tree indexes and query planning | | L1-M05 |
+| B-tree indexes and query planning | | L1-M07 |
 | Transaction isolation levels | | L1-M05 |
-| PostgreSQL optimization (EXPLAIN, indexing) | | L1-M06 |
+| PostgreSQL optimization (EXPLAIN, indexing) | | L1-M07 |
 | Replication (streaming, logical) | | L2-M43 |
 | Connection pooling (PgBouncer) | | L2-M43 |
 | Event sourcing | | L3-M82 |
@@ -68,8 +69,8 @@ Go through the domains below. For each one, honestly assess yourself:
 | Profiling and optimization | | L2-M48 |
 | Connection pooling | | L2-M43 |
 | **Networking** | | |
-| HTTP/1.1, HTTP/2, HTTP/3 (QUIC) | | L1-M07 |
-| DNS resolution | | L1-M07 |
+| HTTP/1.1, HTTP/2, HTTP/3 (QUIC) | | L1-M04 |
+| DNS resolution | | L1-M04 |
 | TLS/mTLS | | L2-M44 |
 | WebSocket protocol | | L3-M67 |
 | CDN architecture | | L3-M61 |

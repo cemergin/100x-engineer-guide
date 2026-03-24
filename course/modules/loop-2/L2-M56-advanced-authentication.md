@@ -1,7 +1,8 @@
 # L2-M56: Advanced Authentication -- OAuth2 / OpenID Connect
 
-> ⏱️ 60 min | 🟡 Deep Dive | Prerequisites: L1-M13, L2-M31
-> Source: Chapter 5 of the 100x Engineer Guide
+> **Loop 2 (Practice)** | Section 2E: Security & Quality | ⏱️ 60 min | 🟡 Deep Dive | Prerequisites: L1-M13, L2-M31
+>
+> **Source:** Chapter 5 of the 100x Engineer Guide
 
 ## What You'll Learn
 

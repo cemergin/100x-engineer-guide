@@ -1,8 +1,8 @@
 # L2-M60: Loop 2 Capstone
 
-> ⏱️ 90 min | 🟢 Core | Prerequisites: All previous modules (L2-M31 through L2-M59)
+> **Loop 2 (Practice)** | Section 2E: Security & Quality | ⏱️ 90 min | 🟢 Core | Prerequisites: All previous modules (L2-M31 through L2-M59)
 >
-> **What you'll build:** A complete architecture review of TicketPulse v2, a stress test that finds the breaking point, a simulated incident drill, and a self-assessment for Loop 3.
+> **Source:** Chapters 5, 21, 18, 27 of the 100x Engineer Guide
 
 ---
 

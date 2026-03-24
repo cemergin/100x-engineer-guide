@@ -1,10 +1,8 @@
 # L1-M14: Your First Deployment
 
-> **Loop 1 (Foundation)** | Section 1C: Building the API | Duration: 75 min | Tier: Core
+> **Loop 1 (Foundation)** | Section 1C: Building the API | ⏱️ 75 min | 🟢 Core | Prerequisites: L1-M01 (Course Setup)
 >
-> **Prerequisites:** L1-M01 (Course Setup)
->
-> **What you'll build:** A production-ready Dockerfile for TicketPulse using multi-stage builds, a docker-compose setup running the full stack (app + Postgres + Redis), health checks, and image optimization.
+> **Source:** Chapters 25, 5, 7, 8 of the 100x Engineer Guide
 
 ---
 

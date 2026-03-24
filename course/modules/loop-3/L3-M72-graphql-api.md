@@ -1,7 +1,8 @@
 # L3-M72: GraphQL API
 
-> ⏱️ 75 min | 🟡 Deep Dive | Prerequisites: L2-M36, L3-M67
-> Source: Chapter 25 (GraphQL Deep Dive, Pagination, Federation, Security)
+> **Loop 3 (Mastery)** | Section 3B: Real-Time & Advanced Features | ⏱️ 75 min | 🟡 Deep Dive | Prerequisites: L2-M36, L3-M67
+>
+> **Source:** Chapter 25 of the 100x Engineer Guide
 
 ## What You'll Learn
 

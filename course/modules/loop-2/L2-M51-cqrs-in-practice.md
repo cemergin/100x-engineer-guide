@@ -1,10 +1,8 @@
 # L2-M51: CQRS in Practice
 
-> **Loop 2 (Applied)** | Section 2D: Advanced Patterns | Duration: 75 min | Tier: Deep Dive
+> **Loop 2 (Practice)** | Section 2D: Advanced Patterns | ⏱️ 75 min | 🟡 Deep Dive | Prerequisites: L2-M39 (Kubernetes Basics), L2-M44 (Kafka Basics or equivalent message broker familiarity)
 >
-> **Prerequisites:** L2-M39 (Kubernetes Basics), L2-M44 (Kafka Basics or equivalent message broker familiarity)
->
-> **What you'll build:** You will separate TicketPulse's read and write paths for the events feature -- a normalized write model in Postgres, an event-driven projection pipeline via Kafka, a denormalized read model optimized for display, and a "read-your-writes" consistency strategy.
+> **Source:** Chapters 3, 22, 25, 32, 13 of the 100x Engineer Guide
 
 ---
 

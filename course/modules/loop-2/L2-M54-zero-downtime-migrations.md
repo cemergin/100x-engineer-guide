@@ -1,10 +1,8 @@
 # L2-M54: Zero-Downtime Migrations
 
-> **Loop 2 (Applied)** | Section 2D: Advanced Patterns | Duration: 60 min | Tier: Core
+> **Loop 2 (Practice)** | Section 2D: Advanced Patterns | ⏱️ 60 min | 🟢 Core | Prerequisites: L2-M39 (Kubernetes Basics), familiarity with Postgres
 >
-> **Prerequisites:** L2-M39 (Kubernetes Basics), familiarity with Postgres
->
-> **What you'll build:** You will perform a zero-downtime schema migration on TicketPulse's tickets table (10M rows) using the expand-and-contract pattern -- adding a column, backfilling in batches, adding constraints, creating concurrent indexes, and handling the column rename case.
+> **Source:** Chapters 3, 22, 25, 32, 13 of the 100x Engineer Guide
 
 ---
 

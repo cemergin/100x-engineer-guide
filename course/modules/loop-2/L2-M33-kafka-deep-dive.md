@@ -1,10 +1,8 @@
 # L2-M33: Kafka Deep Dive
 
-> **Loop 2 (Practice)** | Section 2A: Breaking Apart the Monolith | Duration: 75 min | Tier: Core
+> **Loop 2 (Practice)** | Section 2A: Breaking Apart the Monolith | ⏱️ 75 min | 🟢 Core | Prerequisites: L2-M32 (Service Communication), L1-M22 (Introduction to Message Queues)
 >
-> **Prerequisites:** L2-M32 (Service Communication), L1-M22 (Introduction to Message Queues)
->
-> **What you'll build:** Replace RabbitMQ with Kafka for TicketPulse's event backbone, create topics with partitions, build producers and consumers, observe message flow in Kafka UI, test consumer group rebalancing and offset management by killing and restarting consumers.
+> **Source:** Chapters 3, 21, 25 of the 100x Engineer Guide
 
 ---
 

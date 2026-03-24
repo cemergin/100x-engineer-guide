@@ -1,10 +1,8 @@
 # L1-M16: Testing Fundamentals
 
-> **Loop 1 (Foundation)** | Section 1C: Building the API | Duration: 75 min | Tier: Core
+> **Loop 1 (Foundation)** | Section 1C: Building the API | ⏱️ 75 min | 🟢 Core | Prerequisites: L1-M11 (REST API Design)
 >
-> **Prerequisites:** L1-M11 (REST API Design)
->
-> **What you'll build:** A test suite for TicketPulse covering unit tests for business logic, integration tests for the ticket purchase flow with a real database, test doubles for external services, and a TDD mini-exercise for discount codes.
+> **Source:** Chapters 25, 5, 7, 8 of the 100x Engineer Guide
 
 ---
 

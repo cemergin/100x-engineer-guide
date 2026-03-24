@@ -1,10 +1,8 @@
 # L3-M64: CDN & Edge Computing
 
-> **Loop 3 (Mastery)** | Section 3A: Global Scale Architecture | Duration: 60 min | Tier: Core
+> **Loop 3 (Mastery)** | Section 3A: Global Scale Architecture | ⏱️ 60 min | 🟢 Core | Prerequisites: L3-M61 (Multi-Region Design), L3-M62 (Cloud Provider Deep Dive)
 >
-> **Prerequisites:** L3-M61 (Multi-Region Design), L3-M62 (Cloud Provider Deep Dive)
->
-> **What you'll build:** Put TicketPulse's static assets behind a CDN. Configure Cache-Control headers for different asset types. Measure the latency improvement. Design which TicketPulse logic could run at the edge. Implement a cache invalidation strategy for when event data changes.
+> **Source:** Chapters 1, 19, 31, 22, 23 of the 100x Engineer Guide
 
 ---
 

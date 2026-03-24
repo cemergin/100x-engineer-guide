@@ -1,10 +1,8 @@
 # L1-M24: Secrets Management
 
-> **Loop 1 (Foundation)** | Section 1E: Security & Reliability Basics | Duration: 45 min | Tier: Core
+> **Loop 1 (Foundation)** | Section 1E: Security & Reliability Basics | ⏱️ 45 min | 🟢 Core | Prerequisites: L1-M23 (OWASP Top 10)
 >
-> **Prerequisites:** L1-M23 (OWASP Top 10)
->
-> **What you'll build:** You will extract every hardcoded secret from TicketPulse into environment variables, create a validated .env setup with startup checks that crash immediately on missing config, and configure direnv for automatic per-project environment activation.
+> **Source:** Chapters 5, 4, 20 of the 100x Engineer Guide
 
 ---
 

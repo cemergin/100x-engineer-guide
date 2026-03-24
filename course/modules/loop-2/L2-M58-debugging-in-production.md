@@ -1,7 +1,8 @@
 # L2-M58: Debugging in Production
 
-> ⏱️ 75 min | 🟢 Core | Prerequisites: L2-M48 (Prometheus), L2-M49 (Grafana), L2-M50 (OpenTelemetry)
-> Source: Chapter 18 of the 100x Engineer Guide
+> **Loop 2 (Practice)** | Section 2E: Security & Quality | ⏱️ 75 min | 🟢 Core | Prerequisites: L2-M45 (Prometheus+Grafana), L2-M46 (OpenTelemetry), L2-M48 (Chaos Engineering)
+>
+> **Source:** Chapter 18 of the 100x Engineer Guide
 
 ## What You'll Learn
 
@@ -38,7 +39,7 @@ curl -s http://localhost:3001/api/health | jq .
 curl -s http://localhost:16686/api/services | jq .
 ```
 
-If any of these are not running, go back to L2-M48 through L2-M50 and set them up.
+If any of these are not running, go back to L2-M45 through L2-M48 and set them up.
 
 ---
 

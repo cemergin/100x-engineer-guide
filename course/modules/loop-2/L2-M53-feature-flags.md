@@ -1,10 +1,8 @@
 # L2-M53: Feature Flags
 
-> **Loop 2 (Applied)** | Section 2D: Advanced Patterns | Duration: 45 min | Tier: Core
+> **Loop 2 (Practice)** | Section 2D: Advanced Patterns | ⏱️ 45 min | 🟢 Core | Prerequisites: L2-M39 (Kubernetes Basics)
 >
-> **Prerequisites:** L2-M39 (Kubernetes Basics)
->
-> **What you'll build:** You will implement a feature flag system for TicketPulse -- deterministic user bucketing, percentage rollouts, a flag admin API, metrics split by variant, and flag hygiene with expiration alerts.
+> **Source:** Chapters 3, 22, 25, 32, 13 of the 100x Engineer Guide
 
 ---
 

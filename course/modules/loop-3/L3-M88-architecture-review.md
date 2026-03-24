@@ -1,7 +1,8 @@
 # L3-M88: The TicketPulse Architecture Review
 
-> ⏱️ 90 min | 🟢 Core | Prerequisites: All prior modules
-> Source: Chapter 28 (C4 Model, Diagramming), Chapter 3 (Architecture Patterns), Chapter 7 (Production Checklist)
+> **Loop 3 (Mastery)** | Section 3E: The Final Sprint | ⏱️ 90 min | 🟢 Core | Prerequisites: All prior modules
+>
+> **Source:** Chapters 28, 3, 7 of the 100x Engineer Guide
 
 ## What You'll Learn
 

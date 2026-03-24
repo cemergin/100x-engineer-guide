@@ -1,7 +1,8 @@
 # L1-M02: Your Dev Environment
 
-> **60 min** | **Core** | Prerequisites: L1-M01 (TicketPulse running locally), macOS or Linux terminal
-> Source: Chapter 12 of the 100x Engineer Guide
+> **Loop 1 (Foundation)** | Section 1A: Tooling & Environment | ⏱️ 60 min | 🟢 Core | Prerequisites: L1-M01 (TicketPulse running locally), macOS or Linux terminal
+>
+> **Source:** Chapters 12, 21 of the 100x Engineer Guide
 
 ## What You'll Learn
 - How to install and configure modern CLI tools that are 5-50x faster than their default counterparts

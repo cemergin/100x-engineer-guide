@@ -1,7 +1,8 @@
 # L3-M83: Advanced Kubernetes
 
-> ⏱️ 60 min | 🟡 Deep Dive | Prerequisites: L2-M42
-> Source: Chapter 7 (Kubernetes Deep Dive — NetworkPolicies, RBAC, Security, PDB, HPA)
+> **Loop 3 (Mastery)** | Section 3D: The Cutting Edge | ⏱️ 60 min | 🟡 Deep Dive | Prerequisites: L2-M42
+>
+> **Source:** Chapter 7 of the 100x Engineer Guide
 
 ## What You'll Learn
 

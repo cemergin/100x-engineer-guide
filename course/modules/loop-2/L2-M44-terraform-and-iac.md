@@ -1,7 +1,8 @@
 # L2-M44: Terraform & Infrastructure as Code
 
-> ⏱️ 75 min | 🟢 Core | Prerequisites: L2-M43
-> Source: Chapter 7 of the 100x Engineer Guide
+> **Loop 2 (Practice)** | Section 2C: Infrastructure & Operations | ⏱️ 75 min | 🟢 Core | Prerequisites: L2-M43
+>
+> **Source:** Chapter 7 of the 100x Engineer Guide
 
 ## What You'll Learn
 

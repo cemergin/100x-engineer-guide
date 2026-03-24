@@ -1,7 +1,8 @@
 # L3-M89: Your Career Engineering Plan
 
-> ⏱️ 60 min | 🟢 Core | Prerequisites: All prior modules
-> Source: Chapter 29 (Career Engineering — Promotion Packets, Brag Documents, Staff+ Archetypes, Negotiation)
+> **Loop 3 (Mastery)** | Section 3E: The Final Sprint | ⏱️ 60 min | 🟢 Core | Prerequisites: All prior modules
+>
+> **Source:** Chapter 29 of the 100x Engineer Guide
 
 ## What You'll Learn
 

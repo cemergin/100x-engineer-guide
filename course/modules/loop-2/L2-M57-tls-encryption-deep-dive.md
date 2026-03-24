@@ -1,7 +1,8 @@
 # L2-M57: TLS & Encryption Deep Dive
 
-> ⏱️ 60 min | 🟡 Deep Dive | Prerequisites: L1-M04, L2-M56
-> Source: Chapter 21 of the 100x Engineer Guide
+> **Loop 2 (Practice)** | Section 2E: Security & Quality | ⏱️ 60 min | 🟡 Deep Dive | Prerequisites: L1-M04, L2-M56
+>
+> **Source:** Chapter 21 of the 100x Engineer Guide
 
 ## What You'll Learn
 

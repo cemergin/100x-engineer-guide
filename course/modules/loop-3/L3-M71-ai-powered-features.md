@@ -1,7 +1,8 @@
 # L3-M71: AI-Powered Features
 
-> ⏱️ 75 min | 🟡 Deep Dive | Prerequisites: L3-M70
-> Source: Chapter 10 (AI-Native Engineering, RAG, Vector Databases)
+> **Loop 3 (Mastery)** | Section 3B: Real-Time & Advanced Features | ⏱️ 75 min | 🟡 Deep Dive | Prerequisites: L3-M70
+>
+> **Source:** Chapters 10, 25 of the 100x Engineer Guide
 
 ## What You'll Learn
 

@@ -1,7 +1,8 @@
 # L3-M77a: Package Principles & Architecture Fitness Functions
 
-> ⏱️ 75 min | 🔴 Expert | Prerequisites: L3-M77 (ADRs), L2-M31-35 (Microservices), all Loop 1 foundations
-> Source: Chapter 32 of the 100x Engineer Guide (Section 10: Package & Module Design Principles)
+> **Loop 3 (Mastery)** | Section 3C: Operations & Leadership | ⏱️ 75 min | 🔴 Expert | Prerequisites: L3-M77 (ADRs), L2-M31-35 (Microservices), all Loop 1 foundations
+>
+> **Source:** Chapter 32 of the 100x Engineer Guide
 
 ## What You'll Learn
 

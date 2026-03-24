@@ -1,6 +1,8 @@
 # L2-M41: The N+1 Problem
-> ⏱️ 45 min | 🟢 Core | Prerequisites: L1-M07, L2-M37
-> Source: Chapter 24 of the 100x Engineer Guide
+
+> **Loop 2 (Practice)** | Section 2B: Performance & Databases | ⏱️ 45 min | 🟢 Core | Prerequisites: L1-M07, L2-M37
+>
+> **Source:** Chapter 24 of the 100x Engineer Guide
 
 ## What You'll Learn
 - How to detect N+1 queries by enabling query logging

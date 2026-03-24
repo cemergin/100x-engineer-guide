@@ -1,10 +1,8 @@
 # L1-M22: Introduction to Message Queues
 
-> **Loop 1 (Foundation)** | Section 1D: Architecture Fundamentals | Duration: 75 min | Tier: Core
+> **Loop 1 (Foundation)** | Section 1D: Architecture Fundamentals | ⏱️ 75 min | 🟢 Core | Prerequisites: L1-M21 (Event-Driven Thinking)
 >
-> **Prerequisites:** L1-M21 (Event-Driven Thinking)
->
-> **What you'll build:** Add RabbitMQ to TicketPulse, publish `TicketPurchased` events to a queue, build a consumer that processes email notifications, observe queue behavior through the management UI, and handle consumer failures with dead letter queues.
+> **Source:** Chapters 1, 3 of the 100x Engineer Guide
 
 ---
 

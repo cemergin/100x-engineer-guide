@@ -1,7 +1,8 @@
 # L3-M75: Cost Optimization
 
-> ⏱️ 60 min | 🟢 Core | Prerequisites: L2-M44 (AWS Architecture), L2-M45 (Docker), L2-M46 (Kubernetes)
-> Source: Chapter 19, Chapter 4 of the 100x Engineer Guide
+> **Loop 3 (Mastery)** | Section 3C: Operations & Leadership | ⏱️ 60 min | 🟢 Core | Prerequisites: L2-M44 (AWS Architecture), L2-M45 (Docker), L2-M46 (Kubernetes)
+>
+> **Source:** Chapters 4, 9 of the 100x Engineer Guide
 
 ## What You'll Learn
 

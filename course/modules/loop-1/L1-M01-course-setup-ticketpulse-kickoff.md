@@ -1,7 +1,8 @@
 # L1-M01: Course Setup & TicketPulse Kickoff
 
-> **60 min** | **Core** | Prerequisites: A computer with Docker installed, basic terminal comfort
-> Source: Chapter 12 of the 100x Engineer Guide
+> **Loop 1 (Foundation)** | Section 1A: Tooling & Environment | ⏱️ 60 min | 🟢 Core | Prerequisites: A computer with Docker installed, basic terminal comfort
+>
+> **Source:** Chapters 12, 21 of the 100x Engineer Guide
 
 ## What You'll Learn
 - How to get the TicketPulse application running locally with a single command

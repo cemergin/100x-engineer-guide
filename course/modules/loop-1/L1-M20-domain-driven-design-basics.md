@@ -1,10 +1,8 @@
 # L1-M20: Domain-Driven Design Basics
 
-> **Loop 1 (Foundation)** | Section 1D: Architecture Fundamentals | Duration: 75 min | Tier: Deep Dive
+> **Loop 1 (Foundation)** | Section 1D: Architecture Fundamentals | ⏱️ 75 min | 🟡 Deep Dive | Prerequisites: L1-M19 (Architecture Patterns Overview)
 >
-> **Prerequisites:** L1-M19 (Architecture Patterns Overview)
->
-> **What you'll build:** Identify TicketPulse's bounded contexts, draw a context map, define the ubiquitous language, and refactor the Order model into a proper aggregate with invariant enforcement.
+> **Source:** Chapters 1, 3 of the 100x Engineer Guide
 
 ---
 

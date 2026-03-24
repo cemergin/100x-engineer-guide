@@ -1,6 +1,8 @@
 # L2-M39: Advanced SQL for Analytics
-> ⏱️ 60 min | 🟡 Deep Dive | Prerequisites: L1-M06, L1-M07, L2-M37
-> Source: Chapter 24 of the 100x Engineer Guide
+
+> **Loop 2 (Practice)** | Section 2B: Performance & Databases | ⏱️ 60 min | 🟡 Deep Dive | Prerequisites: L1-M06, L1-M07, L2-M37
+>
+> **Source:** Chapter 24 of the 100x Engineer Guide
 
 ## What You'll Learn
 - Window functions: ROW_NUMBER, LAG, NTILE, running totals, rolling averages

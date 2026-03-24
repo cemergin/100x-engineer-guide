@@ -1,7 +1,8 @@
 # L1-M03: Git Beyond the Basics
 
-> **60 min** | **Core** | Prerequisites: L1-M01 (TicketPulse repo cloned), basic git (add, commit, push, pull, branch)
-> Source: Chapter 12 of the 100x Engineer Guide
+> **Loop 1 (Foundation)** | Section 1A: Tooling & Environment | ⏱️ 60 min | 🟢 Core | Prerequisites: L1-M01 (TicketPulse repo cloned), basic git (add, commit, push, pull, branch)
+>
+> **Source:** Chapters 12, 21 of the 100x Engineer Guide
 
 ## What You'll Learn
 - How to rewrite commit history with interactive rebase — turning messy work-in-progress into clean, reviewable commits

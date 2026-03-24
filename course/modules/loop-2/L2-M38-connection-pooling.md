@@ -1,6 +1,8 @@
 # L2-M38: Connection Pooling
-> ⏱️ 60 min | 🟢 Core | Prerequisites: L2-M37
-> Source: Chapter 24 of the 100x Engineer Guide
+
+> **Loop 2 (Practice)** | Section 2B: Performance & Databases | ⏱️ 60 min | 🟢 Core | Prerequisites: L2-M37
+>
+> **Source:** Chapter 24 of the 100x Engineer Guide
 
 ## What You'll Learn
 - Why each PostgreSQL connection is expensive (process model, memory overhead)

@@ -1,10 +1,8 @@
 # L1-M13: Authentication & Authorization
 
-> **Loop 1 (Foundation)** | Section 1C: Building the API | Duration: 75 min | Tier: Core
+> **Loop 1 (Foundation)** | Section 1C: Building the API | ⏱️ 75 min | 🟢 Core | Prerequisites: L1-M11 (REST API Design)
 >
-> **Prerequisites:** L1-M11 (REST API Design)
->
-> **What you'll build:** JWT-based authentication for TicketPulse -- signup, login, protected routes, role-based access control, and token refresh. By the end, only admins can create events and only logged-in users can buy tickets.
+> **Source:** Chapters 25, 5, 7, 8 of the 100x Engineer Guide
 
 ---
 

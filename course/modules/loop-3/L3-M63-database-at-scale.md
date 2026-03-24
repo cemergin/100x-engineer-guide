@@ -1,10 +1,8 @@
 # L3-M63: Database at Scale
 
-> **Loop 3 (Mastery)** | Section 3A: Global Scale Architecture | Duration: 75 min | Tier: Deep Dive
+> **Loop 3 (Mastery)** | Section 3A: Global Scale Architecture | ⏱️ 75 min | 🟡 Deep Dive | Prerequisites: L2-M37 (PostgreSQL Internals), L2-M35 (Database Per Service), L3-M61 (Multi-Region Design)
 >
-> **Prerequisites:** L2-M37 (PostgreSQL Internals), L2-M35 (Database Per Service), L3-M61 (Multi-Region Design)
->
-> **What you'll build:** Design a scaled database architecture for TicketPulse at 50M tickets, 10M orders, and 1M events. Implement table partitioning, observe query plan improvements, and design a sharding strategy with a justified shard key. Understand the trade-offs between partitioning and sharding and when each is appropriate.
+> **Source:** Chapters 1, 19, 31, 22, 23 of the 100x Engineer Guide
 
 ---
 

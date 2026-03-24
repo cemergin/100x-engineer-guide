@@ -1,7 +1,8 @@
 # L3-M68: The Ticket Rush Problem
 
-> ⏱️ 90 min | 🔴 Expert | Prerequisites: L2-M50, L3-M67
-> Source: Chapter 23 (System Design Case Studies), Chapter 10 (Real-Time Systems)
+> **Loop 3 (Mastery)** | Section 3B: Real-Time & Advanced Features | ⏱️ 90 min | 🔴 Expert | Prerequisites: L2-M50, L3-M67
+>
+> **Source:** Chapters 23, 10 of the 100x Engineer Guide
 
 ## What You'll Learn
 
@@ -56,8 +57,14 @@ Write down your design. Draw the data flow. Then continue.
 
 The most intuitive implementation:
 
-```javascript
-async function purchaseTicket(userId, eventId, seatId) {
+```typescript
+interface PurchaseResult {
+  success?: boolean;
+  ticketId?: string;
+  error?: string;
+}
+
+async function purchaseTicket(userId: string, eventId: string, seatId: string): Promise<PurchaseResult> {
   // Step 1: Check availability
   const ticket = await db.query(
     'SELECT * FROM tickets WHERE event_id = $1 AND seat_id = $2 AND status = $3',
@@ -121,8 +128,21 @@ RETURNING id, seat_id, price;
 
 This is an atomic compare-and-swap at the database level. The `WHERE status = 'available'` clause means only the first `UPDATE` succeeds. All subsequent attempts find zero matching rows and return nothing.
 
-```javascript
-async function purchaseTicketOptimistic(userId, eventId, seatId) {
+```typescript
+interface PurchaseSuccess {
+  success: true;
+  ticketId: string;
+  seatId: string;
+}
+
+interface PurchaseError {
+  error: string;
+  details?: string;
+}
+
+type PurchaseOutcome = PurchaseSuccess | PurchaseError;
+
+async function purchaseTicketOptimistic(userId: string, eventId: string, seatId: string | null): Promise<PurchaseOutcome> {
   // Single atomic operation -- no race window
   const result = await db.query(
     `UPDATE tickets
@@ -149,13 +169,14 @@ async function purchaseTicketOptimistic(userId, eventId, seatId) {
     );
 
     return { success: true, ticketId: ticket.id, seatId: ticket.seat_id };
-  } catch (paymentError) {
+  } catch (paymentError: unknown) {
     // Payment failed -- release the reservation
     await db.query(
       `UPDATE tickets SET status = 'available', user_id = NULL, reserved_at = NULL WHERE id = $1`,
       [ticket.id]
     );
-    return { error: 'Payment failed', details: paymentError.message };
+    const message = paymentError instanceof Error ? paymentError.message : 'Unknown error';
+    return { error: 'Payment failed', details: message };
   }
 }
 ```
@@ -224,15 +245,29 @@ User clicks "Buy"
 
 ### Build: The Virtual Queue
 
-```javascript
-const Redis = require('ioredis');
+```typescript
+import Redis from 'ioredis';
+
 const redis = new Redis();
 
-const QUEUE_KEY = (eventId) => `queue:${eventId}`;
-const PROCESSING_KEY = (eventId) => `processing:${eventId}`;
+const QUEUE_KEY = (eventId: string): string => `queue:${eventId}`;
+const PROCESSING_KEY = (eventId: string): string => `processing:${eventId}`;
+
+interface QueueJoinResult {
+  status: 'queued' | 'already_in_queue';
+  position?: number;
+  totalWaiting?: number;
+  estimatedWaitSeconds?: number;
+}
+
+interface QueuePositionResult {
+  status: 'waiting' | 'processing' | 'not_in_queue';
+  position?: number;
+  totalWaiting?: number;
+}
 
 // Step 1: User joins the queue
-async function joinQueue(userId, eventId) {
+async function joinQueue(userId: string, eventId: string): Promise<QueueJoinResult> {
   const queueKey = QUEUE_KEY(eventId);
 
   // Score = timestamp (earlier = lower score = higher priority)
@@ -251,14 +286,14 @@ async function joinQueue(userId, eventId) {
 
   return {
     status: 'queued',
-    position: position + 1,
+    position: position! + 1,
     totalWaiting,
-    estimatedWaitSeconds: Math.ceil((position + 1) * 0.5) // ~2 purchases/sec
+    estimatedWaitSeconds: Math.ceil((position! + 1) * 0.5) // ~2 purchases/sec
   };
 }
 
 // Step 2: Get current queue position (polled or pushed via WebSocket)
-async function getQueuePosition(userId, eventId) {
+async function getQueuePosition(userId: string, eventId: string): Promise<QueuePositionResult> {
   const position = await redis.zrank(QUEUE_KEY(eventId), userId);
 
   if (position === null) {
@@ -278,9 +313,16 @@ async function getQueuePosition(userId, eventId) {
 
 ### Build: The Queue Processor
 
-```javascript
+```typescript
+interface UserNotification {
+  status: string;
+  ticketId?: string;
+  seatId?: string;
+  reason?: string;
+}
+
 // Processes users from the queue, one at a time
-async function processQueue(eventId) {
+async function processQueue(eventId: string): Promise<void> {
   const queueKey = QUEUE_KEY(eventId);
   const processingKey = PROCESSING_KEY(eventId);
 
@@ -294,7 +336,7 @@ async function processQueue(eventId) {
       continue;
     }
 
-    const userId = result[0];
+    const userId: string = result[0];
 
     // Check if tickets are still available (fast check)
     const remaining = await getAvailableCount(eventId);
@@ -310,21 +352,21 @@ async function processQueue(eventId) {
 
     // Attempt the purchase
     try {
-      const result = await purchaseTicketOptimistic(userId, eventId, null);
+      const purchaseResult = await purchaseTicketOptimistic(userId, eventId, null);
 
-      if (result.success) {
+      if ('success' in purchaseResult) {
         await notifyUser(userId, eventId, {
           status: 'purchased',
-          ticketId: result.ticketId,
-          seatId: result.seatId
+          ticketId: purchaseResult.ticketId,
+          seatId: purchaseResult.seatId
         });
 
         // Broadcast availability update to all watchers
         await broadcastAvailability(eventId);
       } else {
-        await notifyUser(userId, eventId, { status: 'failed', reason: result.error });
+        await notifyUser(userId, eventId, { status: 'failed', reason: purchaseResult.error });
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(`Purchase failed for user ${userId}:`, err);
       await notifyUser(userId, eventId, { status: 'error', reason: 'Internal error' });
     } finally {
@@ -334,7 +376,7 @@ async function processQueue(eventId) {
 }
 
 // Notify user via WebSocket
-async function notifyUser(userId, eventId, message) {
+async function notifyUser(userId: string, eventId: string, message: UserNotification): Promise<void> {
   await redisPub.publish(`user-updates:${userId}`, JSON.stringify({
     eventId,
     ...message,
@@ -343,35 +385,34 @@ async function notifyUser(userId, eventId, message) {
 }
 
 // Tell all remaining queue members they are sold out
-async function drainQueueAsSoldOut(eventId) {
+async function drainQueueAsSoldOut(eventId: string): Promise<void> {
   const queueKey = QUEUE_KEY(eventId);
-  let batch;
 
   while (true) {
-    batch = await redis.zpopmin(queueKey, 100);
+    const batch = await redis.zpopmin(queueKey, 100);
     if (!batch || batch.length === 0) break;
 
     for (let i = 0; i < batch.length; i += 2) {
-      const userId = batch[i];
+      const userId: string = batch[i];
       await notifyUser(userId, eventId, { status: 'sold_out' });
     }
   }
 }
 
-function sleep(ms) {
+function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 ```
 
 ### WebSocket Integration: Live Queue Position
 
-```javascript
+```typescript
 // On the WebSocket server, push position updates to queued users
 setInterval(async () => {
   // For each active event with a queue
   for (const eventId of activeEvents) {
     const queueKey = QUEUE_KEY(eventId);
-    const members = await redis.zrange(queueKey, 0, -1); // All queued users
+    const members: string[] = await redis.zrange(queueKey, 0, -1); // All queued users
 
     for (let i = 0; i < members.length; i++) {
       await notifyUser(members[i], eventId, {
@@ -414,15 +455,30 @@ SELECT
 
 ### Load Test Script
 
-```javascript
-// load-test.js
-const fetch = require('node-fetch');
+```typescript
+// load-test.ts
+// Uses native fetch (Node 18+)
 
 const EVENT_ID = 'evt_rush_test';
 const CONCURRENT_USERS = 1000;
 const API_URL = 'http://localhost:3000';
 
-async function simulateUser(userId) {
+interface SimulationResult {
+  userId: string;
+  queuePosition?: number;
+  status: string;
+  error?: string;
+  latencyMs: number;
+}
+
+interface EventStats {
+  sold: number;
+  available: number;
+  reserved: number;
+  uniqueBuyers: number;
+}
+
+async function simulateUser(userId: number): Promise<SimulationResult> {
   const start = Date.now();
 
   try {
@@ -432,7 +488,7 @@ async function simulateUser(userId) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId: `user_${userId}` })
     });
-    const joinData = await joinRes.json();
+    const joinData = await joinRes.json() as { position: number; status: string };
 
     return {
       userId: `user_${userId}`,
@@ -440,17 +496,18 @@ async function simulateUser(userId) {
       status: joinData.status,
       latencyMs: Date.now() - start
     };
-  } catch (err) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
     return {
       userId: `user_${userId}`,
       status: 'error',
-      error: err.message,
+      error: message,
       latencyMs: Date.now() - start
     };
   }
 }
 
-async function runRush() {
+async function runRush(): Promise<void> {
   console.log(`Starting rush: ${CONCURRENT_USERS} users, 50 tickets`);
   console.log('---');
 
@@ -482,7 +539,7 @@ async function runRush() {
 
   // Check final state
   const checkRes = await fetch(`${API_URL}/api/events/${EVENT_ID}/stats`);
-  const stats = await checkRes.json();
+  const stats = await checkRes.json() as EventStats;
 
   console.log('\nFinal state:');
   console.log(`  Tickets sold: ${stats.sold}`);
@@ -515,7 +572,7 @@ A race condition has allowed one extra sale. The database shows 51 confirmed tic
 
 The queue processor checks available count before attempting the purchase:
 
-```javascript
+```typescript
 const remaining = await getAvailableCount(eventId);
 if (remaining <= 0) { /* sold out */ }
 ```
@@ -575,12 +632,16 @@ COMMIT;
 
 What if the user clicks "buy" twice? Or the network retries the request?
 
-```javascript
+```typescript
 // Generate an idempotency key on the client
 const idempotencyKey = `${userId}:${eventId}:${Date.now()}`;
 
 // Server checks before processing
-async function processWithIdempotency(idempotencyKey, userId, eventId) {
+async function processWithIdempotency(
+  idempotencyKey: string,
+  userId: string,
+  eventId: string
+): Promise<{ error?: string }> {
   // Check Redis first (fast path)
   const exists = await redis.set(`idem:${idempotencyKey}`, '1', 'NX', 'EX', 3600);
   if (!exists) {
@@ -594,14 +655,16 @@ async function processWithIdempotency(idempotencyKey, userId, eventId) {
        VALUES ($1, $2, $3, 'processing')`,
       [idempotencyKey, userId, eventId]
     );
-  } catch (err) {
-    if (err.code === '23505') { // Unique violation
+  } catch (err: unknown) {
+    if (err instanceof Error && (err as NodeJS.ErrnoException & { code: string }).code === '23505') {
+      // Unique violation
       return { error: 'Duplicate request' };
     }
     throw err;
   }
 
   // Proceed with purchase...
+  return {};
 }
 ```
 
@@ -613,17 +676,18 @@ Two layers of deduplication: Redis for speed, database unique constraint for cor
 
 For seat-specific reservations (user picks a specific seat), you need a per-seat lock:
 
-```javascript
-const Redlock = require('redlock');
+```typescript
+import Redlock from 'redlock';
+
 const redlock = new Redlock([redis], {
   retryCount: 3,
   retryDelay: 200,
 });
 
-async function reserveSeatWithLock(userId, eventId, seatId) {
+async function reserveSeatWithLock(userId: string, eventId: string, seatId: string): Promise<PurchaseOutcome> {
   const lockKey = `lock:seat:${eventId}:${seatId}`;
 
-  let lock;
+  let lock: Awaited<ReturnType<typeof redlock.acquire>> | undefined;
   try {
     // Acquire a lock for this specific seat (10 second TTL)
     lock = await redlock.acquire([lockKey], 10_000);
@@ -632,8 +696,8 @@ async function reserveSeatWithLock(userId, eventId, seatId) {
     const result = await purchaseTicketOptimistic(userId, eventId, seatId);
     return result;
 
-  } catch (err) {
-    if (err.name === 'LockError') {
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === 'LockError') {
       return { error: 'Seat is being reserved by another user, try again' };
     }
     throw err;

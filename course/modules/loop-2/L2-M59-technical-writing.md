@@ -1,7 +1,8 @@
 # L2-M59: Technical Writing for Engineers
 
-> ⏱️ 60 min | 🟢 Core | Prerequisites: L2-M58 (Debugging in Production)
-> Source: Chapter 27 of the 100x Engineer Guide
+> **Loop 2 (Practice)** | Section 2E: Security & Quality | ⏱️ 60 min | 🟢 Core | Prerequisites: L2-M58 (Debugging in Production)
+>
+> **Source:** Chapter 27 of the 100x Engineer Guide
 
 ## What You'll Learn
 

@@ -1,10 +1,8 @@
 # L2-M52: Data Pipelines
 
-> **Loop 2 (Applied)** | Section 2D: Advanced Patterns | Duration: 75 min | Tier: Deep Dive
+> **Loop 2 (Practice)** | Section 2D: Advanced Patterns | ⏱️ 75 min | 🟡 Deep Dive | Prerequisites: L2-M39 (Kubernetes Basics), L2-M44 (Kafka Basics or equivalent)
 >
-> **Prerequisites:** L2-M39 (Kubernetes Basics), L2-M44 (Kafka Basics or equivalent)
->
-> **What you'll build:** You will design and implement a CDC (Change Data Capture) pipeline for TicketPulse analytics -- Debezium captures database changes, Kafka transports them, and a consumer writes denormalized records to an analytics database with a materialized daily revenue view.
+> **Source:** Chapters 3, 22, 25, 32, 13 of the 100x Engineer Guide
 
 ---
 

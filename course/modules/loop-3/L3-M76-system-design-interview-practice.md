@@ -1,7 +1,8 @@
 # L3-M76: System Design Interview Practice
 
-> ⏱️ 90 min | 🟢 Core | Prerequisites: All Loop 2 modules (distributed systems, databases, messaging)
-> Source: Chapter 23 of the 100x Engineer Guide
+> **Loop 3 (Mastery)** | Section 3C: Operations & Leadership | ⏱️ 90 min | 🟢 Core | Prerequisites: All Loop 2 modules (distributed systems, databases, messaging)
+>
+> **Source:** Chapter 32 of the 100x Engineer Guide
 
 ## What You'll Learn
 

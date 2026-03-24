@@ -1,10 +1,8 @@
 # L2-M35: Database Per Service
 
-> **Loop 2 (Practice)** | Section 2A: Breaking Apart the Monolith | Duration: 75 min | Tier: Core
+> **Loop 2 (Practice)** | Section 2A: Breaking Apart the Monolith | ⏱️ 75 min | 🟢 Core | Prerequisites: L2-M31 (Strangler Fig), L2-M34 (Saga Pattern)
 >
-> **Prerequisites:** L2-M31 (Strangler Fig), L2-M34 (Saga Pattern)
->
-> **What you'll build:** Split TicketPulse's single Postgres database into service-specific databases, migrate tables to their owning services, replace cross-service JOINs with API calls, and implement the outbox pattern for reliable event publishing.
+> **Source:** Chapters 3, 21, 25 of the 100x Engineer Guide
 
 ---
 

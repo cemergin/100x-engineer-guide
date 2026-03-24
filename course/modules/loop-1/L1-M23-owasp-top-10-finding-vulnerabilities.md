@@ -1,10 +1,8 @@
 # L1-M23: OWASP Top 10 -- Finding Vulnerabilities
 
-> **Loop 1 (Foundation)** | Section 1E: Security & Reliability Basics | Duration: 75 min | Tier: Core
+> **Loop 1 (Foundation)** | Section 1E: Security & Reliability Basics | ⏱️ 75 min | 🟢 Core | Prerequisites: L1-M13 (Authentication & Authorization)
 >
-> **Prerequisites:** L1-M13 (Authentication & Authorization)
->
-> **What you'll build:** You will find and exploit five real vulnerabilities planted in TicketPulse -- SQL injection, XSS, CSRF, broken auth, and SSRF -- then fix each one. You will experience the attack before you write the defense.
+> **Source:** Chapters 5, 4, 20 of the 100x Engineer Guide
 
 ---
 

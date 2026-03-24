@@ -1,10 +1,8 @@
 # L3-M66: The Payment System
 
-> **Loop 3 (Mastery)** | Section 3A: Global Scale Architecture | Duration: 90 min | Tier: Expert
+> **Loop 3 (Mastery)** | Section 3A: Global Scale Architecture | ⏱️ 90 min | 🔴 Expert | Prerequisites: L2-M34 (The Saga Pattern), L3-M63 (Database at Scale), L3-M61 (Multi-Region Design)
 >
-> **Prerequisites:** L2-M34 (The Saga Pattern), L3-M63 (Database at Scale), L3-M61 (Multi-Region Design)
->
-> **What you'll build:** Design a production-grade payment system for TicketPulse. Implement idempotency to prevent double charges. Build a double-entry ledger. Design reconciliation between your ledger and the payment provider. Handle the worst-case scenario: payment succeeds at Stripe but your callback times out.
+> **Source:** Chapters 1, 19, 31, 22, 23 of the 100x Engineer Guide
 
 ---
 

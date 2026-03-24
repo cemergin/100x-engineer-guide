@@ -1,10 +1,8 @@
 # L3-M61: Multi-Region Design
 
-> **Loop 3 (Mastery)** | Section 3A: Global Scale Architecture | Duration: 75 min | Tier: Core
+> **Loop 3 (Mastery)** | Section 3A: Global Scale Architecture | ⏱️ 75 min | 🟢 Core | Prerequisites: L2-M48 (Chaos Engineering), L2-M54 (Zero-Downtime Migrations), L2-M44 (Terraform & IaC)
 >
-> **Prerequisites:** L2-M48 (Chaos Engineering), L2-M54 (Zero-Downtime Migrations), L2-M44 (Terraform & IaC)
->
-> **What you'll build:** Design a multi-region architecture for TicketPulse. Determine where compute lives, which data is global vs regional, and how users worldwide get the fastest possible experience. You will draw two competing architectures (active-active vs active-passive), defend your choice, and trace a cross-region purchase through the entire system.
+> **Source:** Chapters 1, 19, 31, 22, 23 of the 100x Engineer Guide
 
 ---
 

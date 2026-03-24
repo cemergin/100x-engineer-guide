@@ -1,10 +1,8 @@
 # L2-M55: Webhooks
 
-> **Loop 2 (Applied)** | Section 2D: Advanced Patterns | Duration: 60 min | Tier: Core
+> **Loop 2 (Practice)** | Section 2D: Advanced Patterns | ⏱️ 60 min | 🟢 Core | Prerequisites: L2-M39 (Kubernetes Basics), L2-M49 (Circuit Breakers & Resilience)
 >
-> **Prerequisites:** L2-M39 (Kubernetes Basics), L2-M49 (Circuit Breakers & Resilience)
->
-> **What you'll build:** You will implement a complete webhook system for TicketPulse -- partner registration, HMAC-SHA256 signed delivery, a consumer that verifies signatures, retry with exponential backoff, a dead letter queue, idempotency, and delivery metrics.
+> **Source:** Chapters 3, 22, 25, 32, 13 of the 100x Engineer Guide
 
 ---
 

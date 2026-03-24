@@ -1,10 +1,8 @@
 # L3-M62: Cloud Provider Deep Dive
 
-> **Loop 3 (Mastery)** | Section 3A: Global Scale Architecture | Duration: 90 min | Tier: Core
+> **Loop 3 (Mastery)** | Section 3A: Global Scale Architecture | ⏱️ 90 min | 🟢 Core | Prerequisites: L3-M61 (Multi-Region Design), L2-M44 (Terraform & IaC), L2-M43 (Kubernetes Fundamentals)
 >
-> **Prerequisites:** L3-M61 (Multi-Region Design), L2-M44 (Terraform & IaC), L2-M43 (Kubernetes Fundamentals)
->
-> **What you'll build:** Deploy at least one TicketPulse service to a real cloud provider (AWS or GCP). Hit your live endpoint from the internet. Estimate the cost of running TicketPulse at scale. Walk away understanding what each platform makes easy and what it makes painful.
+> **Source:** Chapters 1, 19, 31, 22, 23 of the 100x Engineer Guide
 
 ---
 

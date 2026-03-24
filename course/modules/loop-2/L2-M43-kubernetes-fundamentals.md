@@ -1,7 +1,8 @@
 # L2-M43: Kubernetes Fundamentals
 
-> ⏱️ 90 min | 🟢 Core | Prerequisites: L1-M14, L2-M31
-> Source: Chapter 7 of the 100x Engineer Guide
+> **Loop 2 (Practice)** | Section 2C: Infrastructure & Operations | ⏱️ 90 min | 🟢 Core | Prerequisites: L1-M14, L2-M31
+>
+> **Source:** Chapter 7 of the 100x Engineer Guide
 
 ## What You'll Learn
 

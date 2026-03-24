@@ -1,7 +1,8 @@
 # L3-M70: Recommendation Engine
 
-> ⏱️ 75 min | 🟡 Deep Dive | Prerequisites: L2-M40
-> Source: Chapter 10 (AI-Native Engineering, Vector Databases), Chapter 9 (ML Infrastructure)
+> **Loop 3 (Mastery)** | Section 3B: Real-Time & Advanced Features | ⏱️ 75 min | 🟡 Deep Dive | Prerequisites: L2-M40
+>
+> **Source:** Chapters 10, 25 of the 100x Engineer Guide
 
 ## What You'll Learn
 

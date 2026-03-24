@@ -1,10 +1,8 @@
 # L1-M16b: Clean Code & Design Principles
 
-> **Loop 1 (Foundation)** | Section 1D: Software Engineering Principles | Duration: 60 min | Tier: Core
+> **Loop 1 (Foundation)** | Section 1C+: Software Engineering Principles | ⏱️ 60 min | 🟢 Core | Prerequisites: L1-M16a (SOLID Principles in Practice)
 >
-> **Prerequisites:** L1-M16a (SOLID Principles in Practice)
->
-> **What you'll build:** You will review a deliberately messy TicketPulse file, rename 10 things, break apart a 150-line function, fix swallowed errors, learn when duplication is better than the wrong abstraction, and remove a premature abstraction.
+> **Source:** Chapter 32 of the 100x Engineer Guide
 
 ---
 
