@@ -97,6 +97,8 @@ volumes:
   neo4j-data:
 ```
 
+> ⚠️ **Version Note:** This module pins specific software versions that were current at writing (March 2026). Before running, check for the latest stable releases — Docker images, package versions, and tool versions evolve frequently. The concepts and patterns remain the same regardless of version.
+
 ```bash
 docker compose up -d neo4j
 
@@ -660,6 +662,17 @@ For each of these potential TicketPulse features, think about where you'd implem
 ## What's Next
 
 Section 2B is complete. You've built a deep understanding of database performance — from Postgres internals and connection pooling, through advanced SQL analytics, search engineering, N+1 detection, and graph databases. In **Section 2C**, you'll tackle observability and reliability: distributed tracing, monitoring, and making TicketPulse production-ready.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Graph database** | A database optimized for storing and querying data modeled as nodes and edges (relationships). |
+| **Node** | An entity in a graph database, representing a person, place, thing, or concept. |
+| **Edge** | A relationship connecting two nodes in a graph database, often with a type and properties. |
+| **Cypher** | A declarative query language for graph databases, used primarily with Neo4j. |
+| **Neo4j** | A popular open-source graph database that uses the property graph model and the Cypher query language. |
+| **Traversal** | The process of navigating from node to node along edges to answer a graph query. |
 
 ## 📚 Further Reading
 - [Neo4j Getting Started](https://neo4j.com/docs/getting-started/)

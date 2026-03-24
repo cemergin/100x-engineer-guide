@@ -391,3 +391,13 @@ You have:
 ---
 
 **Next module**: L3-M87 -- Mobile Backend Patterns, where TicketPulse launches a mobile app and the backend requirements change fundamentally.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **AI pair programming** | Using an AI assistant alongside a developer in real time to write, review, and debug code. |
+| **Claude Code** | Anthropic's CLI tool that integrates Claude into the development workflow for code generation and analysis. |
+| **Prompt engineering** | The practice of crafting effective inputs to an LLM to elicit accurate, useful responses. |
+| **Code review** | The process of examining code changes for correctness, style, security, and maintainability before merging. |
+| **Context window** | The maximum amount of text (measured in tokens) that an LLM can process in a single request. |

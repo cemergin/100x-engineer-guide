@@ -134,6 +134,8 @@ provider "helm" {
 }
 ```
 
+> ⚠️ **Version Note:** This module pins specific software versions that were current at writing (March 2026). Before running, check for the latest stable releases — Docker images, package versions, and tool versions evolve frequently. The concepts and patterns remain the same regardless of version.
+
 ### 2b. Variables
 
 Variables make your Terraform code reusable across environments.

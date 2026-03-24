@@ -463,3 +463,13 @@ You have:
 ---
 
 **Next module**: L3-M88 -- The TicketPulse Architecture Review, where we step back and examine the complete system we have built across 88+ modules.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Push notification** | A server-initiated message delivered to a mobile device, even when the app is backgrounded. |
+| **FCM** | Firebase Cloud Messaging; Google's service for sending push notifications to Android and iOS devices. |
+| **APNs** | Apple Push Notification service; Apple's service for delivering push notifications to iOS, macOS, and other Apple devices. |
+| **Offline-first** | An architecture where the app works without a network connection and syncs data when connectivity is restored. |
+| **Deep link** | A URL that navigates a user directly to specific content or a screen within a mobile application. |

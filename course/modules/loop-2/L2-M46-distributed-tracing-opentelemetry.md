@@ -75,6 +75,8 @@ Add Jaeger to your `docker-compose.yml`:
     restart: unless-stopped
 ```
 
+> ⚠️ **Version Note:** This module pins specific software versions that were current at writing (March 2026). Before running, check for the latest stable releases — Docker images, package versions, and tool versions evolve frequently. The concepts and patterns remain the same regardless of version.
+
 ```bash
 docker compose up -d jaeger
 ```

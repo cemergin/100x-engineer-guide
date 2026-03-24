@@ -786,3 +786,13 @@ You have:
 ---
 
 **Next module**: L3-M83 — Advanced Kubernetes, where we production-harden TicketPulse's K8s deployment with NetworkPolicies, RBAC, security contexts, and Pod Disruption Budgets.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Event sourcing** | A pattern where state changes are stored as an immutable sequence of events rather than by updating a current record. |
+| **Event store** | A database or log that persists the ordered sequence of domain events as the system's source of truth. |
+| **Projection** | A read-model derived by replaying events, optimized for specific query patterns. |
+| **Snapshot** | A periodic capture of aggregate state used to avoid replaying the entire event history from the beginning. |
+| **Upcasting** | The process of transforming old event schemas into the current schema during replay to handle schema evolution. |

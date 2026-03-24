@@ -624,6 +624,16 @@ gl    # your alias for git log --oneline --graph --decorate -20
 
 You have a fast environment and a running codebase. In Module 3, you'll learn the Git skills that separate professionals from amateurs — interactive rebase, bisect, and the reflog safety net. You'll practice these directly on TicketPulse feature branches with intentionally messy history, and you'll learn to recover from every Git disaster you'll ever encounter.
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Shell** | A command-line interpreter that executes user commands and scripts (e.g., Bash, Zsh). |
+| **Alias** | A shortcut that maps a short command name to a longer or more complex command. |
+| **Fuzzy finder** | A tool (such as fzf) that lets you search and select items interactively using approximate string matching. |
+| **Terminal multiplexer** | Software (like tmux) that allows multiple terminal sessions within a single window, with split panes and session persistence. |
+| **Dotfiles** | Hidden configuration files (prefixed with a dot) that customize your shell, editor, and development tools. |
+
 ## Further Reading
 
 - [ripgrep user guide](https://github.com/BurntSushi/ripgrep/blob/master/GUIDE.md) — advanced patterns and config

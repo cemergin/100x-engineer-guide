@@ -570,6 +570,17 @@ YOUR BIGGEST GAP: _____________________________________________
 
 ---
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **GDPR** | General Data Protection Regulation; an EU regulation governing how personal data is collected, stored, and processed. |
+| **Right to erasure** | A GDPR right allowing individuals to request the deletion of their personal data. |
+| **Crypto-shredding** | A data deletion technique where encrypted data is rendered irrecoverable by destroying its encryption keys. |
+| **PII** | Personally Identifiable Information; any data that can be used to identify a specific individual. |
+| **Consent** | A GDPR requirement that users must give informed, explicit permission before their personal data is processed. |
+| **Data export** | The ability for users to download their personal data in a portable, machine-readable format as required by GDPR. |
+
 ## Further Reading
 
 - **Chapter 30**: Data Privacy, Ethics & Compliance -- the full technical guide

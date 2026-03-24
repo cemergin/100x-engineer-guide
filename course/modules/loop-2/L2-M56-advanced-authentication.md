@@ -772,6 +772,17 @@ Before moving on, verify:
 
 ---
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **OAuth 2.0** | An authorization framework that enables third-party applications to obtain limited access to a user's resources. |
+| **OIDC** | OpenID Connect; an identity layer on top of OAuth 2.0 that provides user authentication and profile information. |
+| **PKCE** | Proof Key for Code Exchange; an OAuth 2.0 extension that protects public clients from authorization code interception. |
+| **Authorization code** | A short-lived code exchanged for tokens during the OAuth 2.0 authorization code flow. |
+| **Access token** | A credential that grants the bearer permission to access specific resources on behalf of a user. |
+| **ID token** | A JWT issued by an OIDC provider that contains claims about the authenticated user's identity. |
+
 ## Further Reading
 
 - [RFC 6749: OAuth 2.0 Authorization Framework](https://tools.ietf.org/html/rfc6749)

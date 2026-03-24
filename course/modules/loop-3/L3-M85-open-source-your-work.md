@@ -439,3 +439,14 @@ You have:
 ---
 
 **Next module**: L3-M86 -- AI-Powered Engineering Workflow, where we use Claude Code to implement a new TicketPulse feature and evaluate where AI accelerates us and where it needs correction.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Open source** | Software whose source code is publicly available and licensed for use, modification, and redistribution. |
+| **LICENSE** | A file declaring the legal terms under which a project's source code may be used and distributed. |
+| **CONTRIBUTING** | A file that describes how external contributors can participate in a project (code style, PR process, etc.). |
+| **Semver** | Semantic Versioning; a versioning scheme (MAJOR.MINOR.PATCH) that communicates the nature of changes in each release. |
+| **Changeset** | A structured description of changes in a release, often auto-generated from commit messages or PR metadata. |
+| **Maintainer** | A person responsible for reviewing contributions, merging changes, and guiding the direction of an open-source project. |

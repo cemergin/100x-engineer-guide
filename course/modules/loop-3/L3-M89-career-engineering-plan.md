@@ -411,3 +411,13 @@ You have:
 ---
 
 **Next module**: L3-M90 -- The Final Capstone. The last module of the entire course. A retrospective on everything you have learned, a showcase of what you have built, and a plan for what comes next.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Brag document** | A running record of your accomplishments, impact, and key contributions maintained for performance reviews. |
+| **Promotion packet** | A compiled collection of evidence demonstrating readiness for the next career level. |
+| **Staff+ archetype** | A recognized pattern of senior engineering impact such as Tech Lead, Architect, Solver, or Right Hand. |
+| **Negotiation** | The process of discussing and reaching agreement on compensation, role, or scope with an employer. |
+| **Sponsorship** | Active advocacy by a senior leader who creates opportunities and visibility for your career advancement. |

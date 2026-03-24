@@ -667,3 +667,13 @@ Before moving on, confirm:
 You have now covered the foundational software engineering principles: SOLID, clean code, design patterns, and modularity. These principles are tools, not rules. Apply them when the complexity warrants it. Skip them when simplicity is more valuable. The judgment of *when* to apply *which* principle is what separates a 10x engineer from someone who memorized a textbook.
 
 In Loop 2, you will apply these principles at the system level: architecture patterns, distributed systems, and designing for scale.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Coupling** | The degree to which one module depends on the internal details of another module. |
+| **Cohesion** | The degree to which the elements within a module belong together and serve a single, well-defined purpose. |
+| **Connascence** | A metric describing how changes in one module require changes in another, generalizing the concept of coupling. |
+| **Dependency graph** | A directed graph that shows which modules depend on which other modules in a system. |
+| **Module boundary** | The explicit interface or contract that separates a module's internal implementation from external consumers. |

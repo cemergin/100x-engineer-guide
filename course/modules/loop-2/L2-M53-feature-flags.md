@@ -483,6 +483,16 @@ The canonical example: Knight Capital lost $440 million in 45 minutes because ol
 
 ---
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Feature flag** | A toggle that enables or disables a feature at runtime without deploying new code. |
+| **Rollout** | The gradual process of enabling a feature for an increasing percentage of users. |
+| **Canary** | A release strategy where a change is deployed to a small subset of users before a full rollout. |
+| **A/B test** | An experiment that compares two variants of a feature to measure which performs better. |
+| **Flag hygiene** | The practice of regularly cleaning up old or fully-rolled-out feature flags to reduce code complexity. |
+
 ## Further Reading
 
 - Martin Fowler, "Feature Toggles" -- the comprehensive taxonomy of flag types (release, experiment, ops, permission)

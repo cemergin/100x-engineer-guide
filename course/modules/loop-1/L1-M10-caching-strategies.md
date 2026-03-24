@@ -621,6 +621,17 @@ You've completed **Section 1B: Data Foundations**. You can now:
 
 Next up is **Section 1C**, where you'll build on these foundations with application-level patterns.
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Cache-aside** | A caching pattern where the application checks the cache first and loads data from the database on a miss. |
+| **TTL** | Time to Live; the duration a cached entry remains valid before it expires and must be refreshed. |
+| **Cache miss** | An event where requested data is not found in the cache, requiring a fetch from the underlying data source. |
+| **Cache hit** | An event where requested data is found in the cache, avoiding a slower fetch from the underlying data source. |
+| **Cache invalidation** | The process of removing or updating stale entries in a cache when the underlying data changes. |
+| **Stampede** | A scenario where many concurrent cache misses for the same key cause a flood of requests to the database. |
+
 ## 📚 Further Reading
 - [Redis Caching Patterns](https://redis.io/docs/manual/patterns/) — Official patterns documentation
 - [Caching Strategies and How to Choose the Right One](https://codeahoy.com/2017/08/11/caching-strategies-and-how-to-choose-the-right-one/)

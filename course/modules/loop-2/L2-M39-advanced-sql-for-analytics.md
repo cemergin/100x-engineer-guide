@@ -627,6 +627,16 @@ For TicketPulse's analytics dashboard, a materialized view refreshed every 5 min
 
 In **L2-M40: Search Engineering**, you'll add Elasticsearch to TicketPulse so users can search for "jazz concerts in NYC this weekend" with full-text search, filters, and autocomplete.
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Window function** | A function that performs a calculation across a set of rows related to the current row without collapsing them. |
+| **CTE** | Common Table Expression; a named temporary result set defined with WITH that can be referenced in the same query. |
+| **LATERAL JOIN** | A PostgreSQL join that allows a subquery to reference columns from preceding tables in the FROM clause. |
+| **Materialized view** | A database object that stores the result of a query physically on disk and can be refreshed on demand. |
+| **pg_cron** | A PostgreSQL extension that schedules recurring SQL jobs directly inside the database using cron syntax. |
+
 ## 📚 Further Reading
 - [PostgreSQL Window Functions](https://www.postgresql.org/docs/current/tutorial-window.html)
 - [PostgreSQL LATERAL Queries](https://www.postgresql.org/docs/current/queries-table-expressions.html#QUERIES-LATERAL)

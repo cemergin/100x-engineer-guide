@@ -556,6 +556,16 @@ git add -A && git commit -m "feat: add Redis-backed rate limiting with per-user 
 
 ---
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Rate limiter** | A mechanism that controls how many requests a client can make to a service within a given time window. |
+| **Token bucket** | A rate-limiting algorithm where tokens are added at a fixed rate and each request consumes one token. |
+| **Sliding window** | A rate-limiting algorithm that tracks requests in a continuously moving time window for smoother enforcement. |
+| **429** | The HTTP status code (Too Many Requests) returned when a client exceeds the allowed request rate. |
+| **Retry-After** | An HTTP response header that tells the client how long to wait before making another request. |
+
 ## Further Reading
 
 - Stripe's rate limiting blog post -- practical patterns from a company that handles millions of API calls

@@ -550,3 +550,13 @@ A notification system is deceptively complex. The core is straightforward: recei
 The key architectural decisions: a gateway that centralizes cross-cutting concerns, priority queues that ensure urgent notifications beat marketing emails, two-layer deduplication for correctness, and a state machine that tracks every notification from creation to delivery.
 
 This pattern scales from TicketPulse (thousands of notifications per day) to Slack-scale (billions per month) by adjusting the queue infrastructure (Redis sorted sets to Kafka topics) and the number of channel workers.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Push notification** | A message delivered to a user's device by a server, even when the application is not actively open. |
+| **Priority queue** | A queue where messages with higher priority are dequeued and processed before lower-priority messages. |
+| **Deduplication** | The process of detecting and discarding duplicate messages to prevent redundant notifications. |
+| **Delivery tracking** | Recording whether a notification was successfully delivered, opened, or failed for each recipient. |
+| **Channel** | A medium through which notifications are sent, such as email, SMS, push, or in-app. |

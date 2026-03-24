@@ -433,3 +433,14 @@ Before continuing to the next module, verify:
 ## What's Next
 
 TicketPulse now has security defenses, proper secrets management, structured logging, and defined SLOs. But when a new developer joins the team, they spend hours setting up their environment. The next module fixes the "works on my machine" problem with version managers, lockfiles, and automatic environment setup.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **SLO** | Service Level Objective; a target value or range for a measurable aspect of service reliability. |
+| **SLI** | Service Level Indicator; a quantitative measure of some aspect of the level of service being provided. |
+| **SLA** | Service Level Agreement; a formal contract that specifies the consequences of not meeting SLOs. |
+| **Error budget** | The allowed amount of unreliability derived from the SLO, balancing reliability work against feature development. |
+| **Availability** | The proportion of time a service is operational and able to serve requests successfully. |
+| **Uptime** | The total time a system remains accessible and functional within a given measurement period. |

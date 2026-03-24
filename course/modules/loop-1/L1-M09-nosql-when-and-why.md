@@ -30,6 +30,8 @@ docker run -d \
   redis:7-alpine
 ```
 
+> ⚠️ **Version Note:** This module pins specific software versions that were current at writing (March 2026). Before running, check for the latest stable releases — Docker images, package versions, and tool versions evolve frequently. The concepts and patterns remain the same regardless of version.
+
 Verify both are running:
 
 ```bash
@@ -543,6 +545,16 @@ Keep both containers running — we need Redis for the next module on caching.
 ## What's Next
 
 In **L1-M10: Caching Strategies**, you'll combine Postgres and Redis into a caching layer — implementing cache-aside, managing TTLs, handling cache invalidation, and observing cache hit ratios in real time.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Key-value store** | A NoSQL database that stores data as simple key-value pairs, optimized for fast lookups by key. |
+| **Document database** | A NoSQL database that stores data as semi-structured documents (typically JSON), allowing flexible schemas. |
+| **TTL** | Time to Live; an expiration time after which a stored record is automatically deleted. |
+| **Redis** | An in-memory data structure store commonly used as a cache, message broker, or key-value database. |
+| **Polyglot persistence** | The practice of using different database technologies for different data storage needs within a single system. |
 
 ## 📚 Further Reading
 - [Redis Documentation](https://redis.io/docs/) — Official docs with interactive examples

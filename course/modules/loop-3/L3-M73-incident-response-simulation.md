@@ -749,6 +749,16 @@ Total                  75 min
 
 ---
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Incident commander** | The person who coordinates the response during an incident, making decisions and delegating tasks. |
+| **War room** | A dedicated communication channel (physical or virtual) where the incident response team collaborates in real time. |
+| **Escalation** | The process of involving additional or more senior responders when an incident exceeds the current team's capacity. |
+| **Status page** | A public-facing page that communicates current system status and ongoing incidents to users. |
+| **Postmortem** | A blameless review conducted after an incident to document what happened and define preventive action items. |
+
 ## Further Reading
 
 - **Chapter 26**: Incident War Stories & Postmortem Analysis -- real-world incidents studied in depth

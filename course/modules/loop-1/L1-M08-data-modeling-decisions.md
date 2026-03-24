@@ -569,6 +569,16 @@ The most common schema mistake is denormalizing before you have evidence of a pe
 
 In **L1-M09: NoSQL: When and Why**, you'll learn that not everything belongs in Postgres. Some data patterns are better served by Redis, DynamoDB, or document databases — and you'll learn exactly when to reach for each.
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Normalization** | The process of organizing database columns and tables to reduce data redundancy and improve integrity. |
+| **Denormalization** | The deliberate introduction of redundancy into a schema to improve read performance at the cost of write complexity. |
+| **1NF/2NF/3NF** | First, second, and third normal forms; progressive levels of normalization that eliminate specific types of redundancy. |
+| **ERD** | Entity-Relationship Diagram; a visual representation of tables, their columns, and the relationships between them. |
+| **Cardinality** | The nature of a relationship between entities, such as one-to-one, one-to-many, or many-to-many. |
+
 ## 📚 Further Reading
 - [Database Normalization Explained](https://www.essentialsql.com/get-ready-to-learn-sql-database-normalization-explained-in-simple-english/)
 - [Mermaid Live Editor](https://mermaid.live/) — ERD diagramming

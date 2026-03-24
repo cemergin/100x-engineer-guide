@@ -629,3 +629,13 @@ The skills from Loop 2 will not change with the next framework or the next cloud
 What changes in Loop 3 is the scale of the decisions. You have the tools. Now you will learn when to use them and when not to. That judgment -- knowing which tool fits which problem at which scale -- is what makes a senior engineer.
 
 See you in Loop 3.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Stress test** | A test that pushes a system beyond normal operating capacity to find its breaking point. |
+| **Incident drill** | A simulated incident used to practice the team's response procedures and identify gaps. |
+| **Architecture review** | A structured evaluation of a system's design to identify risks, bottlenecks, and improvement opportunities. |
+| **Postmortem** | A blameless review conducted after an incident to document findings and prevent recurrence. |
+| **Service mesh** | An infrastructure layer that manages service-to-service communication with built-in observability and resilience features. |

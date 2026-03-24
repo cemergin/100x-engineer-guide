@@ -132,6 +132,8 @@ HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
 CMD ["node", "dist/server.js"]
 ```
 
+> ⚠️ **Version Note:** This module pins specific software versions that were current at writing (March 2026). Before running, check for the latest stable releases — Docker images, package versions, and tool versions evolve frequently. The concepts and patterns remain the same regardless of version.
+
 Let us break down every decision:
 
 ### Why `node:20-alpine`?

@@ -592,6 +592,17 @@ TicketPulse's tickets table has high churn — tickets are created, reserved, so
 
 In **L2-M38: Connection Pooling**, you'll discover why TicketPulse's microservices are exhausting Postgres connections — and how PgBouncer fixes it.
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **MVCC** | Multi-Version Concurrency Control; PostgreSQL's method of allowing concurrent reads and writes without locking. |
+| **WAL** | Write-Ahead Log; a log where changes are recorded before being applied to data files, ensuring crash recovery. |
+| **Vacuum** | A PostgreSQL maintenance process that reclaims storage occupied by dead tuples and updates statistics. |
+| **Dead tuple** | A row version that is no longer visible to any transaction and is eligible for cleanup by vacuum. |
+| **Transaction ID** | A unique, monotonically increasing identifier assigned to each transaction in PostgreSQL. |
+| **Shared buffers** | The portion of PostgreSQL's memory used to cache frequently accessed data pages from disk. |
+
 ## 📚 Further Reading
 - [PostgreSQL Internals Documentation](https://www.postgresql.org/docs/current/internals.html)
 - Chapter 24 of the 100x Engineer Guide: Sections 1.1-1.6

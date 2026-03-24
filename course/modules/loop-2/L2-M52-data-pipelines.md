@@ -115,6 +115,8 @@ volumes:
   analytics-data:
 ```
 
+> ⚠️ **Version Note:** This module pins specific software versions that were current at writing (March 2026). Before running, check for the latest stable releases — Docker images, package versions, and tool versions evolve frequently. The concepts and patterns remain the same regardless of version.
+
 Start the stack:
 
 ```bash
@@ -562,6 +564,17 @@ LinkedIn built Kafka specifically for this use case -- change data capture acros
 The same principle applies at TicketPulse's scale. Without CDC, adding analytics means: modify the application to publish events (code changes in every service), or run queries against production (performance risk), or set up database replication (schema-coupled). With CDC, the database itself becomes the event source. No application changes needed.
 
 ---
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **CDC** | Change Data Capture; a technique that detects and propagates data changes from a database to downstream consumers. |
+| **Debezium** | An open-source CDC platform that streams database changes into event systems like Kafka. |
+| **Data pipeline** | An automated sequence of steps that moves and transforms data from source systems to a destination. |
+| **ETL** | Extract, Transform, Load; a traditional data integration pattern that moves data between systems. |
+| **Stream processing** | The continuous, real-time processing of data records as they arrive, rather than in batches. |
+| **Connector** | A component that integrates an external system (database, API, file) with a data pipeline or event platform. |
 
 ## Further Reading
 

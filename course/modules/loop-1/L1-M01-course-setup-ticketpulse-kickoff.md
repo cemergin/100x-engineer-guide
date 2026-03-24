@@ -293,6 +293,8 @@ You'll see three services:
 - Exposes port 6379
 - Has a healthcheck that runs `redis-cli ping`
 
+> ⚠️ **Version Note:** This module pins specific software versions that were current at writing (March 2026). Before running, check for the latest stable releases — Docker images, package versions, and tool versions evolve frequently. The concepts and patterns remain the same regardless of version.
+
 ### 3.2 Verify the Services
 
 ```bash
@@ -544,6 +546,16 @@ The `-v` flag removes the named volumes, so your database will be fresh next tim
 ## What's Next
 
 Your terminal is functional, but is it *fast*? In Module 2, you'll install the tools that will make you measurably more productive every single day — modern CLI tools that make searching, navigating, and manipulating code feel effortless. You'll feel the difference in the first 5 minutes.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Docker Compose** | A tool for defining and running multi-container Docker applications using a YAML configuration file. |
+| **Container** | A lightweight, isolated runtime environment that packages an application with its dependencies. |
+| **Image** | A read-only template containing the instructions and filesystem used to create a container. |
+| **Volume** | A persistent storage mechanism that allows data to survive container restarts and be shared between containers. |
+| **Port mapping** | The binding of a port on the host machine to a port inside a container, enabling external access to containerized services. |
 
 ## Further Reading
 

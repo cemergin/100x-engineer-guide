@@ -481,3 +481,13 @@ You have:
 ---
 
 **Next module**: L3-M89 -- Your Career Engineering Plan, where we translate everything you have learned into concrete career action.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **C4 diagram** | A hierarchical diagram model (Context, Container, Component, Code) for visualizing software architecture at multiple levels. |
+| **Tech debt** | The implied cost of future rework caused by choosing a quick or easy solution over a better long-term approach. |
+| **Risk assessment** | The process of identifying potential threats to a system and evaluating their likelihood and impact. |
+| **Scaling plan** | A documented strategy for how the system will handle increased load, including horizontal and vertical scaling options. |
+| **Fitness function** | An automated test that continuously validates whether a specific architectural quality attribute is maintained. |

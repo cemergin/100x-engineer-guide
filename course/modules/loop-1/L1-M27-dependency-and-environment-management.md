@@ -461,3 +461,13 @@ which jest         # ./node_modules/.bin/jest
 ## What's Next
 
 TicketPulse is written in TypeScript. But what if it was not? The next module shows the same API endpoint implemented in Go, Python, Rust, and TypeScript -- side by side. You will run each, read each, and benchmark each.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Version manager** | A tool (such as nvm or asdf) that installs and switches between multiple versions of a language runtime. |
+| **Lockfile** | A file that records the exact resolved versions of every dependency, ensuring reproducible installs. |
+| **Reproducible build** | A build process that produces identical outputs given the same source code, dependencies, and environment. |
+| **direnv** | A shell extension that automatically loads and unloads environment variables when you enter or leave a directory. |
+| **.tool-versions** | A configuration file used by asdf to declare which runtime versions a project requires. |

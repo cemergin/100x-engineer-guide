@@ -710,3 +710,14 @@ GraphQL gives TicketPulse's clients the power to request exactly what they need.
 The cost of this flexibility: you must solve the N+1 problem (DataLoader), implement pagination properly (Relay connections), and secure against malicious queries (depth limiting, complexity analysis). These are not optional. Without them, a GraphQL API is slower and less secure than the REST API it replaced.
 
 The pragmatic approach: GraphQL for client-facing queries where flexibility drives developer velocity. REST for webhooks, internal services, and public APIs where simplicity and cacheability matter more. They are complementary tools, not competitors.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **GraphQL** | A query language for APIs that lets clients request exactly the data they need in a single request. |
+| **Schema** | The type system definition in GraphQL that describes available queries, mutations, and object types. |
+| **Resolver** | A function that fetches the data for a single field in a GraphQL schema. |
+| **DataLoader** | A utility that batches and caches data-fetching calls within a single GraphQL request to prevent N+1 queries. |
+| **Subscription** | A GraphQL operation that maintains a real-time connection and pushes updates to the client when data changes. |
+| **Federation** | An architecture that composes multiple GraphQL services into a single unified API graph. |

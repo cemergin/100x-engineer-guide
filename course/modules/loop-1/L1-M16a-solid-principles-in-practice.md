@@ -1119,3 +1119,14 @@ Before moving on, confirm:
 ## What's Next
 
 In L1-M16b, we will review TicketPulse code that is technically correct but hard to read -- bad names, long functions, swallowed errors, and wrong abstractions. Clean code is not about SOLID; it is about the humans who read your code next.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **SRP** | Single Responsibility Principle; a class or module should have only one reason to change. |
+| **OCP** | Open/Closed Principle; software entities should be open for extension but closed for modification. |
+| **LSP** | Liskov Substitution Principle; subtypes must be substitutable for their base types without altering correctness. |
+| **ISP** | Interface Segregation Principle; clients should not be forced to depend on interfaces they do not use. |
+| **DIP** | Dependency Inversion Principle; high-level modules should depend on abstractions, not concrete implementations. |
+| **Dependency injection** | A technique where an object's dependencies are provided externally rather than created internally. |

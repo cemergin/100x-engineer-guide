@@ -635,6 +635,18 @@ For a single request, the difference is minimal. HTTP/2's advantage shows up whe
 
 You now understand how requests flow through the network and into your application. In the next section, we start building real features for TicketPulse — starting with the data layer. You'll learn SQL beyond SELECT *, understand how indexes work (and when they hurt), and build the database schema that will power TicketPulse through the rest of the course. The network knowledge from this module will come back every time you debug a production issue.
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **TCP** | Transmission Control Protocol; a connection-oriented protocol that guarantees reliable, ordered delivery of data. |
+| **TLS** | Transport Layer Security; a cryptographic protocol that provides encrypted communication over a network. |
+| **HTTP** | Hypertext Transfer Protocol; the application-layer protocol used for transferring web resources between clients and servers. |
+| **DNS** | Domain Name System; the distributed system that translates human-readable domain names into IP addresses. |
+| **Latency** | The time delay between sending a request and receiving the first byte of the response. |
+| **TTFB** | Time to First Byte; the duration from the client's request to when the first byte of the server's response arrives. |
+| **Round trip** | The time it takes for a network packet to travel from source to destination and back. |
+
 ## Further Reading
 
 - [How DNS Works (comic)](https://howdns.works/) — a beautifully illustrated walkthrough of DNS resolution

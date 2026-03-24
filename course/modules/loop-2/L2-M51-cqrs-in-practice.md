@@ -602,6 +602,17 @@ The meta-lesson: **always start simple**. Add CQRS when you have measured eviden
 
 ---
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **CQRS** | Command Query Responsibility Segregation; a pattern that uses separate models for reading and writing data. |
+| **Command** | An operation that changes state in the system (a write) and typically returns no data. |
+| **Query** | An operation that returns data without modifying state (a read). |
+| **Read model** | A data representation optimized for queries, often denormalized for fast lookups. |
+| **Write model** | A data representation optimized for processing commands, enforcing business rules and consistency. |
+| **Projection** | The process of transforming events or commands into a read-optimized view of the data. |
+
 ## Further Reading
 
 - Martin Fowler, "CQRS" -- the canonical description of the pattern

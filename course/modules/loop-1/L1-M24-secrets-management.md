@@ -543,6 +543,8 @@ services:
     command: redis-server --requirepass ${REDIS_PASSWORD}
 ```
 
+> ⚠️ **Version Note:** This module pins specific software versions that were current at writing (March 2026). Before running, check for the latest stable releases — Docker images, package versions, and tool versions evolve frequently. The concepts and patterns remain the same regardless of version.
+
 The `${VARIABLE}` syntax reads from the `.env` file in the same directory as `docker-compose.yml`. The secrets live in one place and are injected into each container at runtime.
 
 ---
@@ -598,3 +600,13 @@ git status | grep ".env"
 ## What's Next
 
 TicketPulse currently uses `console.log` for everything. When something goes wrong in production, you have no way to trace a request through the system. The next module introduces structured logging and request tracing.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Environment variable** | A key-value pair set outside the application code that configures behavior at runtime. |
+| **.env** | A file that stores environment variables locally for development, typically excluded from version control. |
+| **Secret** | A sensitive value (such as an API key, password, or token) that must be protected from unauthorized access. |
+| **Config** | Non-secret application settings (like feature flags or URLs) that vary between environments. |
+| **dotenv** | A library that loads environment variables from a .env file into the application's runtime environment. |

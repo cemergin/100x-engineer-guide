@@ -518,6 +518,16 @@ The answers drive the roadmap. Not the tools you think are cool. Not what other 
 
 ---
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Developer platform** | An internal platform that provides self-service tools, templates, and services to accelerate development teams. |
+| **Golden path** | A recommended, well-supported default workflow or template that embodies organizational best practices. |
+| **Self-service** | The ability for developers to provision resources, create services, or perform operations without filing tickets. |
+| **Service catalog** | A registry of available internal services and components, including documentation and ownership information. |
+| **DevEx** | Developer Experience; the overall satisfaction and productivity developers feel when using internal tools and platforms. |
+
 ## Further Reading
 
 - **Backstage by Spotify**: backstage.io -- the open-source developer portal

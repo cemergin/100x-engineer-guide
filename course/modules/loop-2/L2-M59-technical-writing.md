@@ -574,6 +574,17 @@ Before moving on, verify:
 
 ---
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **RFC** | Request for Comments; a document proposing a technical design or change for team review before implementation. |
+| **Runbook** | A step-by-step guide for handling a specific operational procedure or incident scenario. |
+| **Postmortem** | A structured review conducted after an incident to document what happened, why, and how to prevent recurrence. |
+| **Diataxis** | A documentation framework that classifies content into tutorials, how-to guides, explanations, and reference. |
+| **Blameless** | An incident review culture that focuses on systemic improvements rather than assigning personal fault. |
+| **Action item** | A concrete, assigned follow-up task resulting from a postmortem or review that prevents recurrence. |
+
 ## Further Reading
 
 - Chapter 27 of the 100x Engineer Guide (Technical Writing & Documentation) for the full treatment

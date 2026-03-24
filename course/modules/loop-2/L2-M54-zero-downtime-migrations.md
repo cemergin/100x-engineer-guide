@@ -458,6 +458,16 @@ The key insight: **every migration is a multi-step process with application depl
 
 ---
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Schema migration** | A versioned change to the database schema (tables, columns, indexes) applied in a controlled sequence. |
+| **Expand-and-contract** | A migration strategy that first adds new structures (expand), migrates data, then removes old structures (contract). |
+| **Backfill** | The process of populating a new column or table with data derived from existing records. |
+| **Zero-downtime** | A deployment or migration approach that keeps the application available to users throughout the change. |
+| **DDL** | Data Definition Language; SQL statements (CREATE, ALTER, DROP) that define or modify database schema objects. |
+
 ## Further Reading
 
 - GitHub Engineering Blog, "gh-ost: GitHub's online schema migration tool for MySQL"

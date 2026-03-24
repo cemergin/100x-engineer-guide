@@ -607,3 +607,13 @@ TicketPulse now has "Events you might like." Three strategies cover different sc
 The cold start problem is handled with fallbacks. Quality is measured with click-through and conversion rates. A/B testing determines optimal weights.
 
 The recommendation engine is a perfect example of "start simple, iterate with data." A co-occurrence matrix in SQL gets you 80% of the way. Embeddings add the remaining nuance. The hardest part is not the algorithm -- it is building the feedback loop that tells you whether the recommendations are actually good.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Collaborative filtering** | A recommendation technique that suggests items based on the preferences of similar users. |
+| **Content-based** | A recommendation technique that suggests items similar to those a user has previously liked, based on item attributes. |
+| **Embedding** | A dense numerical vector representation of an item or user in a continuous space, capturing semantic similarity. |
+| **Cold start** | The challenge of generating recommendations for new users or items with little or no interaction data. |
+| **pgvector** | A PostgreSQL extension that adds vector data types and similarity-search indexes for embedding-based queries. |

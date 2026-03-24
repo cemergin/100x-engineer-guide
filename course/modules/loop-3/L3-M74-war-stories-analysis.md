@@ -417,6 +417,16 @@ For each "No" answer, write an action item with an owner and a due date. This ch
 
 ---
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Cascading failure** | A failure in one component that triggers failures in dependent components, amplifying the overall impact. |
+| **Blast radius** | The scope of users, services, or data affected when a failure or change goes wrong. |
+| **Dead code** | Code that exists in the codebase but is never executed, sometimes masking latent bugs. |
+| **Canary** | A deployment strategy that routes a small percentage of traffic to a new version to detect issues early. |
+| **Kill switch** | A mechanism that instantly disables a feature or service to stop an ongoing incident. |
+
 ## Further Reading
 
 - **Cloudflare Blog**: "Details of the Cloudflare outage on July 2, 2019" -- the full postmortem

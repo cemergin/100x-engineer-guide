@@ -492,3 +492,13 @@ done
 ## What's Next
 
 All four servers handled 100 concurrent connections fine. But what happens at 10,000? The next module pushes each language to its limits with heavy concurrency, revealing how event loops, goroutines, async runtimes, and thread pools handle the pressure differently.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Static typing** | A type system where variable types are checked at compile time, catching type errors before the code runs. |
+| **Dynamic typing** | A type system where variable types are determined and checked at runtime rather than at compile time. |
+| **Compiled** | A language whose source code is translated entirely into machine code before execution. |
+| **Interpreted** | A language whose source code is executed line by line at runtime by an interpreter. |
+| **Garbage collection** | An automatic memory management process that reclaims memory occupied by objects no longer in use. |

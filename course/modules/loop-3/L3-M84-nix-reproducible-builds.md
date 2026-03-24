@@ -117,6 +117,8 @@ The hash in the path is computed from ALL inputs: source code, dependencies, bui
 }
 ```
 
+> ⚠️ **Version Note:** This module pins specific software versions that were current at writing (March 2026). Before running, check for the latest stable releases — Docker images, package versions, and tool versions evolve frequently. The concepts and patterns remain the same regardless of version.
+
 ### What This Gives You
 
 Every engineer who runs `nix develop` in the TicketPulse directory gets:
@@ -395,3 +397,14 @@ You have:
 ---
 
 **Next module**: L3-M85 -- Open Source Your Work, where we prepare a TicketPulse component for public release and learn what makes open source projects actually get adopted.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Nix** | A purely functional package manager that builds software in isolated, reproducible environments. |
+| **Flake** | A Nix feature that provides a standardized, hermetic way to define project inputs, outputs, and dependencies. |
+| **Derivation** | The fundamental build unit in Nix; a description of how to build a package from its inputs. |
+| **direnv** | A shell extension that automatically loads environment variables and Nix shells when entering a project directory. |
+| **Reproducible** | The property that a build produces bit-for-bit identical output regardless of when or where it is executed. |
+| **Content-addressed** | A storage model where artifacts are identified by the hash of their content rather than by name or version. |

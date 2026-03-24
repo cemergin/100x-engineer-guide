@@ -1081,3 +1081,13 @@ Before moving on, confirm:
 ## What's Next
 
 In L1-M16d, we zoom out from individual classes to module-level design: coupling, cohesion, dependency cycles, and what a modular monolith looks like for TicketPulse.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Strategy** | A design pattern that defines a family of interchangeable algorithms, letting the algorithm vary independently from the client. |
+| **Observer** | A design pattern where an object notifies a list of dependents automatically when its state changes. |
+| **Repository** | A design pattern that abstracts data access behind a collection-like interface, decoupling domain logic from persistence. |
+| **Decorator** | A design pattern that attaches additional behavior to an object dynamically by wrapping it. |
+| **Factory** | A design pattern that encapsulates object creation logic, allowing the client to create objects without specifying their concrete class. |

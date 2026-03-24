@@ -421,6 +421,16 @@ Fix: CFR should be paired with deployment frequency. Low CFR + low
 
 ---
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **DORA metrics** | Four key metrics (deployment frequency, lead time, MTTR, change failure rate) that measure software delivery performance. |
+| **Deployment frequency** | How often an organization successfully deploys code to production. |
+| **Lead time** | The elapsed time from code commit to that code running successfully in production. |
+| **MTTR** | Mean Time to Recovery; the average time it takes to restore service after an incident. |
+| **Change failure rate** | The percentage of deployments that result in a failure requiring remediation. |
+
 ## Further Reading
 
 - **"Accelerate: The Science of Lean Software and DevOps"** by Nicole Forsgren, Jez Humble, Gene Kim -- the book that established DORA metrics

@@ -106,6 +106,8 @@ volumes:
   es-data:
 ```
 
+> ⚠️ **Version Note:** This module pins specific software versions that were current at writing (March 2026). Before running, check for the latest stable releases — Docker images, package versions, and tool versions evolve frequently. The concepts and patterns remain the same regardless of version.
+
 ```bash
 docker compose up -d elasticsearch kibana
 
@@ -677,6 +679,17 @@ For TicketPulse, where search is a core user experience with autocomplete, filte
 ## What's Next
 
 In **L2-M41: The N+1 Problem**, you'll discover that TicketPulse's events page is firing 201 database queries to load 100 events — and you'll fix it with a 16x performance improvement.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Inverted index** | A data structure mapping each unique term to the list of documents (or rows) that contain it. |
+| **BM25** | A probabilistic ranking function used by search engines to score documents by relevance to a query. |
+| **Elasticsearch** | A distributed search and analytics engine built on Apache Lucene, commonly used for full-text search. |
+| **Analyzer** | A pipeline of character filters, a tokenizer, and token filters that transforms text into searchable terms. |
+| **Autocomplete** | A search feature that suggests completions as the user types, typically implemented with edge n-grams or prefix queries. |
+| **Facet** | A category or attribute used to filter and narrow search results (e.g., price range, brand). |
 
 ## 📚 Further Reading
 - [Elasticsearch: The Definitive Guide](https://www.elastic.co/guide/en/elasticsearch/reference/current/index.html)

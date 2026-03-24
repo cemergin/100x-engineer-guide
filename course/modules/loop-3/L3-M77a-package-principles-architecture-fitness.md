@@ -504,6 +504,16 @@ COST OF NOT ENFORCING:
 
 ---
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **ADR** | Architecture Decision Record; a short document that captures a single architectural decision and its context. |
+| **RFC** | Request for Comments; a design proposal shared with the team for feedback before a decision is finalized. |
+| **Design doc** | A detailed document describing a proposed technical design, including alternatives considered and trade-offs. |
+| **Decision record** | A log entry that captures the reasoning and outcome of a significant technical or process decision. |
+| **Supersede** | The act of replacing a previous decision record with a new one when the context or choice changes. |
+
 ## Further Reading
 
 - **Chapter 32, Section 10**: Package & Module Design Principles -- the full theoretical foundation

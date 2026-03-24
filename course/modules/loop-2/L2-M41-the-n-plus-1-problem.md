@@ -472,6 +472,16 @@ test('events list should not have N+1', async () => {
 
 In **L2-M42: Graph Databases**, you'll add social features to TicketPulse — "friends attending this event" and "artists similar to ones you've seen" — using Neo4j and Cypher.
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **N+1 problem** | A performance anti-pattern where one query fetches a list and N additional queries fetch related data for each item. |
+| **Eager loading** | A strategy that loads related data in the same query or batch, avoiding extra round trips to the database. |
+| **DataLoader** | A utility that batches and deduplicates data-fetching calls within a single execution tick. |
+| **Batch loading** | The technique of combining multiple individual data requests into a single query to reduce database round trips. |
+| **Query logging** | The practice of recording all SQL queries an application executes, used to detect N+1 and other performance issues. |
+
 ## 📚 Further Reading
 - [DataLoader README](https://github.com/graphql/dataloader) — Facebook's original batching library
 - Chapter 24 of the 100x Engineer Guide: Query Optimization

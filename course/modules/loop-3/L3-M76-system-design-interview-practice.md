@@ -663,6 +663,16 @@ SYSTEM DESIGN INTERVIEW DON'Ts
 
 ---
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Capacity estimation** | The process of calculating the compute, storage, and bandwidth resources a system needs to handle projected load. |
+| **Back-of-envelope** | A rough, order-of-magnitude calculation used to quickly validate whether a design is feasible. |
+| **Trade-off** | A deliberate decision to favor one quality (e.g., consistency) at the expense of another (e.g., latency). |
+| **Deep dive** | A detailed examination of one component of a system design, covering data models, APIs, and failure modes. |
+| **Bottleneck** | The single component or resource that limits the overall throughput of a system under load. |
+
 ## Further Reading
 
 - **Chapter 23**: Full system design case studies with detailed reference solutions

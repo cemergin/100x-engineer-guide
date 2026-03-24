@@ -683,6 +683,17 @@ Before moving on, verify:
 
 ---
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **TLS 1.3** | The latest version of TLS, offering improved security and a faster handshake compared to previous versions. |
+| **Certificate** | A digital document that binds a public key to an identity, signed by a certificate authority. |
+| **mTLS** | Mutual TLS; a variant where both client and server present certificates to authenticate each other. |
+| **Handshake** | The initial negotiation between client and server that establishes encryption parameters for a TLS session. |
+| **Cipher suite** | A named combination of algorithms for key exchange, encryption, and message authentication used in a TLS session. |
+| **Let's Encrypt** | A free, automated certificate authority that issues TLS certificates trusted by major browsers. |
+
 ## Further Reading
 
 - [RFC 8446: TLS 1.3](https://tools.ietf.org/html/rfc8446)

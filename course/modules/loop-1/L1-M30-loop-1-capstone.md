@@ -621,3 +621,13 @@ Most importantly, you now have a mental framework for thinking about systems: ho
 That framework is worth more than any single technology. Technologies change. The ability to analyze a system, find its limits, and design improvements does not.
 
 See you in Loop 2.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Architecture diagram** | A visual representation of a system's components, their responsibilities, and how they interact. |
+| **Bottleneck** | A component or resource that limits overall system throughput or response time. |
+| **Load test** | A test that simulates expected user traffic to measure system behavior under a defined level of demand. |
+| **Capacity planning** | The process of estimating the resources needed to handle current and projected workload growth. |
+| **Trade-off** | A deliberate decision to accept a disadvantage in one area in exchange for a benefit in another. |

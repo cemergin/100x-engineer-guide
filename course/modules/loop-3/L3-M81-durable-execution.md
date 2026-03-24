@@ -661,3 +661,13 @@ You have:
 ---
 
 **Next module**: L3-M82 — Event Sourcing at Scale, where we store events instead of state and gain a complete audit trail of every change that ever happened in TicketPulse's order system.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Durable execution** | A programming model where function state is automatically persisted, surviving crashes and restarts. |
+| **Workflow** | A sequence of steps (activities) orchestrated by a durable execution engine to complete a business process. |
+| **Deterministic replay** | The technique of re-executing workflow code using recorded results to recover state after a failure. |
+| **Temporal** | An open-source durable execution platform that manages workflow state, retries, and timeouts. |
+| **Activity** | A single unit of work within a durable workflow that performs a side effect (e.g., API call, database write). |

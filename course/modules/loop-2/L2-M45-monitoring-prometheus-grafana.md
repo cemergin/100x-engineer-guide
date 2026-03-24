@@ -16,9 +16,13 @@
 
 ## Why This Matters
 
-TicketPulse is now running on Kubernetes with multiple replicas of multiple services. When a user reports "the site is slow," where do you look? Which service? Which endpoint? Is it all users or just some? Without metrics, you are guessing. With Prometheus and Grafana, you have dashboards showing request rates, error rates, and latency percentiles -- in real time. You see the problem before the user reports it.
+It is 11:42 AM on a Friday. A popular artist just announced a surprise drop of 500 tickets on TicketPulse. Traffic spikes to 50x normal in ninety seconds. Your on-call phone lights up: "Purchases are failing." You SSH into the box. Which service is dying -- the API gateway, the event service, the payment service? Is the database melting or is Stripe timing out? Is it every request or just the checkout path? You run `docker logs` and a wall of text floods your terminal. You scroll. You squint. You grep. Nothing useful. Fifteen minutes later, you are still guessing. The tickets are gone. The artist's fans are furious. You never found the bottleneck.
 
-By the end of this module, you will have a real monitoring stack running locally, with real metrics flowing from TicketPulse into Prometheus, visualized in Grafana dashboards on your screen.
+This is what running without monitoring feels like. Blind, slow, and always too late.
+
+Now picture the alternative: a single Grafana dashboard showing request rate per service, error rate spiking on the payment service, p99 latency at 8 seconds on `/api/checkout`. You see it in five seconds. You know exactly where to look. That is the difference Prometheus and Grafana make.
+
+By the end of this module, you will have that dashboard -- real metrics flowing from every TicketPulse service, visualized in real time on your screen. You will never debug blind again.
 
 ## Prereq Check
 
@@ -78,6 +82,8 @@ Add these services to your `docker-compose.yml`:
   prometheus_data:
   grafana_data:
 ```
+
+> ⚠️ **Version Note:** This module pins specific software versions that were current at writing (March 2026). Before running, check for the latest stable releases — Docker images, package versions, and tool versions evolve frequently. The concepts and patterns remain the same regardless of version.
 
 Create the Prometheus configuration:
 

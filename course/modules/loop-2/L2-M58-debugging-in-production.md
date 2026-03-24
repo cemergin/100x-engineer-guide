@@ -623,6 +623,17 @@ Before moving on, verify:
 
 ---
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Observability** | The ability to understand a system's internal state by examining its external outputs (logs, metrics, traces). |
+| **Incident** | An unplanned event that degrades or disrupts service, requiring immediate investigation and response. |
+| **Root cause** | The fundamental reason a failure occurred, as opposed to its symptoms. |
+| **5 Whys** | An iterative questioning technique that asks "why" repeatedly to drill down from a symptom to a root cause. |
+| **Correlation** | The practice of linking related signals (logs, metrics, traces) to reconstruct the sequence of events in an incident. |
+| **Triage** | The process of assessing severity and prioritizing which issues to investigate first during an incident. |
+
 ## Further Reading
 
 - Chapter 18 of the 100x Engineer Guide (Debugging, Profiling & Monitoring) for language-specific debugging and profiling

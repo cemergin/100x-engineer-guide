@@ -413,3 +413,13 @@ That is the real graduation: not knowing everything, but having the scaffold to 
 ---
 
 **Welcome to the other side. Now go build something.**
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Retrospective** | A structured team reflection on what went well, what didn't, and what to improve in the next iteration. |
+| **Knowledge map** | A visual inventory of topics and skills showing your current proficiency and areas for growth. |
+| **Elevator pitch** | A concise (30-60 second) summary of a project, design, or idea that communicates its core value. |
+| **Learning roadmap** | A prioritized plan of topics and skills to study next, informed by your knowledge map and career goals. |
+| **Portfolio project** | A substantial personal or capstone project that demonstrates your engineering skills to employers or peers. |

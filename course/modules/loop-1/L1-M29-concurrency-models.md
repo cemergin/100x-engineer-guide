@@ -507,3 +507,13 @@ kill %1 %2 %3 %4 2>/dev/null  # Stop background processes
 ## What's Next
 
 You have built, secured, logged, measured, and benchmarked TicketPulse across multiple languages. The capstone brings everything together: architecture review, load testing, and a plan for what comes next in Loop 2.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Thread** | An operating-system-level unit of execution that shares memory with other threads in the same process. |
+| **Event loop** | A single-threaded programming construct that waits for and dispatches events or callbacks without blocking. |
+| **Goroutine** | A lightweight concurrent function in Go that is scheduled by the Go runtime rather than the OS. |
+| **Coroutine** | A generalizable subroutine that can suspend and resume execution at specific yield points. |
+| **Async/await** | Language syntax that lets developers write asynchronous code in a sequential style using promises or futures. |

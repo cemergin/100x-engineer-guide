@@ -628,3 +628,15 @@ AI features in TicketPulse solve real problems. Semantic search understands "chi
 But AI is not free. Every LLM call costs money, adds latency, and introduces nondeterminism. The engineering discipline is: cache aggressively, use the cheapest model that works, ground every response in real data, and verify outputs before showing them to users.
 
 The most important AI feature is the one the user never notices: embeddings powering better search and recommendations behind the scenes. The flashiest AI feature (the chatbot) is often the least valuable. Build for substance, not spectacle.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **RAG** | Retrieval-Augmented Generation; a pattern that retrieves relevant documents and feeds them as context to an LLM. |
+| **Embedding** | A dense vector representation of text used to measure semantic similarity between documents or queries. |
+| **Vector search** | A search method that finds items closest to a query vector in a high-dimensional embedding space. |
+| **LLM** | Large Language Model; a neural network trained on large text corpora that generates and understands natural language. |
+| **Prompt** | The input text or instruction given to an LLM to guide its response. |
+| **Grounding** | The technique of anchoring LLM outputs to verified, retrieved facts to reduce hallucination. |
+| **Guardrail** | A check or filter applied to LLM inputs or outputs to enforce safety, accuracy, or policy constraints. |

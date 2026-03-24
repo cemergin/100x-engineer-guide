@@ -556,3 +556,13 @@ curl -s "http://localhost:3000/api/debug/logs?requestId=$REQUEST_ID" | jq '.logs
 ## What's Next
 
 TicketPulse now has proper logging. But what does "reliable" actually mean? How much downtime is acceptable? The next module introduces SLOs and error budgets -- the framework for defining and measuring reliability.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Structured logging** | A logging approach that outputs log entries as machine-parseable data (typically JSON) instead of plain text. |
+| **Log level** | A severity classification (e.g., DEBUG, INFO, WARN, ERROR) that controls which log messages are recorded. |
+| **Request ID** | A unique identifier attached to each incoming request, used to trace it through the system. |
+| **Correlation ID** | An identifier that links related operations across multiple services in a distributed system. |
+| **JSON logging** | The practice of emitting log entries as JSON objects so they can be easily searched, filtered, and aggregated. |

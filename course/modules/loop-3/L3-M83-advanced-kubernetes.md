@@ -505,3 +505,14 @@ You have:
 ---
 
 **Next module**: L3-M84 — Nix & Reproducible Builds, where we eliminate "works on my machine" by defining TicketPulse's exact development environment in a single file.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **NetworkPolicy** | A Kubernetes resource that controls which pods can communicate with each other and with external endpoints. |
+| **RBAC** | Role-Based Access Control; a Kubernetes authorization model that grants permissions based on assigned roles. |
+| **PDB** | PodDisruptionBudget; a Kubernetes resource that limits the number of pods that can be down simultaneously during disruptions. |
+| **SecurityContext** | A Kubernetes setting that defines privilege and access-control options for a pod or container. |
+| **HPA** | Horizontal Pod Autoscaler; a Kubernetes controller that automatically scales the number of pod replicas based on observed metrics. |
+| **Resource quota** | A Kubernetes mechanism that limits the total amount of CPU, memory, or other resources a namespace can consume. |

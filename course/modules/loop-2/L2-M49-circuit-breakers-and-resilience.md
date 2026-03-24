@@ -782,6 +782,17 @@ git add -A && git commit -m "feat: add circuit breaker, retry, bulkhead, and fal
 
 ---
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Circuit breaker** | A stability pattern that stops calling a failing service after a threshold, allowing it time to recover. |
+| **Bulkhead** | A resilience pattern that isolates components so a failure in one does not cascade to others. |
+| **Retry** | Automatically re-attempting a failed operation, typically with increasing delays between attempts. |
+| **Backoff** | A strategy of progressively increasing the wait time between retry attempts to reduce load on a failing system. |
+| **Jitter** | Random variation added to backoff intervals to prevent many clients from retrying simultaneously. |
+| **Timeout** | A maximum duration allowed for an operation to complete before it is aborted and treated as a failure. |
+
 ## Further Reading
 
 - Michael Nygard, "Release It!" -- the book that introduced the circuit breaker pattern to software

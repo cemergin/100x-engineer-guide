@@ -844,3 +844,13 @@ Before moving on, confirm:
 ## What's Next
 
 In L1-M16c, we move from code-level principles to design patterns: Strategy, Observer, Repository, Decorator, and Factory. You will build each one into TicketPulse, solving real problems rather than memorizing textbook definitions.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Code smell** | A surface-level indicator in code that often signals a deeper structural or design problem. |
+| **DRY** | Don't Repeat Yourself; a principle that aims to reduce duplication of logic or knowledge in a codebase. |
+| **KISS** | Keep It Simple, Stupid; a principle favoring straightforward solutions over unnecessarily complex ones. |
+| **YAGNI** | You Ain't Gonna Need It; a principle advising against building features until they are actually required. |
+| **Refactoring** | The process of restructuring existing code to improve readability, structure, or performance without changing its behavior. |

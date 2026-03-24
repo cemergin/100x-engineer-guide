@@ -587,6 +587,16 @@ You now know the SQL patterns that separate junior from senior engineers:
 
 In **L1-M07: Indexing & Query Performance**, you'll learn why some of these queries are fast and others are slow — and how to make the slow ones 100x faster with the right indexes.
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **CTE** | Common Table Expression; a named temporary result set defined with WITH that can be referenced within a query. |
+| **Window function** | A function that performs a calculation across a set of rows related to the current row without collapsing them. |
+| **Aggregate** | A function (e.g., COUNT, SUM, AVG) that computes a single result from a set of input rows. |
+| **GROUP BY** | An SQL clause that groups rows sharing a value so aggregate functions can be applied to each group. |
+| **HAVING** | An SQL clause that filters groups produced by GROUP BY based on aggregate conditions. |
+
 ## 📚 Further Reading
 - [PostgreSQL Window Functions Documentation](https://www.postgresql.org/docs/current/tutorial-window.html)
 - [Modern SQL — Window Functions](https://modern-sql.com/feature/window-functions)

@@ -78,6 +78,8 @@ mkdir -p services/gateway/src
 }
 ```
 
+> ⚠️ **Version Note:** This module pins specific software versions that were current at writing (March 2026). Before running, check for the latest stable releases — Docker images, package versions, and tool versions evolve frequently. The concepts and patterns remain the same regardless of version.
+
 ### Middleware: Correlation ID
 
 Every request gets a unique ID that flows through every service. When something fails in the payment service, you search logs for this ID and see the entire request path.

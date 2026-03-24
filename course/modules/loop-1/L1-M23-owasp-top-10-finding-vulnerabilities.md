@@ -867,3 +867,13 @@ Before continuing to the next module, verify:
 ## What's Next
 
 TicketPulse has `DB_PASSWORD=tiger123` hardcoded in the source code. In the next module, you will extract all secrets to environment variables, validate them on startup, and learn why this matters more than most engineers realize.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **SQL injection** | An attack that inserts malicious SQL into a query, potentially reading or modifying database data. |
+| **XSS** | Cross-Site Scripting; an attack that injects malicious scripts into web pages viewed by other users. |
+| **CSRF** | Cross-Site Request Forgery; an attack that tricks a user's browser into making unwanted requests to a site where they are authenticated. |
+| **SSRF** | Server-Side Request Forgery; an attack that causes a server to make requests to unintended internal or external resources. |
+| **Parameterized query** | A query that uses placeholders for user input, preventing SQL injection by separating code from data. |

@@ -501,6 +501,17 @@ ANALYZE tickets;
 
 In **L1-M08: Data Modeling Decisions**, you'll learn when to normalize, when to denormalize, and how to design schemas that perform well under real-world access patterns.
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Index** | A data structure that speeds up row lookups by maintaining a sorted reference to table data. |
+| **B-tree** | A balanced tree data structure used by most PostgreSQL indexes for efficient range and equality queries. |
+| **Sequential scan** | A query execution method that reads every row in a table from start to finish. |
+| **Index scan** | A query execution method that uses an index to locate matching rows without reading the entire table. |
+| **EXPLAIN ANALYZE** | A PostgreSQL command that executes a query and displays the actual execution plan with timing and row counts. |
+| **Query plan** | The step-by-step strategy the database engine chooses to execute a given SQL statement. |
+
 ## 📚 Further Reading
 - [Use The Index, Luke](https://use-the-index-luke.com/) — The best free resource on SQL indexing
 - [PostgreSQL EXPLAIN Documentation](https://www.postgresql.org/docs/current/using-explain.html)

@@ -426,6 +426,16 @@ MONTHLY COST REVIEW AGENDA (30 minutes)
 
 ---
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Right-sizing** | Adjusting the resources (CPU, memory, instance type) allocated to a service to match its actual usage. |
+| **Reserved instance** | A cloud pricing model offering a discount in exchange for committing to a specific instance type for a term. |
+| **Spot instance** | A cloud compute instance available at a steep discount but subject to interruption when demand rises. |
+| **FinOps** | A practice that brings financial accountability to cloud spending through collaboration between engineering and finance. |
+| **Cost allocation** | Tagging and attributing cloud costs to specific teams, services, or projects for visibility and accountability. |
+
 ## Further Reading
 
 - **AWS Well-Architected Framework, Cost Optimization Pillar**: the canonical guide to cloud cost management

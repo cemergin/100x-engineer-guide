@@ -614,3 +614,14 @@ WebSocket gives TicketPulse real-time superpowers. A single ticket purchase prop
 The pattern you built here -- event rooms, pub/sub backbone, heartbeat, reconnection -- is the foundation for every real-time feature: live chat, collaborative editing, real-time dashboards, multiplayer games. The protocol details change, but the architecture is the same.
 
 Next module: we stress-test this system. What happens when 50K users all try to buy 500 tickets at the same instant?
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **WebSocket** | A protocol providing full-duplex, persistent communication channels over a single TCP connection. |
+| **SSE** | Server-Sent Events; a standard for pushing real-time updates from server to client over HTTP. |
+| **Pub/sub** | A messaging pattern where publishers send messages to topics and subscribers receive messages from topics they follow. |
+| **Heartbeat** | A periodic signal sent between client and server to confirm the connection is still alive. |
+| **Reconnection** | The logic that automatically re-establishes a dropped real-time connection, often with exponential backoff. |
+| **Real-time** | A system characteristic where data is delivered to users within milliseconds of being produced. |

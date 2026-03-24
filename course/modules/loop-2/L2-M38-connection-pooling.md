@@ -438,6 +438,16 @@ The app pool is wasteful — it's holding connections to PgBouncer (cheap) but p
 
 In **L2-M39: Advanced SQL for Analytics**, you'll build a TicketPulse analytics dashboard using window functions, CTEs, LATERAL JOINs, and materialized views — SQL that separates juniors from seniors.
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Connection pool** | A cache of reusable database connections that avoids the overhead of opening a new connection per request. |
+| **PgBouncer** | A lightweight connection pooler for PostgreSQL that sits between clients and the database server. |
+| **Transaction pooling** | A PgBouncer mode where connections are returned to the pool after each transaction completes. |
+| **Max connections** | The PostgreSQL configuration parameter that limits the total number of concurrent client connections. |
+| **Connection overhead** | The CPU, memory, and time cost of establishing and tearing down a database connection. |
+
 ## 📚 Further Reading
 - [PgBouncer Documentation](https://www.pgbouncer.org/config.html)
 - Chapter 24 of the 100x Engineer Guide: Section 5 — Connection Management

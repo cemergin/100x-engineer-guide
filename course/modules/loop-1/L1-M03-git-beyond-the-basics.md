@@ -626,6 +626,16 @@ git checkout -- .
 
 You've mastered your local tools. In Module 4, we zoom out to the network layer: what actually happens when a user's browser talks to TicketPulse? You'll trace a real HTTP request through DNS, TCP, TLS, and the application — and learn to diagnose where slowness lives using `curl` timing breakdowns and DNS trace tools. This is the knowledge that lets you debug production issues that most engineers can't even locate.
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Rebase** | A Git operation that replays commits from one branch onto another, producing a linear history. |
+| **Bisect** | A Git command that performs a binary search through commit history to find the commit that introduced a bug. |
+| **Reflog** | A local log of all reference updates in Git, useful for recovering lost commits or undoing mistakes. |
+| **Cherry-pick** | A Git command that applies a single commit from one branch onto another without merging the entire branch. |
+| **Stash** | A Git feature that temporarily shelves uncommitted changes so you can work on something else and reapply them later. |
+
 ## Further Reading
 
 - [Git rebase documentation](https://git-scm.com/docs/git-rebase) — the official reference, including all rebase options

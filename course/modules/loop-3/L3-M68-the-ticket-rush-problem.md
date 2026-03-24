@@ -764,3 +764,13 @@ Before moving on, verify:
 The ticket rush is a concurrency gauntlet. The naive approach fails immediately. Optimistic locking at the database level is the foundation of correctness -- never rely on application-level checks alone. A virtual queue transforms a chaotic stampede into an orderly line, with WebSocket providing real-time feedback. Database constraints are the final safety net: even if everything else has a bug, the database will refuse the 501st ticket.
 
 This pattern -- queue + optimistic locking + idempotency + database constraints -- applies far beyond ticketing. Flash sales, limited-edition drops, reservation systems, auction closings: any time many users compete for scarce resources under time pressure.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Optimistic locking** | A concurrency control method that detects conflicts at commit time using version numbers rather than holding locks. |
+| **Virtual queue** | A waiting-room mechanism that holds users in line before granting them access to a contested resource. |
+| **Distributed lock** | A lock held across multiple processes or machines, ensuring only one can access a resource at a time. |
+| **FOR UPDATE SKIP LOCKED** | A PostgreSQL clause that locks selected rows and skips any already locked by another transaction. |
+| **Race condition** | A bug where the system's behavior depends on the unpredictable timing of concurrent operations. |

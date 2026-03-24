@@ -630,6 +630,17 @@ git add -A && git commit -m "feat: add webhook system with HMAC signing, retry, 
 
 ---
 
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Webhook** | An HTTP callback that delivers real-time event notifications from one system to another via a POST request. |
+| **HMAC** | Hash-based Message Authentication Code; a mechanism for verifying the integrity and authenticity of a webhook payload. |
+| **Signature** | A cryptographic value sent with a webhook that the receiver uses to verify the payload has not been tampered with. |
+| **Retry** | The automatic re-delivery of a webhook payload when the initial delivery fails. |
+| **Dead letter queue** | A storage location for webhook payloads that have failed delivery after all retry attempts are exhausted. |
+| **Idempotency key** | A unique identifier ensuring that processing the same webhook payload more than once has no additional effect. |
+
 ## Further Reading
 
 - Stripe Webhooks documentation -- the gold standard for webhook design (signature verification, retry policy, event replay)

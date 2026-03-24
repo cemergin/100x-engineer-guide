@@ -49,6 +49,8 @@ docker run -d \
   postgres:16
 ```
 
+> ⚠️ **Version Note:** This module pins specific software versions that were current at writing (March 2026). Before running, check for the latest stable releases — Docker images, package versions, and tool versions evolve frequently. The concepts and patterns remain the same regardless of version.
+
 Wait a few seconds for it to initialize, then connect:
 
 ```bash
@@ -598,6 +600,17 @@ Key commands to remember:
 ## What's Next
 
 In **L1-M06: SQL That Actually Matters**, you'll learn the SQL patterns that senior engineers use daily — CTEs, window functions, and real analytics queries against the TicketPulse data you just created.
+
+## Key Terms
+
+| Term | Definition |
+|------|-----------|
+| **Schema** | A namespace within a PostgreSQL database that organizes tables, views, and other objects. |
+| **Table** | A structured collection of rows and columns that stores data in a relational database. |
+| **Column** | A named attribute of a table that holds values of a specific data type for each row. |
+| **Primary key** | A column (or set of columns) that uniquely identifies each row in a table. |
+| **Foreign key** | A column that references the primary key of another table, establishing a relationship between them. |
+| **JOIN** | An SQL operation that combines rows from two or more tables based on a related column. |
 
 ## 📚 Further Reading
 - [PostgreSQL Official Tutorial](https://www.postgresql.org/docs/current/tutorial.html)
