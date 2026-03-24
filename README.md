@@ -1,7 +1,7 @@
 <!--
   TYPE: index
   TITLE: The 100x Engineer Guide
-  CHAPTERS: 32
+  CHAPTERS: 34
   PARTS: 5
   APPENDICES: 1
   UPDATED: 2026-03-24
@@ -14,7 +14,7 @@
 
 A comprehensive, open-source mega-guide covering every paradigm, philosophy, and hard skill needed to become a lead/staff+ engineer — organized as a narrative that builds from theory to practice.
 
-**32 chapters** · **~40,000 lines** · **~2.5 MB** · **5 parts + appendices**
+**34 chapters** · **~45,000 lines** · **~2.8 MB** · **5 parts + appendices**
 
 ```
 100x-engineer-guide/
@@ -91,6 +91,8 @@ A comprehensive, open-source mega-guide covering every paradigm, philosophy, and
 | 20 | [Dependency & Env Management](./part-3-tooling-practice/20-dependency-env-management.md) | Intermediate | Nix, asdf/mise, nvm/pyenv/rustup, lockfiles, Docker dev envs, devcontainers, reproducible builds |
 | 27 | [Technical Writing](./part-3-tooling-practice/27-technical-writing.md) | Beg→Inter | Diátaxis framework, READMEs, ADRs, RFCs, commit messages, runbooks, postmortems, code comments |
 | 28 | [Code Reading & Open Source](./part-3-tooling-practice/28-code-reading-oss.md) | Beg→Inter | Navigating unfamiliar codebases, OSS contribution workflow, licensing, building your profile |
+| 33 | [GitHub Actions Mastery](./part-3-tooling-practice/33-github-actions-mastery.md) | Inter→Adv | Reusable workflows, composite actions, matrix strategies, OIDC federation, self-hosted runners, monorepo CI, custom actions, security hardening |
+| 34 | [Spec-Driven Development](./part-3-tooling-practice/34-spec-driven-development.md) | Inter→Adv | RFCs, design docs, contract-first API design (OpenAPI/AsyncAPI), executable specs (BDD/Gherkin), AI-native specs, CLAUDE.md as spec |
 
 ---
 

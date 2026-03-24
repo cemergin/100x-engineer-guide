@@ -24,7 +24,7 @@ course:
   title: "The 100x Engineer Course"
   version: "1.0"
   running_example: "TicketPulse — a concert ticketing platform"
-  total_modules: 97
+  total_modules: 101
   estimated_hours: "97-145 hours"
   loops:
     - name: "Foundation — Build the Mental Model"
@@ -1118,6 +1118,25 @@ modules:
     runs_locally: true
     prereqs: [L2-M33]
 
+  - id: L2-M55a
+    title: "GitHub Actions Mastery"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [33, 7, 15]
+    ticketpulse: "TicketPulse's CI/CD is refactored from copy-pasted YAML into reusable workflows, matrix testing, OIDC auth, and path-filtered monorepo CI."
+    summary: "Go beyond basic CI: reusable workflows, matrix strategies, OIDC federation, monorepo path filtering, and security hardening for GitHub Actions."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Refactor TicketPulse's CI into a reusable workflow called by each microservice with different parameters (node version, working directory)."
+      - type: "🛠️ Build"
+        description: "Add matrix testing across Node 20/22 and Postgres 15/16. Set up test sharding across 4 runners."
+      - type: "🔍 Explore"
+        description: "Set up OIDC federation for AWS. Push a deployment workflow that uses no long-lived secrets. Compare the IAM trust policy with the old encrypted secrets approach."
+      - type: "🤔 Reflect"
+        description: "When should you use reusable workflows vs composite actions? Map out a decision matrix for your team."
+    runs_locally: true
+    prereqs: [L1-M15]
+
   # ---------------------------------------------------------------------------
   # Section 2E: Security & Quality (Modules 56-60)
   # ---------------------------------------------------------------------------
@@ -1189,6 +1208,25 @@ modules:
         description: "Write a postmortem for the simulated incident from module 58: timeline, root cause, impact, action items with owners and due dates."
     runs_locally: true
     prereqs: [L2-M58]
+
+  - id: L2-M59a
+    title: "Spec-Driven Development"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [34, 27, 25]
+    ticketpulse: "You write specs before code: an OpenAPI contract for the TicketPulse API, an AsyncAPI spec for Kafka events, an RFC for the waitlist feature, and Gherkin scenarios for the purchase flow."
+    summary: "Practice specification-first development: contract-first APIs (OpenAPI/AsyncAPI), RFCs, and executable BDD specs that enable parallel work and AI-assisted implementation."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Write an OpenAPI 3.1 spec for TicketPulse's event and purchase endpoints. Generate TypeScript types and a mock server from the spec."
+      - type: "🛠️ Build"
+        description: "Write an AsyncAPI spec for the TicketPurchased Kafka event. Define the message schema, headers, and examples."
+      - type: "🛠️ Build"
+        description: "Write Gherkin scenarios for the ticket purchase flow: happy path, insufficient tickets, payment failure. Connect step definitions to the API."
+      - type: "🤔 Reflect"
+        description: "Could an AI agent implement the waitlist feature from just the RFC + OpenAPI spec + Gherkin scenarios you wrote? What is missing?"
+    runs_locally: true
+    prereqs: [L2-M59]
 
   - id: L2-M60
     title: "Loop 2 Capstone: TicketPulse v2 Complete"
@@ -1585,6 +1623,23 @@ modules:
     runs_locally: true
     prereqs: [L2-M43, L2-M45]
 
+  - id: L3-M80a
+    title: "GitHub Actions at Scale"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [33, 7]
+    ticketpulse: "TicketPulse's CI/CD is now a platform: custom deploy actions, multi-environment pipelines with protection rules, cross-repo triggering, and CI observability dashboards."
+    summary: "Build custom GitHub Actions, design multi-environment deployment pipelines with protection rules, scale CI with self-hosted runners, and measure CI health with DORA metrics."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Create a custom 'deploy-service' GitHub Action for TicketPulse: Docker build → push to ECR → update ECS → wait for health check. Test locally with act."
+      - type: "📐 Design"
+        description: "Design the full TicketPulse deployment pipeline: commit → lint → test → build → deploy-staging → smoke-test → deploy-prod-us → deploy-prod-eu → deploy-prod-ap. Draw the ASCII diagram."
+      - type: "🤔 Reflect"
+        description: "At what team size and build volume does investing in self-hosted runners pay for itself? What CI/CD metrics would you put on your engineering dashboard?"
+    runs_locally: true
+    prereqs: [L2-M55a, L3-M80]
+
   # ---------------------------------------------------------------------------
   # Section 3D: The Cutting Edge (Modules 81-87)
   # ---------------------------------------------------------------------------
@@ -1690,6 +1745,23 @@ modules:
         description: "Compare the AI-generated code to what you would have written. Evaluate: correctness, edge case handling, test coverage, readability, and performance. Score each dimension."
     runs_locally: true
     prereqs: [L2-M60]
+
+  - id: L3-M86a
+    title: "AI-Native Spec-Driven Development"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [34, 14, 17]
+    ticketpulse: "You write the complete 'spec stack' for a new TicketPulse feature: CLAUDE.md (project context), RFC (design), OpenAPI (contract), Gherkin (behavior) — then evaluate how an AI agent would implement from those specs alone."
+    summary: "Use specifications as the interface between human intent and AI execution: CLAUDE.md as behavioral spec, AI-executable feature specs, the design-doc-to-AI-implementation workflow, and the spec stack."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Write TicketPulse's CLAUDE.md: project context, code conventions, testing requirements, deployment constraints, and architecture decision references."
+      - type: "🛠️ Build"
+        description: "Write a complete 'spec stack' for smart ticket pricing: CLAUDE.md update, RFC, OpenAPI spec for pricing endpoints, Gherkin scenarios for pricing rules."
+      - type: "🤔 Reflect"
+        description: "How does spec quality correlate with AI output quality? Will AI eventually write the specs too? What is the human engineer's role in an AI-native workflow?"
+    runs_locally: true
+    prereqs: [L2-M59a, L3-M86]
 
   - id: L3-M87
     title: "Mobile Backend Patterns"
