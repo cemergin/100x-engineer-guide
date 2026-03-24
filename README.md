@@ -1,7 +1,7 @@
 <!--
   TYPE: index
   TITLE: The 100x Engineer Guide
-  CHAPTERS: 31
+  CHAPTERS: 32
   PARTS: 5
   APPENDICES: 1
   UPDATED: 2026-03-24
@@ -14,7 +14,7 @@
 
 A comprehensive, open-source mega-guide covering every paradigm, philosophy, and hard skill needed to become a lead/staff+ engineer — organized as a narrative that builds from theory to practice.
 
-**31 chapters** · **~40,000 lines** · **~2.5 MB** · **5 parts + appendices**
+**32 chapters** · **~40,000 lines** · **~2.5 MB** · **5 parts + appendices**
 
 ```
 100x-engineer-guide/
@@ -55,6 +55,7 @@ A comprehensive, open-source mega-guide covering every paradigm, philosophy, and
 | 21 | [Networking & Protocols](./part-1-foundations/21-networking-protocols.md) | Inter→Adv | TCP internals, TLS 1.3 handshake, HTTP lifecycle, DNS, WebSocket, gRPC/protobuf, network debugging |
 | 22 | [Algorithms & Data Structures](./part-1-foundations/22-algorithms-data-structures.md) | Inter→Adv | Hash maps, B-trees, LSM trees, bloom filters, LRU cache, rate limiter, consistent hashing — with code |
 | 24 | [Database Internals](./part-1-foundations/24-database-internals.md) | Advanced | Postgres MVCC/WAL/vacuum/planner, MySQL InnoDB, DynamoDB internals, EXPLAIN ANALYZE, perf tuning |
+| 32 | [Software Engineering Principles](./part-1-foundations/32-software-engineering-principles.md) | Beg→Adv | SOLID with real code, DRY/KISS/YAGNI, coupling/cohesion, 10 essential design patterns, clean code, code smells, composition vs inheritance, FP vs OOP |
 
 > **Read order:** 1 → 2 → 3 → 4 → 5 (core sequence), then 21, 22, 24 in any order.
 
@@ -124,7 +125,7 @@ A comprehensive, open-source mega-guide covering every paradigm, philosophy, and
 Part I — Foundations (start here):
   Ch 1 → Ch 2 → Ch 3 → Ch 4        (core sequence)
   Ch 5                                (standalone)
-  Ch 21, 22, 24                       (standalone, enrich Part I)
+  Ch 21, 22, 24, 32                    (standalone, enrich Part I)
 
 Part II — Applied Engineering (after Part I, any order):
   Ch 6          ← benefits from Ch 1
