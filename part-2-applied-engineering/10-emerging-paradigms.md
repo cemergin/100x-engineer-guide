@@ -22,6 +22,8 @@ The frontier — emerging paradigms that are reshaping backend engineering in 20
 - Data-Intensive Applications
 - Sustainability & Efficiency
 - WebAssembly & Portable Computing
+- Mobile Backend Patterns
+- ML Infrastructure for Backend Engineers
 - Cross-Cutting Themes
 
 ### Related Chapters
@@ -156,6 +158,78 @@ Language-agnostic interfaces (WIT), composable modules, per-component sandboxing
 ### Use Cases
 Edge computing, plugin systems (Shopify, Envoy, Figma), embedded DB functions, polyglot microservices.
 **Trade-off:** Ecosystem still maturing. Not for heavy threading/GPU. Near-native for compute; I/O less clear.
+
+---
+
+## 8. MOBILE BACKEND PATTERNS
+
+### Push Notifications
+- APNs (Apple Push Notification service) and FCM (Firebase Cloud Messaging) architecture
+- Device token registration flow: app registers with OS → sends token to your server → server stores token → sends push via APNs/FCM
+- Notification payload design (title, body, data payload, badge count, sound, category/actions)
+- Silent/background notifications (wake the app to fetch data without showing a notification)
+- Topic-based vs device-based targeting
+- Delivery reliability: push is best-effort, NOT guaranteed. Always have a fallback (in-app inbox).
+- Common problems: stale tokens (devices uninstall), rate limiting, payload size limits (4KB APNs, 4KB FCM)
+
+### Offline-First & Data Sync
+- Offline-first principle: the app works without network, syncs when connectivity returns
+- Conflict resolution strategies: last-write-wins (simple), merge (complex), user-chooses (interactive)
+- CRDTs for automatic merge (see Ch 1)
+- Sync protocols: Firebase Realtime DB (automatic), custom (version vectors + delta sync)
+- Optimistic UI: show the change immediately, sync in background, rollback on conflict
+- Queue local mutations: store writes locally, replay when online (outbox pattern on mobile)
+
+### API Design for Mobile
+- Minimize round trips: batch endpoints, GraphQL, BFF (Backend for Frontend)
+- Payload optimization: only return needed fields, compress responses (gzip/brotli)
+- Image optimization: serve different sizes per device (srcset equivalent for APIs), WebP/AVIF
+- Pagination: cursor-based (works with offline cache), not offset-based
+- Versioning: mobile apps can't be force-updated instantly — support older API versions longer
+- Deep linking: universal links (iOS), app links (Android), deferred deep links for install attribution
+
+### Real-Time Features for Mobile
+- WebSocket vs SSE vs long-polling on mobile (battery and data considerations)
+- Presence systems: heartbeat-based, handle mobile app backgrounding
+- Typing indicators, read receipts, live location sharing
+- Battery optimization: reduce polling frequency when app is backgrounded, use push for wakeup
+
+---
+
+## 9. ML INFRASTRUCTURE FOR BACKEND ENGINEERS
+
+### What Backend Engineers Need to Know
+- You don't need to train models — but you need to serve, monitor, and scale them
+- ML is a data problem before it's a model problem
+
+### Feature Stores
+- What they are: a centralized repository for ML features (computed values used as model inputs)
+- Online store (low-latency serving for real-time inference) vs offline store (batch for training)
+- Tools: Feast (open source), Tecton, SageMaker Feature Store
+- Example: user features (avg order value, days since last login, total orders) stored once, used by multiple models
+
+### Model Serving
+- Batch inference: run model on a schedule, store predictions (simplest, good for recommendations)
+- Real-time inference: model behind an API, responds per-request (needed for search ranking, fraud detection)
+- Serving patterns: model-as-a-service (dedicated endpoint), model-in-application (embedded), sidecar model
+- Tools: TensorFlow Serving, TorchServe, Triton, SageMaker Endpoints, BentoML
+- GPU vs CPU inference: GPUs for large models (LLMs, image), CPU fine for small models (XGBoost, linear)
+- Model versioning and A/B testing (canary rollout for models, shadow scoring)
+
+### A/B Testing & Experimentation Platforms
+- Experimentation as infrastructure (not ad-hoc)
+- Components: randomization (hash user ID to assign variant), feature flags (control/treatment), metrics pipeline, statistical analysis
+- Sample size and duration: don't peek early, use power analysis to determine required sample
+- Guardrail metrics: metrics that must NOT degrade (latency, error rate, revenue)
+- Tools: Statsig, LaunchDarkly, Eppo, Optimizely, GrowthBook (open source), custom on Kafka+ClickHouse
+- Common mistakes: peeking at results too early, insufficient sample size, testing too many things at once, not accounting for novelty effect
+
+### ML Pipelines
+- Training pipelines: data extraction → feature engineering → training → evaluation → model registry
+- Tools: Airflow, Kubeflow, MLflow, Metaflow, SageMaker Pipelines
+- Model registry: version models, track lineage, promote to production
+- Data versioning: DVC (Data Version Control) — git for data
+- Reproducibility: pin data version + code version + environment = reproducible model
 
 ---
 

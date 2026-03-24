@@ -22,6 +22,7 @@ Not LeetCode grinding — the data structures and algorithms that backend engine
 - Probabilistic Data Structures
 - Practical Implementations
 - Sorting & Searching in the Real World
+- Search Engineering
 
 ### Related Chapters
 - Ch 1 (consistent hashing, distributed systems)
@@ -1637,6 +1638,789 @@ SET work_mem = '256MB';
 
 ---
 
+## 8. Search Engineering
+
+Search is one of the most common features in production applications, yet most engineers treat it as a black box. Understanding how search engines work — from text analysis to ranking to scaling — is essential for building search experiences that actually work.
+
+### 8.1 How Search Engines Work
+
+The search pipeline has six stages, and understanding each one is the key to debugging why search results are bad:
+
+```
+Document Ingestion → Analysis → Indexing → Query Processing → Ranking → Results
+
+1. INGESTION:    Receive documents (API call, database sync, web crawl)
+2. ANALYSIS:     Break text into tokens, normalize them (lowercase, stem, remove stop words)
+3. INDEXING:     Build an inverted index: term → list of documents containing that term
+4. QUERY:        Parse the user's query through the same analysis pipeline
+5. RANKING:      Score each matching document by relevance (TF-IDF, BM25, vector similarity)
+6. RESULTS:      Return top-K documents, optionally with highlights and facets
+```
+
+**The inverted index** is the core data structure of search. It maps every analyzed term to the documents (and positions) where that term appears:
+
+```
+Inverted Index:
+
+"database"   → [doc1:pos3, doc2:pos7, doc5:pos1, doc12:pos22]
+"optimize"   → [doc1:pos4, doc3:pos1, doc5:pos8]
+"postgresql" → [doc2:pos1, doc5:pos3, doc12:pos5]
+"index"      → [doc1:pos9, doc2:pos12, doc3:pos6, doc5:pos2, doc7:pos1]
+
+Query: "database optimization"
+→ Analyze: ["database", "optimiz"] (stemmed)
+→ Look up both terms in inverted index
+→ Find documents that match both (intersection): doc1, doc5
+→ Score and rank them
+```
+
+This is why search is fast: instead of scanning every document for your query (O(total_words)), you do a dictionary lookup per query term and intersect posting lists (O(matches)).
+
+**Index segments, merging, and immutability (Lucene architecture):**
+
+Lucene (the library behind Elasticsearch and Solr) uses an append-only segment architecture:
+
+```
+Write path (similar to LSM-Trees):
+1. New documents go into an in-memory buffer
+2. Buffer is periodically flushed to an immutable segment on disk
+3. Each segment is a self-contained inverted index
+4. Segments are periodically merged into larger segments (compaction)
+
+Search path:
+1. Query runs against ALL segments in parallel
+2. Results are merged across segments
+3. Deleted documents are excluded via a deletion bitmap
+
+Why immutable segments?
+- No locking needed for reads (concurrent search is trivial)
+- Filesystem cache is very effective (segments don't change)
+- Write-ahead log protects against crashes
+- Trade-off: deletes/updates require marking old doc as deleted + reindexing
+```
+
+### 8.2 Text Analysis Pipeline
+
+Text analysis is where most search quality problems live. If your analyzer is wrong, no amount of ranking tuning will fix bad results.
+
+**Tokenization** splits text into individual terms:
+
+```
+Input: "New York City's best coffee shops (2024 edition)"
+
+Standard tokenizer:  ["new", "york", "city's", "best", "coffee", "shops", "2024", "edition"]
+Whitespace tokenizer: ["New", "York", "City's", "best", "coffee", "shops", "(2024", "edition)"]
+Keyword tokenizer:   ["New York City's best coffee shops (2024 edition)"]  ← entire string as one token
+
+The choice matters enormously:
+- Standard: good default for full-text search
+- Whitespace: when you want to preserve case and punctuation
+- Keyword: for exact-match fields (email addresses, product SKUs, status codes)
+```
+
+**The full analysis chain: Analyzer = Character Filters → Tokenizer → Token Filters**
+
+```
+Input text: "The <b>Quick</b> Brown FOX jumped over 2 lazy dogs"
+
+Character filter:  Strip HTML     → "The Quick Brown FOX jumped over 2 lazy dogs"
+Tokenizer:         Standard       → ["The", "Quick", "Brown", "FOX", "jumped", "over", "2", "lazy", "dogs"]
+Token filter 1:    Lowercase      → ["the", "quick", "brown", "fox", "jumped", "over", "2", "lazy", "dogs"]
+Token filter 2:    Stop words     → ["quick", "brown", "fox", "jumped", "lazy", "dogs"]
+Token filter 3:    Stemming       → ["quick", "brown", "fox", "jump", "lazi", "dog"]
+
+Final indexed tokens: ["quick", "brown", "fox", "jump", "lazi", "dog"]
+```
+
+**Stemming vs Lemmatization:**
+
+```
+Stemming (algorithmic, fast, sometimes aggressive):
+  "running"    → "run"
+  "runs"       → "run"
+  "better"     → "better"  (stemmer doesn't know this)
+  "studies"    → "studi"   (overstemming — "studio" also becomes "studi")
+  "universal"  → "univers"
+  "university" → "univers" (conflation — different meanings, same stem)
+
+Lemmatization (dictionary-based, slower, more accurate):
+  "running"    → "run"
+  "runs"       → "run"
+  "better"     → "good"    (understands irregular forms)
+  "studies"    → "study"   (correct base form)
+  "universal"  → "universal"
+  "university" → "university"  (no conflation)
+
+Rule of thumb: Use stemming for most search use cases (recall is more important).
+Use lemmatization when precision matters (medical, legal, scientific search).
+```
+
+**Stop words** — common words like "the", "is", "at", "which":
+
+```
+When to REMOVE stop words:
+- General full-text search (they add noise without meaning)
+- Index size matters (stop words can be 25-30% of all tokens)
+
+When to KEEP stop words:
+- Phrase queries: "to be or not to be" — every word matters
+- Song/movie titles: "The Who", "Let It Be", "It"
+- Technical content: "C++" tokenized without "+" is just "c"
+```
+
+**Synonyms** expand queries to match equivalent terms:
+
+```
+Synonym mappings:
+  "couch" ↔ "sofa"
+  "laptop" ↔ "notebook computer"
+  "NYC" → "New York City"  (one-way: NYC matches New York City, but not vice versa)
+
+Apply at index time, query time, or both:
+- Index time: larger index, but faster queries. Cannot change synonyms without reindex.
+- Query time: smaller index, flexible. But multi-word synonyms are tricky.
+- Best practice: query-time synonyms for most cases (flexibility > speed).
+```
+
+**N-grams and edge n-grams for autocomplete:**
+
+```
+Edge n-grams (index time) — for "search-as-you-type":
+
+Input: "elasticsearch"
+min_gram: 2, max_gram: 10
+
+Tokens: ["el", "ela", "elas", "elast", "elasti", "elastic", "elastics", "elasticse", "elasticsea"]
+
+When user types "elas" → exact match on the "elas" token → instant results
+
+N-grams (sliding window) — for fuzzy substring matching:
+
+Input: "hello"
+n: 3 (trigrams)
+
+Tokens: ["hel", "ell", "llo"]
+
+Useful for partial matching and language-agnostic search (CJK languages, compound words).
+```
+
+### 8.3 Ranking Algorithms
+
+Ranking determines result quality. A search engine that finds documents but ranks them badly is useless.
+
+**TF-IDF (Term Frequency - Inverse Document Frequency):**
+
+```
+TF(term, doc) = count of term in document / total terms in document
+IDF(term) = log(total documents / documents containing term)
+Score = TF × IDF
+
+Example with 10,000 documents:
+  Query: "database optimization"
+
+  Document A (1000 words): "database" appears 5 times, "optimization" appears 3 times
+  Document B (100 words): "database" appears 5 times, "optimization" appears 3 times
+
+  "database" appears in 2000 docs:     IDF = log(10000/2000) = 1.61
+  "optimization" appears in 200 docs:  IDF = log(10000/200) = 3.91
+
+  Score A = (5/1000 × 1.61) + (3/1000 × 3.91) = 0.008 + 0.012 = 0.020
+  Score B = (5/100 × 1.61)  + (3/100 × 3.91)  = 0.081 + 0.117 = 0.198
+
+  Document B scores higher — same term counts but shorter document, so higher term density.
+  "optimization" contributes more because it's rarer across the corpus (higher IDF).
+```
+
+**BM25 (Okapi BM25) — the current standard:**
+
+BM25 improves on TF-IDF with two critical refinements:
+
+```
+BM25(query, doc) = Σ IDF(term) × (TF × (k1 + 1)) / (TF + k1 × (1 - b + b × docLength/avgDocLength))
+
+Where:
+  k1 = 1.2 (default) — controls term frequency saturation
+  b  = 0.75 (default) — controls document length normalization
+
+Key improvements over TF-IDF:
+
+1. Term frequency saturation:
+   TF-IDF:  5 occurrences scores 5x higher than 1 occurrence
+   BM25:    5 occurrences scores maybe 2.5x higher than 1 occurrence (diminishing returns)
+
+   This prevents keyword-stuffed documents from dominating results.
+
+2. Document length normalization:
+   b = 0.75 means long documents are penalized, but not severely.
+   b = 0: no length normalization (long documents treated same as short)
+   b = 1: full length normalization (strongly penalize long documents)
+
+BM25 is the default ranking algorithm in Elasticsearch, Solr, and most modern search engines.
+```
+
+**Vector search / semantic search:**
+
+```
+Traditional (lexical) search:
+  Query: "car maintenance tips"
+  Misses: "automobile service guide"  (no matching terms!)
+
+Vector (semantic) search:
+  1. Encode query into a vector:    "car maintenance tips"     → [0.23, -0.45, 0.12, ...]
+  2. Encode document into a vector:  "automobile service guide" → [0.21, -0.43, 0.15, ...]
+  3. Compute cosine similarity:      0.94 (very similar!)
+
+How it works:
+- Use an embedding model (OpenAI ada-002, Cohere embed, sentence-transformers)
+- Documents and queries are projected into the same high-dimensional vector space
+- Similar meanings cluster together, regardless of exact wording
+- Find nearest neighbors using approximate nearest neighbor (ANN) algorithms:
+  HNSW (Hierarchical Navigable Small World) — most common, used by Elasticsearch, pgvector
+  IVF (Inverted File Index) — faster indexing, slightly less accurate
+
+Trade-offs:
+- Catches semantic meaning that lexical search misses
+- But loses exact keyword matching ("error code XJ-4521" won't work well)
+- Embedding model quality matters enormously
+- Vectors are expensive to compute and store (768-1536 dimensions × 4 bytes each)
+```
+
+**Hybrid search — current best practice:**
+
+```
+Combine BM25 (lexical) + vector (semantic) for the best of both worlds:
+
+Strategy 1: Reciprocal Rank Fusion (RRF)
+  BM25 results:    [docA:rank1, docB:rank2, docC:rank3, ...]
+  Vector results:  [docC:rank1, docA:rank2, docD:rank3, ...]
+
+  RRF_score(doc) = Σ 1/(k + rank_in_list)  where k = 60 (constant)
+
+  docA: 1/(60+1) + 1/(60+2) = 0.0164 + 0.0161 = 0.0325  ← top result
+  docC: 1/(60+3) + 1/(60+1) = 0.0159 + 0.0164 = 0.0323
+  docB: 1/(60+2) + 0         = 0.0161
+
+Strategy 2: Weighted linear combination
+  final_score = α × BM25_score + (1-α) × vector_score
+  Tune α based on your use case (start with 0.5, adjust based on relevance testing)
+
+Hybrid search is the current industry standard for production search systems.
+```
+
+**Learning to Rank (LTR):**
+
+```
+Use machine learning to optimize ranking based on user behavior:
+
+1. Collect features per query-document pair:
+   - BM25 score, vector similarity, document freshness, popularity, click count
+   - Query-specific: exact title match, category match, price range match
+
+2. Collect training labels from user behavior:
+   - Click-through rate, dwell time, add-to-cart, purchase
+   - Explicit relevance judgments from human raters
+
+3. Train a model (LambdaMART, neural LTR) to predict relevance
+4. Use the model to re-rank results at query time
+
+Used by: Google, Amazon, Netflix, Airbnb — any search with enough traffic to generate training data.
+LTR is overkill for most applications. Start with BM25, add vectors if needed, then consider LTR.
+```
+
+### 8.4 Elasticsearch / OpenSearch Deep Dive
+
+Elasticsearch is the most widely-deployed search engine. Understanding its architecture is essential.
+
+**Architecture:**
+
+```
+Cluster → Nodes → Indices → Shards → Segments
+
+Cluster: "production-search" (group of nodes)
+  │
+  ├── Node 1 (master-eligible, data)
+  │     ├── Index: "products"
+  │     │     ├── Shard 0 (primary)
+  │     │     │     ├── Segment 0 (immutable, contains 50K docs)
+  │     │     │     ├── Segment 1 (immutable, contains 30K docs)
+  │     │     │     └── Segment 2 (immutable, contains 10K docs, recently flushed)
+  │     │     └── Shard 2 (primary)
+  │     └── Index: "orders"
+  │           └── Shard 1 (replica)
+  │
+  ├── Node 2 (data)
+  │     ├── Index: "products"
+  │     │     ├── Shard 1 (primary)
+  │     │     └── Shard 0 (replica)
+  │     └── Index: "orders"
+  │           └── Shard 0 (primary)
+  │
+  └── Node 3 (coordinating only — routes queries, merges results)
+
+Node types:
+- Master:       Manages cluster state (index creation, shard allocation). 3 dedicated masters minimum.
+- Data:         Stores data, executes searches and aggregations. Scale horizontally.
+- Ingest:       Preprocesses documents (transform, enrich) before indexing.
+- Coordinating: Routes requests, merges results. Useful for heavy aggregation workloads.
+```
+
+**Index mappings — defining your schema:**
+
+```json
+PUT /products
+{
+  "mappings": {
+    "properties": {
+      "title":       { "type": "text", "analyzer": "english" },
+      "title_exact": { "type": "keyword" },
+      "description": { "type": "text" },
+      "price":       { "type": "float" },
+      "category":    { "type": "keyword" },
+      "tags":        { "type": "keyword" },
+      "created_at":  { "type": "date" },
+      "location":    { "type": "geo_point" },
+      "ratings":     { "type": "nested",
+        "properties": {
+          "user_id": { "type": "keyword" },
+          "score":   { "type": "integer" },
+          "comment": { "type": "text" }
+        }
+      }
+    }
+  }
+}
+```
+
+**text vs keyword — the most important distinction:**
+
+```
+"text" field (analyzed):
+  Input: "Quick Brown Fox"
+  Stored as tokens: ["quick", "brown", "fox"]
+  Supports: full-text search (match query), relevance scoring
+  Does NOT support: exact match, sorting, aggregations (use .keyword sub-field)
+
+"keyword" field (not analyzed):
+  Input: "Quick Brown Fox"
+  Stored as: "Quick Brown Fox" (exact string)
+  Supports: exact match (term query), sorting, aggregations, filtering
+  Does NOT support: full-text search
+
+Common pattern — use both:
+  "title": {
+    "type": "text",
+    "fields": {
+      "keyword": { "type": "keyword" }   ← multi-field mapping
+    }
+  }
+  Search: match on "title" (full-text)
+  Filter/sort/aggregate: term on "title.keyword" (exact)
+```
+
+**Query DSL essentials:**
+
+```json
+{
+  "query": {
+    "bool": {
+      "must": [
+        { "match": { "title": "database optimization" } }
+      ],
+      "filter": [
+        { "term": { "status": "published" } },
+        { "range": { "created_at": { "gte": "2024-01-01" } } }
+      ],
+      "should": [
+        { "match": { "tags": "postgresql" } }
+      ],
+      "must_not": [
+        { "term": { "archived": true } }
+      ]
+    }
+  }
+}
+```
+
+```
+bool query breakdown:
+  must:     Documents MUST match. Contributes to relevance score.
+  filter:   Documents MUST match. Does NOT contribute to score (faster, cacheable).
+  should:   Documents SHOULD match. Boosts score if they do. (Optional match.)
+  must_not: Documents MUST NOT match. Does not affect score.
+
+Rule of thumb:
+  - Use "must" for the main search terms (what the user typed)
+  - Use "filter" for structured constraints (status, date range, category)
+  - Use "should" for boosting signals (prefer recent docs, prefer certain categories)
+  - Use "must_not" for exclusions (hide archived, deleted, blocked content)
+```
+
+**Query types — when to use which:**
+
+```
+match:         Full-text search. Analyzes the query, finds docs with matching terms.
+               { "match": { "title": "database optimization" } }
+               Matches: "Optimization techniques for databases"
+
+term:          Exact match. No analysis. Use for keyword fields only.
+               { "term": { "status": "published" } }
+               Does NOT match "Published" (case-sensitive, no analysis)
+
+match_phrase:  All terms must appear in order, adjacent.
+               { "match_phrase": { "title": "New York" } }
+               Matches: "Visit New York City"
+               Does NOT match: "York is New"
+
+multi_match:   Search across multiple fields.
+               { "multi_match": {
+                   "query": "database optimization",
+                   "fields": ["title^3", "description", "tags^2"],
+                   "type": "best_fields"
+               }}
+               title matches score 3x, tags 2x, description 1x
+```
+
+**Aggregations — analytics on search results:**
+
+```json
+{
+  "size": 0,
+  "aggs": {
+    "categories": {
+      "terms": { "field": "category", "size": 20 }
+    },
+    "price_ranges": {
+      "histogram": { "field": "price", "interval": 50 }
+    },
+    "avg_rating": {
+      "avg": { "field": "rating" }
+    },
+    "monthly_sales": {
+      "date_histogram": {
+        "field": "sold_at",
+        "calendar_interval": "month"
+      }
+    }
+  }
+}
+```
+
+Aggregations power: faceted navigation (sidebar filters with counts), dashboards, analytics, and monitoring. They run on the same query scope, so filtering narrows both results and aggregation counts.
+
+**Fuzzy matching for typo tolerance:**
+
+```json
+{
+  "query": {
+    "match": {
+      "title": {
+        "query": "databse optimizaton",
+        "fuzziness": "AUTO"
+      }
+    }
+  }
+}
+```
+
+```
+Fuzziness = Levenshtein edit distance (insertions, deletions, substitutions):
+  "databse"     → "database"     (1 edit: insert 'a')
+  "optimizaton" → "optimization" (1 edit: insert 'i')
+
+AUTO fuzziness (recommended):
+  0-2 characters:  exact match only
+  3-5 characters:  1 edit allowed
+  6+ characters:   2 edits allowed
+```
+
+**Autocomplete — three approaches:**
+
+```
+1. Completion Suggester (FST-based, fastest):
+   - Uses a Finite State Transducer (compact, in-memory)
+   - Prefix matching only
+   - Best for: search box suggestions with known terms
+
+2. Edge n-grams (flexible, good for search-as-you-type):
+   - Index "elasticsearch" as ["el", "ela", "elas", "elast", ...]
+   - Regular match query works for autocomplete
+   - Best for: full-text autocomplete on document content
+
+3. search_as_you_type field type (built-in, simplest):
+   - Automatically creates edge n-gram and shingle sub-fields
+   - Just use multi_match with type: "bool_prefix"
+   - Best for: quick setup, good-enough autocomplete
+
+   { "match_bool_prefix": { "title.search_as_you_type": "data optim" } }
+```
+
+**Highlighting — show matched terms in context:**
+
+```json
+{
+  "query": { "match": { "description": "database optimization" } },
+  "highlight": {
+    "fields": {
+      "description": {
+        "pre_tags": ["<mark>"],
+        "post_tags": ["</mark>"],
+        "fragment_size": 150,
+        "number_of_fragments": 3
+      }
+    }
+  }
+}
+```
+
+Returns: `"...techniques for <mark>database</mark> <mark>optimization</mark> in production systems..."`
+
+**Faceted search — the filter sidebar:**
+
+Faceted search combines a query with aggregations to show users what filters are available and how many results each filter would produce:
+
+```
+User searches "laptop":
+
+Results: 2,345 laptops
+
+Facets (from aggregations):
+  Brand:     Apple (543)  |  Dell (421)  |  Lenovo (389)  |  HP (312)  | ...
+  Price:     $0-500 (234) |  $500-1000 (876) | $1000-2000 (901) | $2000+ (334)
+  RAM:       8GB (567)    |  16GB (1,102) |  32GB (543)  |  64GB (133)
+  Rating:    ★★★★+ (1,203) | ★★★+ (1,890) | ★★+ (2,100)
+
+User clicks "Apple" → filter applied → results narrow to 543 → facet counts update
+```
+
+### 8.5 Performance & Scaling
+
+**Shard sizing:**
+
+```
+Rules of thumb:
+- Target 10-50GB per shard (sweet spot for most workloads)
+- Avoid too many small shards (each shard has overhead: memory, file descriptors, threads)
+- Avoid too-large shards (slow recovery, long GC pauses)
+- Number of shards = expected_data_size / target_shard_size
+
+Example:
+  Expected data: 500GB
+  Target shard size: 25GB
+  Primary shards: 20
+  Replicas: 1 (so 40 total shards across the cluster)
+
+Over-sharding is the #1 operational mistake. 1000 tiny 100MB shards
+is far worse than 10 shards of 10GB each.
+```
+
+**Index Lifecycle Management (ILM):**
+
+```
+Manage time-series data (logs, metrics, events) across hardware tiers:
+
+Hot phase:    (fast SSDs, lots of RAM)
+  → Actively indexed and searched
+  → Recent data (last 7 days)
+
+Warm phase:   (cheaper SSDs, less RAM)
+  → Read-only, still searchable
+  → Force-merge to 1 segment (fewer file handles, faster search)
+  → Older data (7-30 days)
+
+Cold phase:   (HDDs or object storage)
+  → Rarely searched, slow is acceptable
+  → Searchable snapshots (data in S3, cached locally)
+  → Historical data (30-90 days)
+
+Delete phase:
+  → Data past retention period is deleted automatically
+
+This is how teams manage petabytes of log data without going bankrupt on storage.
+```
+
+**Caching:**
+
+```
+Elasticsearch caches at three levels:
+
+1. Filter cache (node query cache):
+   - Caches the results of filter clauses (term, range in filter context)
+   - Bitmap of matching doc IDs — extremely fast for repeated filters
+   - Why filters should use "filter" context, not "must"
+
+2. Request cache:
+   - Caches the entire response for a search request
+   - Only for size:0 requests (aggregations, count)
+   - Invalidated when the index is refreshed
+
+3. Fielddata / doc values:
+   - Column-oriented data for sorting and aggregations
+   - Doc values are built at index time (disk-based, memory-mapped)
+   - Fielddata is built at query time (heap-heavy, avoid for text fields)
+```
+
+**Performance tuning checklist:**
+
+```
+□ Use filter context for non-scoring queries (cacheable, faster)
+□ Increase refresh_interval from 1s to 30s for write-heavy indices
+□ Bulk index with _bulk API (not individual document puts)
+□ Denormalize data — don't model like a relational DB (avoid parent-child, minimize nested)
+□ Use routing to colocate related documents on the same shard
+□ Monitor slow query log: index.search.slowlog.threshold.query.warn: 10s
+□ Force-merge read-only indices to 1 segment
+□ Use doc values instead of fielddata for sorting/aggregations
+□ Right-size your shards (10-50GB each)
+```
+
+**Reindexing strategies:**
+
+```
+Zero-downtime reindex with alias swap:
+
+1. Current state:
+   Alias "products" → Index "products-v1"
+
+2. Create new index with updated mappings:
+   PUT products-v2 { new mappings, new analyzers }
+
+3. Reindex data:
+   POST _reindex { "source": { "index": "products-v1" }, "dest": { "index": "products-v2" } }
+
+4. Swap alias atomically:
+   POST _aliases {
+     "actions": [
+       { "remove": { "index": "products-v1", "alias": "products" } },
+       { "add":    { "index": "products-v2", "alias": "products" } }
+     ]
+   }
+
+5. Application never knows the index changed — it queries the "products" alias.
+6. Delete products-v1 when confident.
+
+Always use aliases. Never point application code at concrete index names.
+```
+
+### 8.6 Alternatives to Elasticsearch
+
+| Tool | Best For | Architecture |
+|------|----------|-------------|
+| **Elasticsearch/OpenSearch** | Full-featured search + analytics | Distributed, JVM-based, scales to petabytes |
+| **Meilisearch** | Instant search, product catalogs | Single binary, Rust, sub-50ms responses, simple config |
+| **Typesense** | Similar to Meilisearch, typo-tolerant | C++, simple to operate, built-in clustering |
+| **PostgreSQL FTS** | Good-enough search within Postgres | `tsvector` + GIN index, no extra infrastructure |
+| **pgvector + tsvector** | Hybrid search in Postgres | Combine full-text + vector search, no extra infra |
+| **Algolia** | Managed, instant search | SaaS, great DX, expensive at scale |
+
+```
+Decision framework:
+
+"Do I need a separate search engine?"
+
+< 100K documents + simple search → PostgreSQL full-text search (tsvector + GIN)
+  - No extra infrastructure
+  - Transactionally consistent with your data
+  - Supports ranking, highlighting, fuzzy matching
+  - Example:
+    SELECT title, ts_rank(search_vector, query) AS rank
+    FROM products, plainto_tsquery('english', 'database optimization') query
+    WHERE search_vector @@ query
+    ORDER BY rank DESC LIMIT 20;
+
+100K-10M documents + fast autocomplete → Meilisearch or Typesense
+  - Drop-in search engine with great defaults
+  - Sub-50ms response times, typo tolerance, faceting built-in
+  - Much simpler to operate than Elasticsearch
+
+10M+ documents OR complex analytics → Elasticsearch / OpenSearch
+  - Full-featured: aggregations, geo search, nested objects, custom analyzers
+  - Scales horizontally to petabytes
+  - Higher operational complexity (JVM tuning, shard management, cluster ops)
+
+Any scale + semantic search needed → Add vector search
+  - pgvector if already on Postgres
+  - Elasticsearch kNN if already on ES
+  - Pinecone / Weaviate / Qdrant for dedicated vector DB
+```
+
+### 8.7 Search UX Patterns
+
+Good search engineering is wasted without good search UX. These patterns are battle-tested:
+
+**Autocomplete / typeahead:**
+
+```
+Implementation checklist:
+□ Debounce input: 200-300ms (don't fire on every keystroke)
+□ Minimum query length: 2-3 characters (don't search on "a")
+□ Show suggestions after 2+ characters typed
+□ Keyboard navigation (arrow keys + Enter)
+□ Highlight the matching portion in suggestions
+□ Cancel in-flight requests when user types more (AbortController)
+□ Cache recent queries client-side
+
+const controller = new AbortController();
+const response = await fetch(`/api/search?q=${query}`, {
+  signal: controller.signal
+});
+// On new keystroke: controller.abort() → cancels previous request
+```
+
+**"Did you mean?" suggestions:**
+
+```
+Three approaches:
+1. Fuzzy matching: find terms within edit distance 1-2 of the query
+2. Phonetic matching: Metaphone/Soundex ("Jon" → "John")
+3. Popularity-weighted: suggest the most common similar query from search logs
+
+Best practice: combine all three.
+If a query returns 0 results but a similar query returns 1000+, show "Did you mean: [similar query]?"
+```
+
+**Faceted navigation:**
+
+```
+The filter sidebar with counts. Rules:
+
+1. Show facets relevant to current results (not all possible values)
+2. Update counts dynamically as filters are applied
+3. Use OR within a facet, AND between facets:
+   Category: [Laptops OR Tablets] AND Brand: [Apple] AND Price: [$500-$1000]
+4. Show count of results each filter value would produce
+5. Don't show filter values with 0 results (or show them grayed out)
+6. Allow removing individual filters (breadcrumbs / pills)
+```
+
+**Zero-results page:**
+
+```
+When search returns nothing, don't show a blank page:
+1. Check for typos and suggest corrections
+2. Show results for a relaxed query (drop least important terms)
+3. Suggest popular/trending searches
+4. Show category browse options
+5. Log zero-result queries — they reveal gaps in your content or analysis pipeline
+```
+
+**Search analytics — measure and improve:**
+
+```
+Track these metrics:
+1. Query volume:          what people search for (query distribution)
+2. Zero-result rate:      % of queries with no results (target: < 5%)
+3. Click-through rate:    % of searches where user clicks a result
+4. Click position:        which result position gets clicked (lower is better)
+5. Refinement rate:       % of searches followed by another search (user didn't find what they wanted)
+6. Time to first click:   how long users spend before clicking
+7. Search exit rate:      % of users who leave after searching (worst case)
+
+Zero-result queries are a gold mine: they tell you exactly what your search is failing at.
+Analyze them weekly and fix the top offenders (add synonyms, fix analysis, add content).
+```
+
+---
+
 ## Summary: When to Use What
 
 | Problem | Data Structure / Algorithm | Why |
@@ -1659,5 +2443,10 @@ SET work_mem = '256MB';
 | Autocomplete, prefix matching | Trie / Radix tree | O(k) lookup where k = key length |
 | Ordered set with concurrency | Skip list | O(log n), simpler concurrent access than trees |
 | Distributed unique IDs | Snowflake / UUIDv7 / ULID | Time-sorted, no coordination, index-friendly |
+| Full-text search | Inverted index (Elasticsearch, Solr) | O(query_terms) lookup, sub-second on millions of docs |
+| Lexical relevance ranking | BM25 | Industry standard, handles term saturation and doc length |
+| Semantic / similarity search | Vector search (HNSW, IVF) | Catches meaning, not just keywords |
+| Search within Postgres | tsvector + GIN index | No extra infra, good enough for < 100K docs |
+| Typo-tolerant instant search | Meilisearch / Typesense | Simple ops, sub-50ms, great defaults |
 
 The structures in this chapter are not interview trivia. They are the building blocks of every database, cache, load balancer, and distributed system you work with. Understanding them means you can read a Postgres `EXPLAIN` plan and know what is happening, choose the right database for your workload, debug performance problems from first principles, and design systems that scale.

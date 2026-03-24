@@ -23,6 +23,7 @@ The practical hard skills that eliminate friction — Linux mastery, shell produ
 - Docker for Daily Use
 - Terraform Essentials
 - Kubernetes CLI (kubectl)
+- Regex Mastery
 - Quick Reference: The Commands You Will Use Daily
 
 ### Related Chapters
@@ -2287,6 +2288,160 @@ kubectl get pods -o jsonpath='{.items[*].metadata.name}'
 kubectl get secret db-creds -o jsonpath='{.data.password}' | base64 -d
 kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.capacity.memory}{"\n"}{end}'
 ```
+
+---
+
+## 9. REGEX MASTERY
+
+A surprisingly high-leverage skill. Regex appears in: grep/rg, sed, code search, log analysis, input validation, text extraction, linting rules, and database queries.
+
+### Core Syntax Reference
+
+```
+LITERALS & METACHARACTERS
+.           Any character (except newline)
+\d          Digit [0-9]
+\D          Non-digit
+\w          Word character [a-zA-Z0-9_]
+\W          Non-word character
+\s          Whitespace (space, tab, newline)
+\S          Non-whitespace
+\b          Word boundary
+^           Start of line
+$           End of line
+
+QUANTIFIERS
+*           0 or more (greedy)
++           1 or more (greedy)
+?           0 or 1 (optional)
+{3}         Exactly 3
+{2,5}       Between 2 and 5
+{3,}        3 or more
+*?  +?  ??  Lazy versions (match as few as possible)
+
+GROUPS & ALTERNATION
+(abc)       Capture group
+(?:abc)     Non-capturing group
+(?P<name>abc)  Named capture group
+(a|b)       Alternation (a OR b)
+
+LOOKAHEAD & LOOKBEHIND
+(?=abc)     Positive lookahead (followed by abc)
+(?!abc)     Negative lookahead (NOT followed by abc)
+(?<=abc)    Positive lookbehind (preceded by abc)
+(?<!abc)    Negative lookbehind (NOT preceded by abc)
+
+CHARACTER CLASSES
+[abc]       Any of a, b, c
+[a-z]       Range
+[^abc]      NOT a, b, or c
+[a-zA-Z0-9]  Alphanumeric
+```
+
+### Practical Patterns Every Engineer Needs
+
+```bash
+# Email (simplified — don't use for validation, use a library)
+[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}
+
+# IPv4 address
+\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b
+
+# URL extraction
+https?://[^\s<>"{}|\\^`\[\]]+
+
+# ISO date (2024-01-15)
+\d{4}-\d{2}-\d{2}
+
+# ISO datetime (2024-01-15T10:30:00Z)
+\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z?
+
+# UUID
+[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
+
+# Semantic version (1.2.3, 1.0.0-beta.1)
+\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?
+
+# Extract function names from code
+function\s+(\w+)\s*\(      # JavaScript
+def\s+(\w+)\s*\(            # Python
+func\s+(\w+)\s*\(           # Go
+
+# Log level extraction
+\b(DEBUG|INFO|WARN|ERROR|FATAL)\b
+
+# JSON key-value extraction
+"(\w+)"\s*:\s*"([^"]*)"
+
+# Find TODO/FIXME comments
+(TODO|FIXME|HACK|XXX|BUG)(\([^)]*\))?:?\s*(.*)
+```
+
+### Regex in Daily Tools
+
+```bash
+# ripgrep (rg) — search code
+rg 'TODO\(.*\):' --type ts            # Find TODOs in TypeScript
+rg 'console\.(log|warn|error)' src/   # Find console statements
+rg 'password|secret|token' --type-not test  # Find potential secrets
+
+# sed — find and replace
+sed -E 's/oldFunc\(/newFunc(/g' file.ts          # Rename function
+sed -E 's/([0-9]+)px/\1rem/g' styles.css         # px to rem (sort of)
+sed -E '/^\s*\/\//d' file.ts                       # Remove comment lines
+
+# grep in log analysis
+grep -oP 'duration=\K[0-9.]+' access.log | sort -n | tail -20  # Top 20 slowest
+grep -cP 'status=(4|5)\d\d' access.log            # Count 4xx/5xx errors
+
+# VS Code search (supports regex)
+# Ctrl+Shift+F → enable regex (.*) → search across project
+# Find: import .* from ['"]\.\./
+# → finds all relative imports
+
+# PostgreSQL
+SELECT * FROM logs WHERE message ~ 'error.*timeout';
+SELECT regexp_matches(url, '/api/v(\d+)/(\w+)', 'g') FROM requests;
+```
+
+### Catastrophic Backtracking (The Regex That Kills Your Server)
+
+```
+# DANGEROUS: nested quantifiers with overlapping matches
+(a+)+$          # Exponential backtracking on "aaaaaaaaaaaaaaab"
+(a|a)+$         # Same problem
+(.*a){10}       # Terrible on strings without 'a'
+
+# Why: the regex engine tries every possible way to match
+# For "aaaaab" with (a+)+$: tries a+a+a+a+a, then a+a+a+aa, then a+a+aa+a, ...
+# Each additional 'a' doubles the attempts
+
+# SAFE alternatives:
+a+$             # Remove nesting
+[^a]*a          # Be specific about what you're matching
+(?:a+)$         # Atomic group (if supported) prevents backtracking
+
+# PROTECTION:
+# - Use RE2 (Google's regex engine) — guarantees linear time, no backtracking
+# - Set timeout on regex execution
+# - Avoid user-supplied regex in production (or sandbox with RE2)
+# - The Cloudflare outage (Ch 26) was caused by catastrophic backtracking
+```
+
+### Regex Debugging
+- **regex101.com**: THE tool for building and testing regex (shows match groups, explains each part, tests against multiple inputs, supports multiple flavors)
+- **VS Code regex search**: test patterns in real-time across your codebase
+- Named capture groups make regex self-documenting:
+  ```
+  (?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})
+  ```
+
+### Common Gotchas
+- Greedy vs lazy: `<.*>` matches `<b>bold</b>` as ONE match. Use `<.*?>` for shortest match.
+- `^` and `$` in multiline: by default match start/end of STRING. Use `m` flag for line-by-line.
+- Escape special characters in literals: `.` matches ANY char. Use `\.` for a literal dot.
+- Different regex flavors: JavaScript, Python, Go (RE2), PCRE have different feature sets. Check what your tool supports.
+- Don't use regex for HTML parsing. Use a proper parser (cheerio, Beautiful Soup). "You can't parse HTML with regex" is a famous Stack Overflow answer for a reason.
 
 ---
 

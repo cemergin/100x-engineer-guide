@@ -24,6 +24,7 @@ How databases actually work under the hood — the knowledge that lets you go fr
 - Backup, Recovery & High Availability
 - Database Performance Tuning
 - Database Management & Operations
+- SQL Mastery
 
 ### Related Chapters
 - Ch 2 (database paradigms and data modeling)
@@ -2111,6 +2112,259 @@ When someone says "the database is slow," work through this checklist:
    └→ shared_buffers and effective_cache_size sized properly?
    └→ work_mem appropriate for workload?
    └→ Autovacuum settings tuned for write volume?
+```
+
+## 9. SQL Mastery
+
+The queries that separate junior from senior database engineers. These are the patterns you'll use weekly.
+
+### Common Table Expressions (CTEs)
+
+```sql
+-- Basic CTE: readable, named subqueries
+WITH active_users AS (
+    SELECT id, name, email, created_at
+    FROM users
+    WHERE status = 'active' AND last_login > NOW() - INTERVAL '30 days'
+),
+user_orders AS (
+    SELECT user_id, COUNT(*) as order_count, SUM(total) as total_spent
+    FROM orders
+    WHERE created_at > NOW() - INTERVAL '30 days'
+    GROUP BY user_id
+)
+SELECT au.name, au.email, COALESCE(uo.order_count, 0) as orders,
+       COALESCE(uo.total_spent, 0) as spent
+FROM active_users au
+LEFT JOIN user_orders uo ON au.id = uo.user_id
+ORDER BY uo.total_spent DESC NULLS LAST;
+
+-- WHY CTEs: readable, self-documenting, can reference multiple times
+-- NOTE: In PostgreSQL, CTEs are optimization fences before v12.
+-- In v12+, the planner can inline CTEs (use MATERIALIZED to force old behavior)
+```
+
+### Recursive CTEs
+
+```sql
+-- Organizational hierarchy (find all reports under a manager)
+WITH RECURSIVE org_tree AS (
+    -- Base case: the starting manager
+    SELECT id, name, manager_id, 0 as depth
+    FROM employees
+    WHERE id = 42  -- starting manager
+
+    UNION ALL
+
+    -- Recursive case: find direct reports of current level
+    SELECT e.id, e.name, e.manager_id, ot.depth + 1
+    FROM employees e
+    JOIN org_tree ot ON e.manager_id = ot.id
+    WHERE ot.depth < 10  -- safety limit to prevent infinite recursion
+)
+SELECT * FROM org_tree ORDER BY depth, name;
+
+-- Category tree (e-commerce: Electronics > Phones > Smartphones)
+-- Bill of materials (manufacturing: assembly contains sub-assemblies)
+-- Graph traversal in SQL (shortest path, reachability)
+```
+
+### Window Functions
+
+```sql
+-- ROW_NUMBER: assign a unique number within each partition
+SELECT name, department, salary,
+    ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC) as rank
+FROM employees;
+-- Use case: "top N per group" → WHERE rank <= 3
+
+-- RANK vs DENSE_RANK vs ROW_NUMBER
+-- Salaries: 100, 90, 90, 80
+-- ROW_NUMBER: 1, 2, 3, 4  (always unique)
+-- RANK:       1, 2, 2, 4  (gaps after ties)
+-- DENSE_RANK: 1, 2, 2, 3  (no gaps)
+
+-- Running total
+SELECT date, revenue,
+    SUM(revenue) OVER (ORDER BY date) as running_total
+FROM daily_revenue;
+
+-- Moving average (7-day)
+SELECT date, revenue,
+    AVG(revenue) OVER (
+        ORDER BY date
+        ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+    ) as avg_7day
+FROM daily_revenue;
+
+-- Percentage of total
+SELECT department, salary,
+    salary::numeric / SUM(salary) OVER () * 100 as pct_of_total
+FROM employees;
+
+-- LAG / LEAD (access previous/next row)
+SELECT date, revenue,
+    revenue - LAG(revenue) OVER (ORDER BY date) as day_over_day_change,
+    LEAD(revenue) OVER (ORDER BY date) as next_day_revenue
+FROM daily_revenue;
+
+-- FIRST_VALUE / LAST_VALUE / NTH_VALUE
+SELECT name, department, salary,
+    FIRST_VALUE(name) OVER (PARTITION BY department ORDER BY salary DESC) as highest_paid
+FROM employees;
+
+-- NTILE (divide rows into N buckets)
+SELECT name, salary,
+    NTILE(4) OVER (ORDER BY salary) as quartile
+FROM employees;
+```
+
+### JSON Operations (PostgreSQL)
+
+```sql
+-- JSONB storage and querying (PostgreSQL)
+CREATE TABLE events (
+    id BIGSERIAL PRIMARY KEY,
+    data JSONB NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Insert
+INSERT INTO events (data) VALUES ('{"type": "click", "page": "/home", "user_id": 123}');
+
+-- Access fields
+SELECT data->>'type' as event_type,          -- text extraction
+       data->'user_id' as user_id_json,       -- JSON extraction
+       data#>>'{nested,deep,field}' as deep   -- nested path extraction
+FROM events;
+
+-- Filter on JSON fields
+SELECT * FROM events WHERE data->>'type' = 'click';
+SELECT * FROM events WHERE data @> '{"type": "click"}';  -- containment (uses GIN index!)
+SELECT * FROM events WHERE data ? 'user_id';              -- key exists
+
+-- GIN index for JSONB (essential for performance)
+CREATE INDEX idx_events_data ON events USING GIN (data);
+-- Supports: @>, ?, ?|, ?& operators
+
+-- JSONB aggregation
+SELECT data->>'type' as event_type, COUNT(*)
+FROM events
+GROUP BY data->>'type';
+
+-- Build JSON in queries
+SELECT json_build_object(
+    'user', json_build_object('id', u.id, 'name', u.name),
+    'orders', json_agg(json_build_object('id', o.id, 'total', o.total))
+) as result
+FROM users u
+JOIN orders o ON u.id = o.user_id
+GROUP BY u.id, u.name;
+
+-- jsonb_path_query (SQL/JSON path — PostgreSQL 12+)
+SELECT * FROM events
+WHERE jsonb_path_exists(data, '$.tags[*] ? (@ == "urgent")');
+```
+
+### Advanced Query Patterns
+
+```sql
+-- UPSERT (INSERT ... ON CONFLICT)
+INSERT INTO user_settings (user_id, key, value)
+VALUES (123, 'theme', 'dark')
+ON CONFLICT (user_id, key)
+DO UPDATE SET value = EXCLUDED.value, updated_at = NOW();
+
+-- Batch upsert with UNNEST (PostgreSQL — much faster than individual inserts)
+INSERT INTO metrics (name, value, recorded_at)
+SELECT * FROM UNNEST(
+    ARRAY['cpu', 'memory', 'disk'],
+    ARRAY[45.2, 72.1, 55.0],
+    ARRAY[NOW(), NOW(), NOW()]
+)
+ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value;
+
+-- LATERAL JOIN (like a for-each loop in SQL)
+-- "For each user, get their 3 most recent orders"
+SELECT u.name, recent_orders.*
+FROM users u
+CROSS JOIN LATERAL (
+    SELECT id, total, created_at
+    FROM orders
+    WHERE user_id = u.id
+    ORDER BY created_at DESC
+    LIMIT 3
+) recent_orders;
+-- WHY LATERAL: the subquery can reference columns from the outer query
+
+-- FILTER clause (conditional aggregation — cleaner than CASE)
+SELECT
+    COUNT(*) as total_orders,
+    COUNT(*) FILTER (WHERE status = 'completed') as completed,
+    COUNT(*) FILTER (WHERE status = 'cancelled') as cancelled,
+    SUM(total) FILTER (WHERE status = 'completed') as completed_revenue
+FROM orders
+WHERE created_at > NOW() - INTERVAL '30 days';
+
+-- GROUPING SETS / CUBE / ROLLUP (multiple aggregation levels in one query)
+SELECT
+    COALESCE(region, 'ALL') as region,
+    COALESCE(product, 'ALL') as product,
+    SUM(revenue) as total
+FROM sales
+GROUP BY GROUPING SETS (
+    (region, product),  -- per region+product
+    (region),           -- per region subtotal
+    (product),          -- per product subtotal
+    ()                  -- grand total
+);
+
+-- EXISTS vs IN vs JOIN for semi-joins
+-- EXISTS is usually fastest for correlated checks:
+SELECT * FROM users u
+WHERE EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.id AND o.total > 1000);
+-- Better than: WHERE id IN (SELECT user_id FROM orders WHERE total > 1000)
+-- Because EXISTS short-circuits on first match
+
+-- Generate series (useful for filling gaps in time-series data)
+SELECT date, COALESCE(daily.count, 0) as count
+FROM generate_series(
+    '2024-01-01'::date,
+    '2024-01-31'::date,
+    '1 day'::interval
+) as date
+LEFT JOIN (
+    SELECT DATE(created_at) as day, COUNT(*) as count
+    FROM events GROUP BY DATE(created_at)
+) daily ON date = daily.day;
+```
+
+### Performance Patterns
+
+```sql
+-- Keyset pagination (fast, stable — replaces OFFSET for deep pages)
+-- First page:
+SELECT id, name, created_at FROM users ORDER BY created_at DESC, id DESC LIMIT 20;
+-- Next page (pass last row's values):
+SELECT id, name, created_at FROM users
+WHERE (created_at, id) < ('2024-01-15T10:00:00Z', 12345)
+ORDER BY created_at DESC, id DESC LIMIT 20;
+-- WHY: uses index directly, O(1) regardless of page depth
+-- vs OFFSET 10000 which must scan and discard 10000 rows
+
+-- Materialized view for expensive aggregations
+CREATE MATERIALIZED VIEW monthly_revenue AS
+SELECT DATE_TRUNC('month', created_at) as month,
+       SUM(total) as revenue, COUNT(*) as order_count
+FROM orders GROUP BY 1;
+-- Refresh: REFRESH MATERIALIZED VIEW CONCURRENTLY monthly_revenue;
+-- Requires unique index for CONCURRENTLY
+
+-- Advisory locks (application-level distributed locking in PostgreSQL)
+SELECT pg_try_advisory_lock(hashtext('process-invoices'));
+-- Returns true if lock acquired, false if already held
+-- Use for: singleton job execution, preventing duplicate processing
+SELECT pg_advisory_unlock(hashtext('process-invoices'));
 ```
 
 This chapter covered the knowledge that separates engineers who can write SQL from engineers who can make databases perform. Every concept here — MVCC, WAL, vacuum, the query planner, buffer management — is something you will encounter in production. The difference between knowing these internals and not knowing them is the difference between spending 5 minutes diagnosing a problem and spending 5 days.
