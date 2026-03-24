@@ -25,6 +25,7 @@ How databases actually work under the hood — the knowledge that lets you go fr
 - Database Performance Tuning
 - Database Management & Operations
 - SQL Mastery
+- Graph Databases
 
 ### Related Chapters
 - Ch 2 (database paradigms and data modeling)
@@ -2366,5 +2367,188 @@ SELECT pg_try_advisory_lock(hashtext('process-invoices'));
 -- Use for: singleton job execution, preventing duplicate processing
 SELECT pg_advisory_unlock(hashtext('process-invoices'));
 ```
+
+---
+
+## 10. GRAPH DATABASES
+
+When relationships between entities are as important as the entities themselves, relational JOINs become unwieldy and graph databases shine.
+
+### How Graph Databases Work
+
+**The Property Graph Model** (used by Neo4j, Neptune, Memgraph):
+- **Nodes** (vertices): entities with labels and properties. `(:User {name: "Alice", age: 30})`
+- **Relationships** (edges): typed, directed connections with properties. `[:FOLLOWS {since: "2023-01-15"}]`
+- **Both nodes and relationships can have arbitrary key-value properties**
+- Relationships are first-class citizens — they are stored and indexed, not computed via JOINs
+
+**How it differs from relational:**
+```
+RELATIONAL: To find "friends of friends of Alice"
+  SELECT DISTINCT f3.name
+  FROM users u
+  JOIN friendships f1 ON u.id = f1.user_id
+  JOIN friendships f2 ON f1.friend_id = f2.user_id
+  JOIN friendships f3_rel ON f2.friend_id = f3_rel.user_id
+  JOIN users f3 ON f3_rel.friend_id = f3.id
+  WHERE u.name = 'Alice';
+  -- Multiple self-JOINs, gets worse with each hop, performance degrades
+
+GRAPH (Cypher):
+  MATCH (alice:User {name: "Alice"})-[:FRIENDS*2..3]-(fof:User)
+  RETURN DISTINCT fof.name
+  -- Traversal, not JOIN. Performance depends on local neighborhood size, not table size.
+```
+
+**Key insight:** In a relational DB, the cost of a JOIN is proportional to the table sizes. In a graph DB, the cost of a traversal is proportional to the local neighborhood — it doesn't matter if you have 1 billion nodes if you're only traversing 3 hops from one node.
+
+### Query Languages
+
+**Cypher** (Neo4j, Memgraph — most popular):
+```cypher
+-- Create nodes and relationships
+CREATE (alice:User {name: "Alice", email: "alice@example.com"})
+CREATE (bob:User {name: "Bob"})
+CREATE (alice)-[:FOLLOWS {since: date("2024-01-15")}]->(bob)
+
+-- Pattern matching: find who Alice follows
+MATCH (alice:User {name: "Alice"})-[:FOLLOWS]->(followed)
+RETURN followed.name
+
+-- Variable-length paths: friends within 1-3 hops
+MATCH (alice:User {name: "Alice"})-[:FRIENDS*1..3]-(friend)
+RETURN DISTINCT friend.name, length(shortestPath((alice)-[:FRIENDS*]-(friend))) as distance
+
+-- Shortest path
+MATCH path = shortestPath((a:User {name: "Alice"})-[:KNOWS*]-(b:User {name: "Dave"}))
+RETURN nodes(path), length(path)
+
+-- Aggregation: most connected users
+MATCH (u:User)-[:FOLLOWS]->(other)
+RETURN u.name, count(other) as following_count
+ORDER BY following_count DESC LIMIT 10
+
+-- Subgraph pattern: find triangles (mutual connections)
+MATCH (a:User)-[:FRIENDS]-(b:User)-[:FRIENDS]-(c:User)-[:FRIENDS]-(a)
+RETURN DISTINCT a.name, b.name, c.name
+
+-- Recommend: products bought by people who bought what I bought
+MATCH (me:User {id: 123})-[:PURCHASED]->(product)<-[:PURCHASED]-(other)-[:PURCHASED]->(rec)
+WHERE NOT (me)-[:PURCHASED]->(rec)
+RETURN rec.name, count(other) as score
+ORDER BY score DESC LIMIT 10
+```
+
+**Gremlin** (Apache TinkerPop — used by Neptune, JanusGraph, CosmosDB):
+```groovy
+// Traversal-based, more verbose, more portable
+g.V().has('User', 'name', 'Alice').out('FOLLOWS').values('name')
+
+// Variable-length: 2-3 hops
+g.V().has('User', 'name', 'Alice').repeat(both('FRIENDS')).times(3).dedup().values('name')
+```
+
+**SPARQL** (RDF/triple stores — used by knowledge graphs, W3C standard):
+```sparql
+SELECT ?friendName WHERE {
+  :alice :knows ?friend .
+  ?friend :name ?friendName .
+}
+```
+
+### When to Use a Graph Database
+
+| Use Case | Why Graph Excels | Example |
+|----------|-----------------|---------|
+| **Social networks** | Relationship traversal IS the query | "People you may know", mutual friends, influence scoring |
+| **Fraud detection** | Detect patterns across entities | Shared phone/email/device across accounts = fraud ring |
+| **Recommendation engines** | Collaborative filtering via graph | "Customers who bought X also bought Y" — natural graph traversal |
+| **Knowledge graphs** | Rich entity relationships with inference | Google Knowledge Panel, enterprise data catalogs |
+| **Identity resolution** | Match entities across datasets | Same person with different names/emails across systems |
+| **Network/IT operations** | Dependency mapping | "If this server goes down, what services are affected?" |
+| **Authorization (ReBAC)** | Permission via relationships | Google Zanzibar: "User X has role Y on resource Z" — traverse the graph |
+| **Supply chain** | Multi-hop dependency tracking | "Which suppliers are affected if factory X shuts down?" |
+
+### When NOT to Use a Graph Database
+
+- **Simple CRUD** with no relationship queries — Postgres is better
+- **Heavy aggregations** (SUM, AVG, GROUP BY) — graph DBs are weak at this
+- **Time-series data** — use TimescaleDB/InfluxDB
+- **Full-text search** — use Elasticsearch
+- **Tabular reporting** — relational is built for this
+- **If your queries are always "get entity by ID"** — key-value store is simpler
+
+### Graph Database Options
+
+| Database | Model | Hosting | Best For |
+|----------|-------|---------|----------|
+| **Neo4j** | Property graph | Self-hosted, Aura (cloud) | Most mature, best tooling, Cypher |
+| **Amazon Neptune** | Property graph + RDF | AWS managed | AWS-native, Gremlin + SPARQL |
+| **Memgraph** | Property graph | Self-hosted, cloud | Real-time streaming graphs, Cypher-compatible |
+| **ArangoDB** | Multi-model (graph + document + KV) | Self-hosted, cloud | When you need graph + document in one DB |
+| **TigerGraph** | Property graph | Self-hosted, cloud | Massive-scale analytics, parallel traversal |
+| **Dgraph** | Property graph (GraphQL-native) | Self-hosted, cloud | GraphQL API directly on the graph |
+| **JanusGraph** | Property graph | Self-hosted (on Cassandra/HBase) | Massive scale, TinkerPop/Gremlin |
+| **PostgreSQL + Apache AGE** | Property graph (extension) | Self-hosted | Add graph queries to existing Postgres |
+
+### Data Modeling for Graphs
+
+**Principles:**
+1. **Model verbs as relationships, nouns as nodes.** "Alice PURCHASED Product" not "Alice has purchase_id 123"
+2. **Use specific relationship types.** `:PURCHASED`, `:REVIEWED`, `:RETURNED` — not generic `:RELATED_TO`
+3. **Store properties on relationships.** A `:PURCHASED` relationship can have `{date, quantity, price}`
+4. **Avoid super-nodes** (nodes with millions of relationships). They become bottlenecks. Strategies: partition by time (`[:FOLLOWS_2024]`), use intermediate nodes
+5. **Denormalize for query patterns.** Like NoSQL, model for how you query, not for normalization
+
+**Example: E-Commerce Graph Model:**
+```
+(:Customer)-[:PURCHASED {date, amount}]->(:Order)-[:CONTAINS {qty}]->(:Product)
+(:Product)-[:IN_CATEGORY]->(:Category)-[:SUBCATEGORY_OF]->(:Category)
+(:Customer)-[:REVIEWED {rating, text}]->(:Product)
+(:Customer)-[:VIEWED {timestamp}]->(:Product)
+(:Product)-[:SIMILAR_TO {score}]->(:Product)
+```
+
+### Performance & Scaling
+
+**Index everything you query by:** Create indexes on node properties used in MATCH patterns.
+```cypher
+CREATE INDEX FOR (u:User) ON (u.email)
+CREATE INDEX FOR (u:User) ON (u.id)
+CREATE CONSTRAINT FOR (u:User) REQUIRE u.id IS UNIQUE
+```
+
+**Scaling challenges:**
+- Graph databases are harder to shard than key-value or document stores — sharding cuts edges, requiring cross-partition traversals
+- **Neo4j**: leader-follower replication (reads scale, writes don't) or Fabric (sharded subgraphs)
+- **Neptune**: read replicas (up to 15), storage auto-scales
+- **JanusGraph/TigerGraph**: designed for horizontal scaling from the start
+
+**Performance tips:**
+- Limit traversal depth (`*1..5` not `*` — unbounded traversals can explode)
+- Use `PROFILE` or `EXPLAIN` to understand query plans
+- Warm the page cache on startup for frequently accessed subgraphs
+- Batch writes (especially for initial data load — Neo4j's `LOAD CSV` or `neo4j-admin import`)
+
+### Graph + Relational: Hybrid Architecture
+
+Many production systems use BOTH:
+```
+PostgreSQL (OLTP)          Neo4j (Graph)
+├── Users table            ├── (:User) nodes
+├── Orders table           ├── (:Order) nodes
+├── Products table         ├── Relationships
+└── Transactions           └── Recommendations
+
+Sync via CDC (Debezium) → Kafka → Neo4j consumer
+```
+
+- **Postgres** handles: CRUD, transactions, reporting, aggregations
+- **Neo4j** handles: recommendations, fraud detection, social features, path finding
+- **CDC keeps them in sync**: changes in Postgres are streamed to Neo4j
+
+This is the most practical architecture for adding graph capabilities to an existing system — you don't replace your relational DB, you augment it.
+
+---
 
 This chapter covered the knowledge that separates engineers who can write SQL from engineers who can make databases perform. Every concept here — MVCC, WAL, vacuum, the query planner, buffer management — is something you will encounter in production. The difference between knowing these internals and not knowing them is the difference between spending 5 minutes diagnosing a problem and spending 5 days.
