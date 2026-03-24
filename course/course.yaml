@@ -24,8 +24,8 @@ course:
   title: "The 100x Engineer Course"
   version: "1.0"
   running_example: "TicketPulse — a concert ticketing platform"
-  total_modules: 90
-  estimated_hours: "90-135 hours"
+  total_modules: 97
+  estimated_hours: "97-145 hours"
   loops:
     - name: "Foundation — Build the Mental Model"
       modules: "L1-M01 through L1-M30"
@@ -327,6 +327,80 @@ modules:
         description: "Categorize each test you wrote: is it a unit test, integration test, or end-to-end test? Draw the testing pyramid for TicketPulse."
     runs_locally: true
     prereqs: [L1-M11]
+
+  # ---------------------------------------------------------------------------
+  # Section 1C+: Software Engineering Principles (Modules 16a-16d)
+  # ---------------------------------------------------------------------------
+  # These modules draw from Ch 32 and establish the code-level principles
+  # that make everything else in the course work better.
+
+  - id: L1-M16a
+    title: "SOLID Principles in Practice"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [32]
+    ticketpulse: "Refactor TicketPulse code to follow SOLID — extract responsibilities from the monolithic OrderService"
+    summary: "Learn each SOLID principle by finding violations in TicketPulse and refactoring them"
+    exercises:
+      - type: "🐛 Debug"
+        description: "Find 5 SOLID violations in the TicketPulse codebase (they're planted intentionally)"
+      - type: "🛠️ Build"
+        description: "Refactor OrderService into separate services following SRP, apply DI to decouple from Postgres"
+      - type: "🤔 Reflect"
+        description: "Before reading on: which SOLID principle do you think is most important for a growing codebase? Why?"
+    runs_locally: true
+    prereqs: [L1-M16]
+
+  - id: L1-M16b
+    title: "Clean Code & Design Principles"
+    tier: "🟢 Core"
+    duration: "60 min"
+    source_chapters: [32]
+    ticketpulse: "Apply naming, function design, and error handling principles to TicketPulse"
+    summary: "Transform messy TicketPulse code into clean code using DRY, KISS, YAGNI, and clean code essentials"
+    exercises:
+      - type: "🛠️ Build"
+        description: "Rename 10 poorly-named variables/functions in TicketPulse to reveal intent"
+      - type: "🐛 Debug"
+        description: "Find code smells: a 200-line function, primitive obsession, feature envy — refactor each"
+      - type: "💡 Insight"
+        description: "Read Sandi Metz's 'The Wrong Abstraction' blog post. Find an over-abstraction in the codebase."
+    runs_locally: true
+    prereqs: [L1-M16a]
+
+  - id: L1-M16c
+    title: "Design Patterns That Matter"
+    tier: "🟡 Deep Dive"
+    duration: "75 min"
+    source_chapters: [32]
+    ticketpulse: "Implement Strategy (pricing), Observer (events), and Repository patterns in TicketPulse"
+    summary: "Apply the 5 most useful design patterns to real TicketPulse features"
+    exercises:
+      - type: "🛠️ Build"
+        description: "Implement Strategy pattern for ticket pricing (flat, tiered, early-bird, VIP)"
+      - type: "🛠️ Build"
+        description: "Implement Observer/event emitter for domain events (TicketPurchased triggers email, analytics, inventory)"
+      - type: "📐 Design"
+        description: "Design: where would you use Decorator pattern in TicketPulse? Draw the before/after."
+    runs_locally: true
+    prereqs: [L1-M16b]
+
+  - id: L1-M16d
+    title: "Coupling, Cohesion & Modularity"
+    tier: "🟡 Deep Dive"
+    duration: "60 min"
+    source_chapters: [32, 3]
+    ticketpulse: "Analyze TicketPulse's coupling, draw a dependency graph, and reduce inappropriate coupling"
+    summary: "Measure and improve TicketPulse's modularity using coupling/cohesion analysis"
+    exercises:
+      - type: "🔍 Explore"
+        description: "Run dependency-cruiser on TicketPulse, visualize the dependency graph, identify cycles"
+      - type: "📐 Design"
+        description: "Draw the ideal module boundaries for TicketPulse. Compare with current state."
+      - type: "🤔 Reflect"
+        description: "Where would you draw the line between 'acceptable coupling' and 'too coupled' in TicketPulse?"
+    runs_locally: true
+    prereqs: [L1-M16b]
 
   # ---------------------------------------------------------------------------
   # Section 1D: Architecture Fundamentals (Modules 17-22)
@@ -959,6 +1033,23 @@ modules:
     runs_locally: true
     prereqs: [L2-M33, L2-M35]
 
+  - id: L2-M51a
+    title: "Composition Over Inheritance & FP vs OOP"
+    tier: "🟡 Deep Dive"
+    duration: "60 min"
+    source_chapters: [32, 6]
+    ticketpulse: "Refactor TicketPulse's service layer: replace inheritance hierarchies with composition, introduce FP for data pipelines"
+    summary: "Replace a deep inheritance hierarchy with composition, and rewrite a data pipeline using functional patterns"
+    exercises:
+      - type: "🛠️ Build"
+        description: "Replace BaseService → AuthService → LoggedService → CachedService hierarchy with composed middlewares"
+      - type: "🛠️ Build"
+        description: "Rewrite the ticket pricing pipeline as a chain of pure functions (calculate base → apply discount → add fees → add tax)"
+      - type: "🤔 Reflect"
+        description: "When would you choose OOP over FP for a new TicketPulse feature? Give a concrete example of each."
+    runs_locally: true
+    prereqs: [L2-M51]
+
   - id: L2-M52
     title: "Data Pipelines"
     tier: "🟡 Deep Dive"
@@ -1425,6 +1516,23 @@ modules:
         description: "Review your ADRs: if the team size doubled or the traffic 10x'd, would you make the same decisions? Annotate each ADR with 'would revisit at scale X' notes."
     runs_locally: true
     prereqs: [L2-M60]
+
+  - id: L3-M77a
+    title: "Package Principles & Architecture Fitness Functions"
+    tier: "🔴 Expert"
+    duration: "75 min"
+    source_chapters: [32, 15]
+    ticketpulse: "Apply Martin's package principles to TicketPulse's monorepo. Set up architecture fitness functions to enforce boundaries."
+    summary: "Design TicketPulse's package structure using the 6 package principles, then automate enforcement"
+    exercises:
+      - type: "📐 Design"
+        description: "Map TicketPulse's packages against ADP, SDP, SAP. Identify principle violations."
+      - type: "🛠️ Build"
+        description: "Configure dependency-cruiser or ArchUnit rules that fail CI if package principles are violated"
+      - type: "💡 Insight"
+        description: "Read the 'Stable Dependencies Principle' section of 'Agile Software Development' by Martin. Apply to TicketPulse's shared packages."
+    runs_locally: true
+    prereqs: [L3-M77]
 
   - id: L3-M78
     title: "DORA Metrics & Team Performance"
