@@ -132,6 +132,7 @@ on:
 Path filtering is the single most impactful optimization for monorepos:
 
 ```yaml
+# Only run when these paths change (positive filter)
 on:
   push:
     branches: [main]
@@ -140,13 +141,20 @@ on:
       - 'packages/shared/**'
       - 'package.json'
       - '.github/workflows/api-ci.yml'
+```
+
+```yaml
+# Run on everything EXCEPT these paths (negative filter)
+on:
+  push:
+    branches: [main]
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
 ```
 
 **Rules:**
-- `paths` and `paths-ignore` cannot be combined in the same trigger — use one or the other.
+- `paths` and `paths-ignore` **cannot** be combined in the same trigger — use one or the other.
 - Patterns use `fnmatch` syntax. `**` matches any directory depth.
 - If only `paths` is set, the workflow only runs when those paths change.
 - Always include the workflow file itself in `paths` so changes to CI trigger CI.
@@ -560,7 +568,6 @@ runs:
   steps:
     - name: Checkout
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
-      shell: bash
 
     - name: Setup Node.js
       uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af  # v4.1.0
@@ -2544,7 +2551,7 @@ jobs:
 
 ---
 
-## 15. KEY TAKEAWAYS
+## KEY TAKEAWAYS
 
 1. **Path filtering is free performance.** In a monorepo, only run CI for what changed. This alone can cut runner costs 50-80%.
 
@@ -2564,4 +2571,4 @@ jobs:
 
 ---
 
-*Next: Chapter 34 explores advanced observability and monitoring patterns — the other side of the feedback loop from CI/CD.*
+*Next: Chapter 34 explores spec-driven development — writing the specification before the code, from RFCs and OpenAPI contracts to AI-native specs that serve as the interface between human intent and machine execution.*

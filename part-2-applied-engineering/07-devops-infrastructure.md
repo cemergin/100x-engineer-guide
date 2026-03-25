@@ -91,6 +91,8 @@ Kubernetes controllers encoding domain-specific operational knowledge via CRDs. 
 
 ## 3. CI/CD PHILOSOPHIES
 
+> For hands-on GitHub Actions mastery — reusable workflows, OIDC, self-hosted runners, and more — see **Chapter 33: GitHub Actions Mastery**.
+
 ### Core Practices
 - **CI:** Merge to mainline frequently (at least daily). Automated build + test on every commit.
 - **Continuous Delivery:** Every change *can* be deployed. Human decides when.

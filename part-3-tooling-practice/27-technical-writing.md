@@ -323,6 +323,8 @@ State the license. For internal projects, state "Internal — proprietary."
 
 ## 4. Architecture Decision Records (ADRs)
 
+> For a deeper treatment of ADRs, RFCs, contract-first API design (OpenAPI/AsyncAPI), executable specs (BDD/Gherkin), and AI-native specifications, see **Chapter 34: Spec-Driven Development**.
+
 An ADR captures a single architectural decision: what was decided, why, and what the consequences are. ADRs create a decision log that future engineers (including your future self) can reference.
 
 ### Template

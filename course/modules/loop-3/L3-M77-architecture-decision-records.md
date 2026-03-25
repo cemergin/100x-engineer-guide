@@ -528,3 +528,5 @@ The best ADRs include their own expiration conditions. A decision that was right
 - **adr-tools**: CLI for managing ADR documents (github.com/npryce/adr-tools)
 - **"Design Docs at Google"**: how Google documents design decisions at scale
 - **Joel Parker Henderson's ADR collection**: github.com/joelparkerhenderson/architecture-decision-record
+
+> **Going deeper:** **L3-M86a (AI-Native Spec-Driven Development)** extends ADRs into the AI era — CLAUDE.md as behavioral specification, the "spec stack" (CLAUDE.md + RFC + OpenAPI + Gherkin), and using specs as the interface between human intent and AI execution.

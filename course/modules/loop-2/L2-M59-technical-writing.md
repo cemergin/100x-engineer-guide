@@ -592,4 +592,6 @@ Before moving on, verify:
 - [Google SRE Book: Chapter 15 - Postmortem Culture](https://sre.google/sre-book/postmortem-culture/)
 - [RFC 7322: RFC Style Guide](https://tools.ietf.org/html/rfc7322) -- how the internet's own RFCs are written
 
+> **Going deeper:** **L2-M59a (Spec-Driven Development)** builds on everything here with contract-first API design (OpenAPI), event schema specs (AsyncAPI), and executable BDD specifications (Gherkin) — writing specs that machines can validate and AI agents can implement from.
+>
 > **Next up:** L2-M60 is the Loop 2 Capstone. You have gone from a monolith to a production-grade microservices platform. Time to prove it.

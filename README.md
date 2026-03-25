@@ -143,6 +143,8 @@ Part III — Tooling & Practice (anytime):
   Ch 11, 12, 14, 15, 27, 28    ← standalone
   Ch 17                          ← benefits from Ch 12
   Ch 20                          ← benefits from Ch 12
+  Ch 33                          ← benefits from Ch 7, 15, 8
+  Ch 34                          ← benefits from Ch 27, 25, 9
 
 Part IV — Cloud & Operations (after Parts I-II):
   Ch 13         ← benefits from Ch 1-4, 7

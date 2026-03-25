@@ -355,6 +355,8 @@ npx lint-staged
 
 ## 2. CI/CD PIPELINE ARCHITECTURE
 
+> For advanced GitHub Actions patterns — reusable workflows, OIDC federation, matrix strategies, custom actions, monorepo CI, and security hardening — see **Chapter 33: GitHub Actions Mastery**.
+
 ### 2.1 Pipeline Stages (Optimal Order)
 
 The principle: **fail fast, fail cheap.** Run the fastest and most likely-to-fail checks first.

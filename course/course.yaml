@@ -24,7 +24,7 @@ course:
   title: "The 100x Engineer Course"
   version: "1.0"
   running_example: "TicketPulse — a concert ticketing platform"
-  total_modules: 101
+  total_modules: 100
   estimated_hours: "97-145 hours"
   loops:
     - name: "Foundation — Build the Mental Model"
@@ -1761,7 +1761,7 @@ modules:
       - type: "🤔 Reflect"
         description: "How does spec quality correlate with AI output quality? Will AI eventually write the specs too? What is the human engineer's role in an AI-native workflow?"
     runs_locally: true
-    prereqs: [L2-M59a, L3-M86]
+    prereqs: [L2-M59a, L3-M77, L3-M86]
 
   - id: L3-M87
     title: "Mobile Backend Patterns"

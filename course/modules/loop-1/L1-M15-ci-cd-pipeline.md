@@ -542,3 +542,5 @@ After this module, TicketPulse should have:
 | **Branch protection** | GitHub settings that prevent pushing directly to a branch. Require PR reviews and CI checks to pass. |
 | **Concurrency** | Controls how multiple pipeline runs for the same branch are handled. `cancel-in-progress` stops older runs. |
 | **Cache** | Saved state (node_modules, Docker layers) reused between pipeline runs to save time. |
+
+> **Going deeper:** In Loop 2, **L2-M55a (GitHub Actions Mastery)** takes everything here to the next level: reusable workflows across multiple services, matrix strategies, OIDC federation (no more stored secrets), monorepo path filtering, and supply-chain security hardening.

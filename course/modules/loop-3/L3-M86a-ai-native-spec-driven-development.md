@@ -1,6 +1,6 @@
 # L3-M86a: AI-Native Spec-Driven Development
 
-> **Loop 3 (Mastery)** | Section 3D: AI & Intelligence | ⏱️ 75 min | 🟢 Core | Prerequisites: L2-M59 (Technical Writing), L3-M77 (Architecture Decision Records), L3-M86 (AI-Powered Engineering)
+> **Loop 3 (Mastery)** | Section 3D: AI & Intelligence | ⏱️ 75 min | 🟢 Core | Prerequisites: L2-M59a (Spec-Driven Development), L3-M77 (Architecture Decision Records), L3-M86 (AI-Powered Engineering)
 >
 > **Source:** Chapter 34 of the 100x Engineer Guide
 
@@ -827,7 +827,7 @@ Before moving on, confirm you have completed:
 
 ## Further Reading
 
-- **Chapter 34**: AI-Native Development Practices -- spec-driven workflows, prompt engineering, and the future of human-AI collaboration
+- **Chapter 34**: Spec-Driven Development -- RFCs, contract-first APIs, executable specs, and AI-native specification patterns
 - **Chapter 9**: Engineering Leadership -- ADRs, RFCs, and decision documentation (the foundation specs build on)
 - **Chapter 17**: AI-Augmented Engineering -- practical AI tool usage, prompt strategies, and review processes
 - **OpenAPI Specification**: swagger.io/specification/ -- the standard for REST API specifications

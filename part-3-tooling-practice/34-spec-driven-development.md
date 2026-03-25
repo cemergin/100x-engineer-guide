@@ -1524,6 +1524,8 @@ syntax = "proto3";
 
 package ticketpulse.inventory.v1;
 
+import "google/protobuf/timestamp.proto";
+
 option go_package = "github.com/ticketpulse/proto/inventory/v1";
 
 // InventoryService manages seat availability and reservations.
