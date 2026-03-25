@@ -22,6 +22,7 @@ A comprehensive, open-source mega-guide covering every paradigm, philosophy, and
 ├── part-2-applied-engineering/  ← Domains: concurrency, DevOps, testing, leadership, API design
 ├── part-3-tooling-practice/     ← Hands-on: languages, Linux/Vim/Git, AI tools, codebase org
 ├── part-4-cloud-operations/     ← Production: cloud, monitoring, AWS/Firebase, incident stories
+├── course/                      ← 97 hands-on modules across 3 progressive loops (see below)
 ├── appendices/                  ← Reference: reading list, 250+ term glossary
 └── README.md                    ← You are here
 ```
@@ -191,6 +192,44 @@ Summary sentence.
 - Follow `PREREQS` to build reading order
 - Filter by `DIFFICULTY` for level-appropriate content
 - Each subdirectory has its own `README.md` with local navigation
+
+---
+
+## Interactive Learning with AI
+
+The [`course/`](./course/) directory contains **97 hands-on modules** organized in 3 progressive loops, built from the same material as the guide chapters. Each module has exercises you build on a running project (TicketPulse) so concepts compound as you go:
+
+- **Loop 1** (M01–M30): Foundations — dev environment, databases, APIs, testing, security, observability
+- **Loop 2** (M31–M60): Applied — microservices, Kafka, Kubernetes, Terraform, advanced patterns
+- **Loop 3** (M61–M90): Mastery — multi-region, system design, incident response, capstone
+
+This course pairs with **[Tech Skill Builder](https://github.com/cemergin/tech-skill-builder)**, a Claude Code plugin that turns these modules into interactive learning experiences.
+
+### Learn with an AI Tutor
+
+Use `/tech-skill-builder:learn` in [Claude Code](https://claude.ai/claude-code) to start a guided tutoring session through any module. The tutor:
+
+- Walks you through concepts step-by-step with Socratic questioning
+- Generates hands-on exercises tailored to your skill level
+- Provides real-time feedback on your code and understanding
+- Adapts pacing based on your progress
+
+### Build Your Own Course
+
+Use `/tech-skill-builder:create-course` to generate new courses from scratch — whether you want to extend this guide with your own topics or create entirely new curricula for your team.
+
+### Getting Started
+
+```bash
+# Install the plugin in Claude Code
+claude plugin add cemergin/tech-skill-builder
+
+# Start learning any module
+/tech-skill-builder:learn
+
+# Create a new course
+/tech-skill-builder:create-course
+```
 
 ---
 
