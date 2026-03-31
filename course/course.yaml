@@ -24,7 +24,7 @@ course:
   title: "The 100x Engineer Course"
   version: "1.0"
   running_example: "TicketPulse — a concert ticketing platform"
-  total_modules: 100
+  total_modules: 104
   estimated_hours: "97-145 hours"
   loops:
     - name: "Foundation — Build the Mental Model"
@@ -910,6 +910,40 @@ modules:
     runs_locally: true
     prereqs: [L2-M43]
 
+  - id: L2-M44a
+    title: "Policy & IaC Security Scanning"
+    tier: "🟡 Deep Dive"
+    duration: "60 min"
+    source_chapters: [35]
+    ticketpulse: "TicketPulse's Terraform and Kubernetes manifests are scanned by Checkov, Trivy, and Kyverno — misconfigurations are caught before they reach the cluster."
+    summary: "Add policy-as-code to TicketPulse's deployment pipeline using Checkov for static scanning, conftest for plan validation, and Kyverno for admission control."
+    exercises:
+      - type: "🔍 Explore"
+        description: "Run Checkov against TicketPulse's Terraform files. Triage findings into fix-now, accept, and skip. Fix at least 2 real misconfigurations."
+      - type: "🛠️ Build"
+        description: "Write a custom Checkov policy and an OPA/Rego policy for conftest. Run conftest against a terraform plan JSON output."
+      - type: "🛠️ Build"
+        description: "Install Kyverno and apply three policies: require labels, block privileged containers, auto-generate NetworkPolicies. Verify enforcement."
+    runs_locally: true
+    prereqs: [L2-M44]
+
+  - id: L2-M44b
+    title: "Database Migrations as Code"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [35]
+    ticketpulse: "TicketPulse's database schema is fully version-controlled with numbered migration files — any environment can be reproduced from scratch."
+    summary: "Write versioned database migrations for TicketPulse, practice rollback and recovery, and implement zero-downtime expand-contract migrations."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Create 4 migration pairs (up + down) for TicketPulse tables: events, tickets, add email column, add email index. Run and verify."
+      - type: "🐛 Debug"
+        description: "Write a broken migration, observe the dirty state, recover using force and re-run. Practice rolling back to specific versions."
+      - type: "📐 Design"
+        description: "Design and implement an expand-contract migration to rename a column with zero downtime. Separate schema and data migrations."
+    runs_locally: true
+    prereqs: [L1-M06, L2-M44]
+
   - id: L2-M45
     title: "Monitoring Stack"
     tier: "🟢 Core"
@@ -1694,6 +1728,40 @@ modules:
         description: "Configure Horizontal Pod Autoscaler (HPA) for the events service: scale from 2 to 10 pods based on CPU utilization. Run a load test and watch pods scale up and back down."
     runs_locally: true
     prereqs: [L2-M43]
+
+  - id: L3-M83a
+    title: "Observability & GitOps as Code"
+    tier: "🟡 Deep Dive"
+    duration: "75 min"
+    source_chapters: [35]
+    ticketpulse: "TicketPulse's dashboards, alerts, and SLOs are version-controlled files in Git — ArgoCD auto-syncs them to the cluster alongside application code."
+    summary: "Version-control Grafana dashboards, Prometheus alerting rules, and SLO definitions. Set up ArgoCD for GitOps deployment of TicketPulse."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Export Grafana dashboards to JSON files and set up file-based provisioning. Delete a dashboard in the UI and verify it is restored from Git on restart."
+      - type: "🛠️ Build"
+        description: "Write PrometheusRule CRDs for TicketPulse alerts. Use Sloth to generate multi-window, multi-burn-rate SLO alerts from a simple YAML definition."
+      - type: "🚀 Deploy"
+        description: "Set up ArgoCD to watch a Git repo and auto-sync TicketPulse manifests. Test self-healing: manually change a resource and watch ArgoCD revert it."
+    runs_locally: true
+    prereqs: [L2-M45, L2-M44]
+
+  - id: L3-M83b
+    title: "Platform Engineering & Crossplane"
+    tier: "🔴 Expert"
+    duration: "75 min"
+    source_chapters: [35]
+    ticketpulse: "TicketPulse developers can self-service databases and infrastructure through a platform API — Crossplane manages the resources, Backstage catalogs the services."
+    summary: "Build Crossplane Compositions for self-service infrastructure and Backstage catalog entries for TicketPulse's services."
+    exercises:
+      - type: "📐 Design"
+        description: "Design and implement a Crossplane CompositeResourceDefinition (XRD) for a 'Database' platform API. Build a Composition that maps size tiers to real resources."
+      - type: "🛠️ Build"
+        description: "Write Backstage catalog-info.yaml files for each TicketPulse service, documenting dependencies, APIs, and ownership."
+      - type: "🤔 Reflect"
+        description: "Design the full golden path for TicketPulse: developer portal → self-service API → GitOps → policy gates → infrastructure. Evaluate the trade-offs of platform complexity vs team productivity."
+    runs_locally: true
+    prereqs: [L3-M83, L2-M44]
 
   - id: L3-M84
     title: "Nix & Reproducible Builds"
