@@ -24,6 +24,7 @@ The two cloud platforms in depth — AWS (20 core services, networking, security
 - Developer & Operations Tools
 - Cost Optimization
 - Architecture Patterns on AWS
+- Frontend Deployment on AWS
 - Firebase Services Map
 - Core Services (Firebase)
 - Firebase Security Rules
@@ -1442,6 +1443,201 @@ IoT Devices / Click Streams / Application Logs
 - DynamoDB Global Tables: multi-region, multi-active (no primary/replica distinction)
 - Route 53 health checks with failover routing
 - Conflict resolution strategy required for writes in multiple regions
+
+---
+
+## 10. FRONTEND DEPLOYMENT ON AWS
+
+### 10.1 SPA Deployment: S3 + CloudFront
+
+**Why S3 alone is not enough:** S3 static website hosting gives you an HTTP endpoint, but no HTTPS, no custom domain with TLS, no edge caching, and no SPA routing (refreshing `/dashboard` returns 404). CloudFront solves all of these.
+
+**The standard architecture:** S3 bucket (private, block all public access) -> CloudFront with **Origin Access Control (OAC)** -> custom error responses for SPA routing.
+
+```hcl
+# Terraform: Full SPA stack (S3 + CloudFront + ACM + Route 53)
+resource "aws_s3_bucket" "spa" {
+  bucket = "myapp-frontend-${var.environment}"
+}
+
+resource "aws_s3_bucket_public_access_block" "spa" {
+  bucket                  = aws_s3_bucket.spa.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_cloudfront_origin_access_control" "spa" {
+  name                              = "spa-oac"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
+resource "aws_cloudfront_distribution" "spa" {
+  origin {
+    domain_name              = aws_s3_bucket.spa.bucket_regional_domain_name
+    origin_id                = "s3-spa"
+    origin_access_control_id = aws_cloudfront_origin_access_control.spa.id
+  }
+
+  enabled             = true
+  default_root_object = "index.html"
+
+  # SPA routing: serve index.html for all 403/404 from S3
+  custom_error_response {
+    error_code         = 403
+    response_code      = 200
+    response_page_path = "/index.html"
+  }
+  custom_error_response {
+    error_code         = 404
+    response_code      = 200
+    response_page_path = "/index.html"
+  }
+
+  default_cache_behavior {
+    allowed_methods        = ["GET", "HEAD"]
+    cached_methods         = ["GET", "HEAD"]
+    target_origin_id       = "s3-spa"
+    viewer_protocol_policy = "redirect-to-https"
+    cache_policy_id        = "658327ea-f89d-4fab-a63d-7e88639e58f6" # CachingOptimized
+    compress               = true
+  }
+
+  aliases = [var.domain_name]
+
+  viewer_certificate {
+    acm_certificate_arn      = aws_acm_certificate.spa.arn  # Must be us-east-1
+    ssl_support_method       = "sni-only"
+    minimum_protocol_version = "TLSv1.2_2021"
+  }
+
+  restrictions {
+    geo_restriction { restriction_type = "none" }
+  }
+}
+```
+
+**Custom domain setup:** Route 53 alias record pointing to the CloudFront distribution. The ACM certificate **must be in us-east-1** regardless of where your bucket lives -- CloudFront is a global service that reads certs from us-east-1 only.
+
+### 10.2 Caching Architecture
+
+**Three cache layers** operate between your users and S3:
+
+| Layer | Controls | Where |
+|---|---|---|
+| **Browser cache** | `Cache-Control` header on the object | User's browser |
+| **CloudFront edge cache** | TTL in cache behavior + origin headers | 400+ edge locations |
+| **S3 origin** | Object metadata | Single region |
+
+**The fingerprinting pattern** (used by every modern bundler):
+- **`index.html`**: `Cache-Control: no-cache` -- always revalidated so users get the latest entry point
+- **Hashed assets** (`main.a3f8c2.js`, `style.b7d1e4.css`): `Cache-Control: public, max-age=31536000, immutable` -- cached for 1 year because the filename changes when content changes
+
+**Cache invalidation options:**
+- **CloudFront invalidation** (`/*`): Costs $0.005 per path after the first 1,000/month. Good for emergencies, not for every deploy.
+- **Versioned paths** (`/v2/app.js`): No invalidation needed. Best for APIs and shared libraries.
+- **Fingerprinted filenames**: The best approach for SPAs -- deploy new files, update `index.html`, old files age out.
+
+**Debugging stale content:** Check CloudFront response headers. `X-Cache: Hit from cloudfront` means edge served it. `Age: 3600` tells you seconds since edge cached it. `Via` confirms the request went through CloudFront.
+
+### 10.3 Edge Logic
+
+**CloudFront Functions** run at viewer request/response. They are lightweight (max 10 KB, <1 ms execution, no network access). Use for:
+- URL rewrites (trailing slash normalization, `www` redirect)
+- Security headers injection
+- Simple A/B routing via cookies
+- Geo-based redirects using `CloudFront-Viewer-Country`
+
+```javascript
+// CloudFront Function: Add security headers to every response
+function handler(event) {
+  var response = event.response;
+  var headers = response.headers;
+  headers['strict-transport-security'] = { value: 'max-age=63072000; includeSubdomains; preload' };
+  headers['content-security-policy']   = { value: "default-src 'self'; script-src 'self'" };
+  headers['x-frame-options']           = { value: 'DENY' };
+  headers['x-content-type-options']    = { value: 'nosniff' };
+  return response;
+}
+```
+
+**Lambda@Edge** runs at origin request/response. Full Node.js/Python runtime, up to 5 seconds (viewer-triggered) or 30 seconds (origin-triggered), network access allowed. Use for:
+- Server-side rendering at the edge for SEO-critical pages
+- Image optimization (resize/convert on the fly)
+- Advanced geolocation routing or authentication
+- A/B testing with complex logic
+
+| Criteria | CloudFront Functions | Lambda@Edge |
+|---|---|---|
+| **Runtime** | JavaScript only | Node.js, Python |
+| **Execution limit** | <1 ms | 5-30 s |
+| **Max memory** | 2 MB | 128-10,240 MB |
+| **Network access** | No | Yes |
+| **Cost** | ~1/6 of Lambda@Edge | Higher |
+| **Deploy region** | All edges automatically | us-east-1 (replicated) |
+| **Best for** | Header manipulation, redirects | SSR, auth, image processing |
+
+### 10.4 Serverless APIs for Frontend
+
+**Lambda + API Gateway (HTTP API)** is the default choice for frontend backends on AWS. Use **HTTP API**, not REST API -- it is 70% cheaper, supports OIDC/JWT auth natively, and has lower latency.
+
+**CORS configuration** is the number one source of frontend-backend integration pain. You need both API Gateway CORS settings *and* your Lambda must return CORS headers (API Gateway CORS only applies to preflight `OPTIONS` requests):
+
+```javascript
+// Lambda: API endpoint with proper CORS and error handling
+export const handler = async (event) => {
+  const headers = {
+    'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGIN,  // Never use '*' in production
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+  };
+  try {
+    const body = JSON.parse(event.body || '{}');
+    const result = await processRequest(body);
+    return { statusCode: 200, headers, body: JSON.stringify(result) };
+  } catch (err) {
+    console.error('Request failed:', err);
+    return { statusCode: 500, headers, body: JSON.stringify({ error: 'Internal server error' }) };
+  }
+};
+```
+
+**Lambda Function URLs** are a simpler alternative when you do not need API Gateway features (throttling, usage plans, request validation). A Function URL gives your Lambda a dedicated HTTPS endpoint with built-in CORS configuration -- good for internal tools or webhook receivers.
+
+### 10.5 Frontend Observability on AWS
+
+**Access logs:** Enable CloudFront access logs to an S3 bucket, then query with **Athena** using a standard SQL table definition over the log format. This gives you per-request data (status codes, cache hit/miss, latency, user agent) at pennies per query.
+
+**CloudWatch metrics to watch:**
+- **Cache hit ratio** (target >95% for SPAs): low ratio means your `Cache-Control` headers are wrong
+- **Origin latency**: should be <100 ms for S3 origins; spikes suggest S3 throttling or large objects
+- **4xx/5xx error rates**: 403 spikes often mean OAC misconfiguration or missing objects
+- **Requests per second**: capacity planning and anomaly detection
+
+**Real User Monitoring (RUM):** CloudWatch RUM captures page load times, Web Vitals (LCP, FID, CLS), and JavaScript errors from real browser sessions. Third-party alternatives (Datadog RUM, Sentry) offer richer dashboards and session replay.
+
+**Alarms to set from day one:** 5xx error rate > 1%, cache hit ratio < 90%, origin latency p99 > 500 ms.
+
+### 10.6 Cost Drivers for Frontend Workloads
+
+| Component | Primary Cost Driver | Typical SPA Cost |
+|---|---|---|
+| **CloudFront** | Data transfer out ($0.085/GB NA) | Dominates at scale |
+| **S3** | GET requests ($0.0004/1000) | Trivial for SPAs |
+| **Lambda@Edge** | Invocations x duration | Can surprise at high traffic |
+| **ACM certificates** | Free | $0 |
+| **Route 53** | $0.50/hosted zone + $0.40/M queries | Negligible |
+
+**Common cost surprises:**
+- **Over-invalidation**: Running `/*` invalidation on every deploy instead of invalidating only `index.html`
+- **Uncompressed assets**: CloudFront compresses on the fly if you enable it, but serving pre-compressed Brotli assets from S3 is more efficient
+- **Missing Cache-Control**: Without proper headers, CloudFront re-fetches from S3 on every request, multiplying origin request costs
+- **Lambda@Edge at scale**: A CloudFront Function at $0.10/M requests vs Lambda@Edge at $0.60/M -- choose the lightest tool that works
+
+**Optimization checklist:** Enable compression in CloudFront (Brotli > gzip). Set aggressive `Cache-Control` on hashed assets. Use **CloudFront Price Classes** to limit edge locations (Price Class 100 covers NA + EU only, cheapest). Pre-compress assets with Brotli during your build step.
 
 ---
 
