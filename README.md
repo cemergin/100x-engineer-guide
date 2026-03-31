@@ -153,6 +153,7 @@ Part IV — Cloud & Operations (after Parts I-II):
   Ch 18         ← benefits from Ch 4
   Ch 19         ← benefits from Ch 7, 13
   Ch 31         ← benefits from Ch 7, 13
+  Ch 35         ← benefits from Ch 7, 5
   Ch 26         ← benefits from Ch 4, 7
 
 Appendices — anytime:
@@ -198,7 +199,7 @@ Summary sentence.
 
 ## Interactive Learning with AI
 
-The [`course/`](./course/) directory contains **97 hands-on modules** organized in 3 progressive loops, built from the same material as the guide chapters. Each module has exercises you build on a running project (TicketPulse) so concepts compound as you go:
+The [`course/`](./course/) directory contains **104 hands-on modules** organized in 3 progressive loops, built from the same material as the guide chapters. Each module has exercises you build on a running project (TicketPulse) so concepts compound as you go:
 
 - **Loop 1** (M01–M30): Foundations — dev environment, databases, APIs, testing, security, observability
 - **Loop 2** (M31–M60): Applied — microservices, Kafka, Kubernetes, Terraform, advanced patterns
