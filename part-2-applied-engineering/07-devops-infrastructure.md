@@ -28,6 +28,7 @@ The infrastructure layer — how code gets from a developer's machine to product
 - Chapter 12 (Docker/Terraform/kubectl hands-on)
 - Chapter 15 (CI/CD pipelines)
 - Chapter 19 (AWS infrastructure)
+- Chapter 35 (Everything as Code — extends IaC to policies, secrets, observability, compliance, GitOps, and platform abstractions)
 
 ---
 

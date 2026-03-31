@@ -1,7 +1,7 @@
 <!--
   TYPE: index
   TITLE: The 100x Engineer Guide
-  CHAPTERS: 34
+  CHAPTERS: 35
   PARTS: 5
   APPENDICES: 1
   UPDATED: 2026-03-24
@@ -14,7 +14,7 @@
 
 A comprehensive, open-source mega-guide covering every paradigm, philosophy, and hard skill needed to become a lead/staff+ engineer — organized as a narrative that builds from theory to practice.
 
-**34 chapters** · **~45,000 lines** · **~2.8 MB** · **5 parts + appendices**
+**35 chapters** · **~47,000 lines** · **~3.0 MB** · **5 parts + appendices**
 
 ```
 100x-engineer-guide/
@@ -107,8 +107,9 @@ A comprehensive, open-source mega-guide covering every paradigm, philosophy, and
 | 19 | [AWS & Firebase Deep Dive](./part-4-cloud-operations/19-aws-firebase-deep-dive.md) | Inter→Adv | AWS 20 core services, VPC, IAM, cost optimization, 5 reference architectures. Firebase: Firestore, Auth |
 | 26 | [Incident War Stories](./part-4-cloud-operations/26-incident-war-stories.md) | Intermediate | 9 real outages analyzed: Cloudflare, GitHub, AWS S3, Knight Capital, Facebook BGP, CrowdStrike |
 | 31 | [GCP Deep Dive](./part-4-cloud-operations/31-gcp-deep-dive.md) | Inter→Adv | Compute Engine, Cloud Run, GKE, BigQuery, Spanner, Pub/Sub, Cloud Storage, IAM, cost optimization, GCP vs AWS comparison |
+| 35 | [Everything as Code](./part-4-cloud-operations/35-everything-as-code.md) | Inter→Adv | Policy-as-code (OPA/Kyverno/Checkov), secrets management (Vault/SOPS), DB migrations, observability-as-code, compliance-as-code, IaC testing, GitOps (ArgoCD/Flux), Crossplane, Backstage |
 
-> **Narrative:** How all the pieces connect (Ch 13) → how to find and fix problems (Ch 18) → AWS in depth (Ch 19) → GCP in depth (Ch 31) → learning from others' failures (Ch 26).
+> **Narrative:** How all the pieces connect (Ch 13) → how to find and fix problems (Ch 18) → AWS in depth (Ch 19) → GCP in depth (Ch 31) → codify everything (Ch 35) → learning from others' failures (Ch 26).
 
 ---
 
