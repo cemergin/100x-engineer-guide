@@ -732,3 +732,592 @@ After completing sections 0-2, you should have enough to write a one-page mental
 This document should take you 30 minutes to write after completing the exercises above. It will save you hours the first time something breaks. Print it. Pin it to your monitor. Refer to it at 3 AM. Update it as you learn more.
 
 You are now loaded. Sections 3-7 will cover observability setup, codebase navigation, incident readiness, and tribal knowledge extraction — but with sections 0-2 complete, you can already answer the question "what is this system and how do I operate it?" That's beast mode.
+
+---
+
+## 3. OBSERVABILITY & DASHBOARDS — YOUR EYES AND EARS
+
+> *"You can't fix what you can't see."*
+
+This is the single biggest force multiplier for a new engineer. An engineer with dashboard access who knows what to look at will outperform a 10-year veteran who's flying blind. Section 1 had you bookmark the primary dashboard. Now you're going to build real situational awareness — pre-loading your brain so that when something goes wrong, you already know what "normal" looks like and can spot the anomaly in seconds.
+
+**Why this matters more than reading code:** Code can be deceptive. Comments lie. READMEs go stale. But metrics and infra don't lie. A dashboard showing 200 RPS tells you more truth about a service than a README claiming "handles 1000 RPS." Observable reality beats documented intention, every single time.
+
+### 3.1 Find the Golden Signals Dashboard
+
+The four golden signals — from Google's SRE book — are the foundation of all service monitoring. Every healthy production system should have a dashboard covering these:
+
+| Signal | What It Measures | Why It Matters | Example Threshold |
+|--------|-----------------|----------------|-------------------|
+| **Latency** | Time to serve a request | Directly impacts user experience | p99 < 500ms |
+| **Error Rate** | Percentage of failed requests | Broken functionality, data loss | < 0.1% of total |
+| **Traffic** | Requests per second (throughput) | Capacity planning, anomaly detection | Varies by service |
+| **Saturation** | How full your resources are | Predicts outages before they happen | CPU < 70%, memory < 80% |
+
+**How to find it:** Ask your team lead: "Where's our golden signals dashboard?" If the answer is "we don't have one" — that's simultaneously a red flag and a golden opportunity. Building one is a high-value first contribution.
+
+**Example Datadog queries for each signal:**
+
+```
+# Latency — p50, p95, p99 by endpoint
+avg:trace.http.request.duration{service:my-service} by {resource_name}.percentile(50,95,99)
+
+# Error rate — 5xx responses as percentage
+(sum:trace.http.request.errors{service:my-service}.as_count() /
+ sum:trace.http.request.hits{service:my-service}.as_count()) * 100
+
+# Traffic — requests per second
+sum:trace.http.request.hits{service:my-service}.as_rate()
+
+# Saturation — CPU and memory utilization
+avg:container.cpu.usage{service:my-service}
+avg:container.memory.usage{service:my-service} / avg:container.memory.limit{service:my-service} * 100
+```
+
+**Example Grafana/Prometheus queries:**
+
+```promql
+# Latency — p99 over 5 minutes
+histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{service="my-service"}[5m])) by (le))
+
+# Error rate — 5xx as percentage
+sum(rate(http_requests_total{service="my-service", status=~"5.."}[5m]))
+/
+sum(rate(http_requests_total{service="my-service"}[5m])) * 100
+
+# Traffic — RPS by endpoint
+sum(rate(http_requests_total{service="my-service"}[5m])) by (handler)
+
+# Saturation — CPU utilization
+rate(container_cpu_usage_seconds_total{pod=~"my-service.*"}[5m])
+/
+container_spec_cpu_quota{pod=~"my-service.*"} * 100
+```
+
+**If your team doesn't have a golden signals dashboard**, here's your move: create one. Use the queries above as starting points. It takes an hour and immediately earns you credibility while giving yourself (and the team) permanent visibility.
+
+### 3.2 Learn What "Normal" Looks Like
+
+You cannot spot anomalies without knowing the baseline. This is non-negotiable.
+
+**The 15-minute baseline exercise:** During a calm period (not during an incident, not during a deploy), sit in front of the primary dashboard for 15 minutes and capture these numbers:
+
+| Metric | Baseline Value | Time Observed | Notes |
+|--------|---------------|---------------|-------|
+| Request rate (RPS) | _____ | _____ | e.g., "~350 RPS at 2 PM EST" |
+| p50 latency | _____ ms | _____ | |
+| p95 latency | _____ ms | _____ | |
+| p99 latency | _____ ms | _____ | |
+| Error rate | _____% | _____ | |
+| CPU utilization | _____% | _____ | |
+| Memory utilization | _____% | _____ | |
+| Active DB connections | _____ | _____ | |
+| Queue depth | _____ | _____ | |
+| Cache hit ratio | _____% | _____ | |
+
+**What to look for:**
+
+- **Daily traffic pattern:** Most services have a predictable curve — low traffic overnight, ramp-up in the morning, peak mid-afternoon, taper off in the evening. Learn your curve.
+- **Spike timing:** Does traffic spike at the top of the hour? (Cron jobs hitting the API.) Does it spike at 9 AM? (Users logging in.) Does it spike on Mondays? (Weekly batch jobs.)
+- **The "normal" error rate:** Zero errors is unusual. Most services have a background error rate of 0.01-0.1%. Know yours so you can tell when it doubles.
+- **Latency bands:** p50 tells you the typical experience. p99 tells you the worst 1% — and p99 is where the pain hides.
+
+**Real-world example:** A new engineer joins the team. Two weeks in, she glances at the dashboard during lunch and says, "Hey, our p99 is at 800ms — isn't it usually around 200?" Nobody else noticed because it had been creeping up over three days. She caught a slow query introduced by a migration two deploys ago. That's what baseline knowledge does.
+
+### 3.3 The Hotlinks List
+
+Build a personal quick-access bookmark bar for your operational tools. When something breaks at 2 AM, you don't want to be searching Confluence for the Datadog URL.
+
+**Your Beast Mode Hotlinks Template:**
+
+| Category | Tool | URL Pattern | What to Look For |
+|----------|------|-------------|------------------|
+| **Service health** | Datadog / Grafana | `app.datadoghq.com/dashboard/xxx` | Golden signals, overall health |
+| **Error tracking** | Sentry / Datadog APM | `sentry.io/organizations/xxx/issues/` | New errors, error spikes, regressions |
+| **Logs** | Datadog / CloudWatch / Kibana | `app.datadoghq.com/logs?query=service:my-svc` | Filtered to your team's services |
+| **Deployments** | GitHub Actions / ArgoCD | `github.com/org/repo/actions` | Recent deploys, success/failure |
+| **Database** | RDS Console / Grafana | `console.aws.amazon.com/rds/` | Connection count, query latency, replication lag |
+| **Queues** | SQS Console / Kafka UI | `console.aws.amazon.com/sqs/` | Queue depth — the early warning signal |
+| **Cost** | AWS Cost Explorer / Datadog Cost | `console.aws.amazon.com/cost-management/` | Unexpected spikes, budget alerts |
+| **On-call** | PagerDuty / OpsGenie | `app.pagerduty.com/schedules` | Current on-call, escalation policies |
+| **Status page** | Statuspage / internal | `status.company.com` | External dependency status |
+| **Runbooks** | Notion / Confluence / GitHub Wiki | varies | Incident response procedures |
+
+```bash
+# Quick way to populate your hotlinks — ask git for CI/CD URLs
+git remote get-url origin
+# → https://github.com/acme/my-service.git
+# → Dashboard: https://github.com/acme/my-service/actions
+
+# Find Datadog dashboard links in the codebase (teams often embed them)
+grep -ri "datadoghq.com\|grafana.*dashboard\|app.datadoghq" README.md docs/ *.md 2>/dev/null
+
+# Check Terraform for monitoring resources that contain dashboard URLs
+grep -r "datadog_dashboard\|grafana_dashboard\|aws_cloudwatch_dashboard" terraform/ 2>/dev/null
+```
+
+**Pro tip:** Put these in a browser bookmark folder called "Ops — [Service Name]" and set it to open all bookmarks at once. One click gives you full situational awareness. Some engineers use a browser extension like OneTab or create a custom start page.
+
+**Queue depth deserves special attention.** Queue depth (Kafka consumer lag, SQS `ApproximateNumberOfMessagesVisible`) is the canary in the coal mine. A growing queue means your consumers can't keep up — and that's often the first sign of a cascading failure. If you watch one metric obsessively, make it this one.
+
+```bash
+# AWS CLI — check SQS queue depth
+aws sqs get-queue-attributes \
+  --queue-url https://sqs.us-east-1.amazonaws.com/123456789/my-queue \
+  --attribute-names ApproximateNumberOfMessages ApproximateNumberOfMessagesNotVisible
+
+# Kafka — check consumer group lag
+kafka-consumer-groups.sh --bootstrap-server kafka:9092 \
+  --describe --group my-consumer-group
+```
+
+### 3.4 Alerts — Who Gets Paged and For What
+
+Before you join the on-call rotation (and you will), you need to understand the alerting topology.
+
+**Questions to answer:**
+
+| Question | Where to Find the Answer |
+|----------|-------------------------|
+| What conditions trigger alerts? | PagerDuty / OpsGenie / Datadog Monitors |
+| What are the thresholds? | Monitor definitions — are they static or dynamic? |
+| Who gets paged first? | Escalation policy — primary, secondary, manager |
+| How fast does it escalate? | Escalation timeout — 5 min? 15 min? 30 min? |
+| Where do alerts fire? | Slack channel? SMS? Phone call? All three? |
+| What's the acknowledgment SLA? | How long before unacked alerts escalate? |
+| Are there maintenance windows? | Scheduled downtime that suppresses alerts |
+
+```bash
+# PagerDuty CLI — list services and escalation policies
+pd service list
+pd escalation-policy list
+
+# Datadog — list monitors for your service
+curl -s "https://api.datadoghq.com/api/v1/monitor?tags=service:my-service" \
+  -H "DD-API-KEY: ${DD_API_KEY}" \
+  -H "DD-APPLICATION-KEY: ${DD_APP_KEY}" \
+  | jq '.[] | {name, type, query, message}'
+```
+
+**The alerting layers you should know:**
+
+1. **Infrastructure alerts:** CPU > 80%, memory > 90%, disk > 85%. These are blunt instruments but catch resource exhaustion.
+2. **Application alerts:** Error rate > 1%, p99 latency > 2s, health check failures. These are more nuanced and service-specific.
+3. **Business alerts:** Payment failures > threshold, signup rate drops, zero orders in 10 minutes. These catch problems that metrics miss.
+4. **Synthetic alerts:** Scheduled health checks from external services (Pingdom, Datadog Synthetics) that verify the system works end-to-end from a user's perspective.
+
+**Real-world example:** New engineer gets paged at 3 AM. The alert says "High CPU on my-service." She doesn't know if this means "the service is about to crash" or "this happens every night at 3 AM when the batch job runs." If she'd reviewed the alerting topology earlier, she'd know the batch job triggers this alert regularly and it resolves in 20 minutes. Instead, she spends an hour investigating, wakes up the on-call secondary, and everyone loses sleep. Learn the alerts before you're in the rotation.
+
+### 3.5 The "Metrics Don't Lie" Principle
+
+This is the philosophical backbone of beast mode observability.
+
+**The problem:** Code is a living document written by many hands over many years. Comments get stale. READMEs diverge from reality. Wiki pages describe the system as it was designed, not as it runs today. Institutional knowledge lives in people's heads, and people leave.
+
+**The solution:** Observable reality is the single source of truth.
+
+| What the Docs Say | What the Metrics Show | Who's Right? |
+|--------------------|-----------------------|--------------|
+| "Service handles 1000 RPS" | Dashboard shows 200 RPS peak | The dashboard |
+| "3 instances in the auto-scaling group" | Terraform shows `min_size = 5` | Terraform |
+| "Redis cache TTL is 1 hour" | Cache hit ratio is 12% | Something is wrong — investigate |
+| "Deploys take 5 minutes" | Last 10 deploys averaged 22 minutes | The deploy logs |
+| "99.9% uptime SLA" | Error budget burned 40% in week 1 | The error budget |
+
+**How to apply this:**
+
+1. When someone tells you how the system works, **verify it against the dashboard.** Not because they're lying, but because systems drift.
+2. When you read architecture docs, **cross-reference against actual infrastructure.** Terraform state and cloud console are the ground truth.
+3. When you're debugging, **start with metrics, not code.** The metrics tell you *where* the problem is. The code tells you *why*.
+
+```bash
+# Verify claims against reality — Terraform edition
+# "We have 3 instances" — let's check
+terraform state list | grep aws_ecs_service
+terraform state show aws_ecs_service.my_service | grep desired_count
+
+# "We use t3.medium" — let's check
+terraform state show aws_instance.my_server | grep instance_type
+
+# AWS CLI — what's actually running?
+aws ecs describe-services --cluster my-cluster --services my-service \
+  --query 'services[0].{desired: desiredCount, running: runningCount, pending: pendingCount}'
+
+aws ec2 describe-instances --filters "Name=tag:Service,Values=my-service" \
+  --query 'Reservations[].Instances[].{id: InstanceId, type: InstanceType, state: State.Name}'
+```
+
+**The mental model:** Treat every piece of documentation and tribal knowledge as a *hypothesis* until confirmed by observable data. This isn't cynicism — it's engineering rigor. And it's exactly the mindset that lets a week-two engineer catch problems that a two-year veteran has gone blind to.
+
+---
+
+## 4. CODEBASE NAVIGATION — READING THE TERRAIN, NOT EVERY LEAF
+
+> *"You don't need to read the whole map. You need to know which direction is north."*
+
+This is NOT "understand the entire codebase" — that's Chapter 28 (Codebase Archeology). This is *navigational intuition*: someone reports a bug in feature X, and within two minutes you're looking at the right file. You don't need to understand every module. You need to know how to find the one that matters right now.
+
+### 4.1 Entrypoint Mapping
+
+Every request enters the system somewhere. These entry points are your anchor points — everything fans out from them.
+
+**The four types of entrypoints:**
+
+| Type | What It Is | How to Find It |
+|------|-----------|----------------|
+| **HTTP route handlers** | API endpoints, web pages | Route files, controller files, decorator patterns |
+| **Event consumers** | Queue processors, webhook handlers | Consumer configs, event handler registrations |
+| **Cron jobs** | Scheduled tasks | Crontab, CloudWatch Events, Kubernetes CronJobs |
+| **CLI commands** | Developer/admin tools | CLI entrypoint files, management command directories |
+
+**Finding entrypoints in common frameworks:**
+
+```bash
+# Express.js — find route definitions
+grep -rn "router\.\(get\|post\|put\|delete\|patch\)" src/ --include="*.ts" --include="*.js"
+grep -rn "app\.\(get\|post\|put\|delete\|patch\)" src/ --include="*.ts" --include="*.js"
+
+# Django — find URL patterns
+grep -rn "path(\|re_path(" */urls.py
+# Or find view classes
+grep -rn "class.*View\|class.*ViewSet" */views.py
+
+# Spring Boot — find request mappings
+grep -rn "@\(GetMapping\|PostMapping\|PutMapping\|DeleteMapping\|RequestMapping\)" \
+  --include="*.java" src/
+
+# FastAPI — find route decorators
+grep -rn "@app\.\(get\|post\|put\|delete\)\|@router\.\(get\|post\|put\|delete\)" \
+  --include="*.py" src/
+
+# Rails — the routes file is the map
+cat config/routes.rb
+rails routes  # if you can run the app
+
+# Go (net/http or Gin)
+grep -rn "HandleFunc\|Handle\|GET\|POST\|PUT\|DELETE" --include="*.go" .
+```
+
+**Finding event consumers:**
+
+```bash
+# SQS consumers — look for queue URL references or SDK calls
+grep -rn "sqs\.\(receive\|ReceiveMessage\|Consumer\)" --include="*.ts" --include="*.py" src/
+grep -rn "SQS_QUEUE_URL\|queue_url\|QueueUrl" src/
+
+# Kafka consumers — look for topic subscriptions
+grep -rn "subscribe\|consumer\|@KafkaListener\|ConsumerGroup" src/
+
+# Cron jobs — scheduled tasks
+cat crontab 2>/dev/null
+grep -rn "schedule\|cron\|@Scheduled\|periodic_task" src/
+ls -la .github/workflows/ | grep -i cron
+grep -rn "schedule:" .github/workflows/
+```
+
+**Build a quick entrypoint map:**
+
+```markdown
+## Entrypoints — [Service Name]
+
+### HTTP (port 8080)
+- POST /api/v1/users      → src/controllers/user.controller.ts → createUser()
+- GET  /api/v1/users/:id   → src/controllers/user.controller.ts → getUser()
+- POST /api/v1/payments    → src/controllers/payment.controller.ts → processPayment()
+
+### Event Consumers
+- SQS: notification-queue  → src/consumers/notification.consumer.ts
+- SQS: export-jobs-queue   → src/consumers/export.consumer.ts
+
+### Cron
+- Daily 2 AM UTC           → src/jobs/cleanup.job.ts (delete expired sessions)
+- Hourly                    → src/jobs/sync.job.ts (sync external data)
+
+### CLI
+- npm run migrate           → src/cli/migrate.ts
+- npm run seed              → src/cli/seed.ts
+```
+
+This map takes 20 minutes to build and saves you hours of grep-ing later. Pin it next to your mental model document from Section 2.
+
+### 4.2 The "Grep Your Way In" Technique
+
+Do NOT try to understand the codebase top-down. Start from an **observable artifact** — an API endpoint, an error message, a log line — and grep backwards into the code.
+
+**The technique:**
+
+1. **Start with something you can see.** An error message in Sentry. A log line in Datadog. An API path from the docs.
+2. **Search for that exact string in the codebase.** Error messages are unique strings — they lead straight to the handler.
+3. **Follow the call chain.** From the handler, trace the function calls to understand the flow.
+
+```bash
+# Technique 1: Start from an error message
+# You see "Payment processing failed: insufficient funds" in Sentry
+rg "insufficient funds" --type ts
+# → src/services/payment.service.ts:142
+
+# Technique 2: Start from an API path
+# You know the endpoint is POST /api/v1/orders
+rg "/api/v1/orders" --type ts
+# → src/routes/order.routes.ts:15
+# → src/controllers/order.controller.ts:28
+
+# Technique 3: Start from a log line
+# You see "[OrderService] Processing order ORD-12345" in logs
+rg "Processing order" --type ts
+# → src/services/order.service.ts:67
+
+# Technique 4: Start from a config key
+# You see an environment variable PAYMENT_GATEWAY_URL in the config
+rg "PAYMENT_GATEWAY_URL" --type ts
+# → src/config/index.ts:23
+# → src/services/payment.service.ts:8
+
+# Technique 5: Start from a database table name
+# You see slow queries on the "orders" table
+rg "orders" --type ts -g "*model*" -g "*entity*" -g "*schema*"
+# → src/models/order.model.ts
+```
+
+**Power moves with ripgrep:**
+
+```bash
+# Find where a function is defined (not just called)
+rg "function processPayment|processPayment\s*=" --type ts
+
+# Find where a class is instantiated
+rg "new PaymentService" --type ts
+
+# Find all files that import a module
+rg "from.*payment.service" --type ts
+
+# Find all TODO/FIXME/HACK comments
+rg "TODO|FIXME|HACK|XXX" --type ts
+
+# Find all environment variables used in the codebase
+rg "process\.env\." --type ts | sort -t: -k2 | uniq
+
+# Contextual search — show 5 lines around the match
+rg -C 5 "handlePayment" --type ts
+```
+
+**Why this beats reading top-down:** A typical service has 500+ files. Reading them sequentially takes days and most of the knowledge decays before you need it. Grepping from a specific artifact gets you to the relevant code in under 60 seconds, and the context is immediately useful because you're looking at it in response to a real question.
+
+### 4.3 Identify the Architectural Layers
+
+You don't need to love the architecture. You need to know where things live.
+
+**Common patterns and where to find things:**
+
+| Pattern | Where to Find Business Logic | Where to Find Data Access | Where to Find API Definitions |
+|---------|-----------------------------|--------------------------|-----------------------------|
+| **MVC** | `controllers/`, `services/` | `models/`, `repositories/` | `routes/`, `controllers/` |
+| **Hexagonal** | `domain/`, `application/` | `infrastructure/adapters/` | `infrastructure/http/` |
+| **Vertical Slices** | `features/payments/`, `features/orders/` | Same directory as feature | Same directory as feature |
+| **Big Ball of Mud** | Everywhere and nowhere | Mixed in with everything | Good luck |
+
+```bash
+# Quick architecture detection — look at the top-level directory structure
+ls -la src/
+# If you see: controllers/ models/ services/ routes/     → MVC
+# If you see: domain/ application/ infrastructure/        → Hexagonal / Clean Architecture
+# If you see: features/ or modules/ with self-contained dirs → Vertical Slices
+# If you see: a flat list of 200 files                    → Big Ball of Mud
+
+# Check for a monorepo structure
+ls packages/ 2>/dev/null || ls apps/ 2>/dev/null || ls services/ 2>/dev/null
+
+# Look at the dependency injection setup — reveals architecture philosophy
+rg "inject\|@Injectable\|@Module\|container\.\(register\|bind\)" src/ --type ts -l
+
+# Check for middleware layers
+rg "middleware\|interceptor\|guard\|filter\|pipe" src/ --type ts -l | head -20
+```
+
+**What to document for yourself:**
+
+```markdown
+## Architecture Notes — [Service Name]
+
+**Pattern:** MVC-ish (controllers → services → repositories)
+**Business logic lives in:** src/services/
+**Data access lives in:** src/repositories/
+**API routes defined in:** src/routes/
+**Shared utilities:** src/common/ and src/utils/
+**Config loading:** src/config/index.ts (reads from environment)
+**Middleware chain:** auth → rate-limit → validate → controller → error-handler
+```
+
+### 4.4 Spot the Load-Bearing Code
+
+Every codebase has a handful of files that everything depends on. These are the load-bearing walls — touch them carefully, test them thoroughly, and know them well.
+
+**How to find them:**
+
+```bash
+# Most frequently changed files (hot spots) — high churn = high importance
+git log --pretty=format: --name-only --since="6 months ago" | \
+  sort | uniq -c | sort -rn | head -20
+
+# Most authors per file (many people touch it = shared dependency)
+for f in $(git ls-files "*.ts" | head -50); do
+  authors=$(git log --format='%ae' -- "$f" | sort -u | wc -l)
+  echo "$authors $f"
+done | sort -rn | head -20
+
+# Largest files (complexity tends to accumulate in large files)
+find src/ -name "*.ts" -exec wc -l {} + | sort -rn | head -20
+
+# Most imported module (everything depends on it)
+rg "from ['\"]" --type ts -o | \
+  sed "s/.*from ['\"]//; s/['\"]//g" | \
+  sort | uniq -c | sort -rn | head -20
+
+# Files changed in the most PRs (high coupling to features)
+git log --pretty=format: --name-only --merges --since="3 months ago" | \
+  sort | uniq -c | sort -rn | head -20
+```
+
+**What load-bearing code looks like:**
+
+- **The base model / entity class** — every other model inherits from it
+- **The authentication middleware** — every request passes through it
+- **The database connection manager** — everything that reads or writes data depends on it
+- **The config loader** — imported by nearly every module
+- **The error handler** — determines how every failure is reported
+- **The main router / app setup** — the spine of the application
+
+**Real-world example:** An engineer runs the most-changed-files command and discovers that `src/utils/helpers.ts` has been modified 340 times in 6 months by 12 different authors. It's a 2,000-line grab bag of utility functions. Everything imports from it. This is the most dangerous file in the codebase — any change here could break anything. Knowing this on day one means she'll treat changes to this file with extra caution, write extra tests, and maybe advocate for splitting it up.
+
+### 4.5 The Archaeology Layer
+
+Every codebase has layers of sediment — old patterns, deprecated dependencies, abandoned experiments. You need to know the boundary between "actively maintained" and "don't touch unless it breaks."
+
+**How to identify legacy code:**
+
+```bash
+# Files not modified in over a year — potential legacy
+git log --pretty=format:'%ai' --diff-filter=M -- src/ | \
+  sort | head -5
+# Better: find files with no recent commits
+for f in $(git ls-files src/ | head -100); do
+  last_modified=$(git log -1 --format='%ai' -- "$f" 2>/dev/null)
+  echo "$last_modified $f"
+done | sort | head -20
+
+# Deprecated dependencies — check for known deprecated packages
+npm outdated 2>/dev/null | head -20       # Node.js
+pip list --outdated 2>/dev/null | head -20  # Python
+bundle outdated 2>/dev/null | head -20      # Ruby
+
+# TODO/FIXME archaeology — how old are the TODOs?
+rg "TODO|FIXME" --type ts -n | while read -r line; do
+  file=$(echo "$line" | cut -d: -f1)
+  lineno=$(echo "$line" | cut -d: -f2)
+  date=$(git log -1 --format='%as' -L "$lineno,$lineno:$file" 2>/dev/null)
+  echo "$date $line"
+done | sort | head -20
+
+# Simpler: find old TODOs by blaming the file
+rg -l "TODO|FIXME" --type ts | while read -r f; do
+  git log -1 --format="%as %H" -- "$f"
+done | sort | head -10
+
+# Framework version mismatches — multiple versions of the same concept
+rg "require\(|import.*from" --type ts | grep -i "express\|fastify\|koa" | sort -u
+
+# Dead code candidates — exported functions never imported elsewhere
+# (This is a rough heuristic)
+for func in $(rg "export (function|const|class) (\w+)" --type ts -o -r '$2' src/ | sort -u); do
+  count=$(rg "$func" --type ts src/ | wc -l)
+  if [ "$count" -le 1 ]; then
+    echo "possibly dead: $func"
+  fi
+done 2>/dev/null | head -20
+```
+
+**Signs of legacy code:**
+
+| Indicator | What It Suggests |
+|-----------|-----------------|
+| Framework version 2 major versions behind | Nobody wants to touch the upgrade |
+| `// TODO: temporary fix (2019-03-15)` | "Temporary" means permanent in most codebases |
+| Commented-out code blocks | Someone was afraid to delete it |
+| Inconsistent patterns in the same directory | Multiple generations of engineers, no style enforcement |
+| `_old`, `_backup`, `_deprecated` in filenames | Self-documenting neglect |
+| Test files with most tests skipped | The code works "well enough" but nobody trusts it |
+| Orphaned config files for tools no longer used | `.babelrc` in a project that migrated to SWC two years ago |
+
+**What to do with this knowledge:**
+
+1. **Draw the boundary.** In your notes, mark which directories/modules are "legacy" vs "active." This prevents you from accidentally adopting old patterns when writing new code.
+2. **Don't refactor legacy code on week one.** Understand it, document the boundary, and move on. Refactoring legacy code requires deep context you don't have yet.
+3. **Know the migration paths.** Ask your team: "Are there any ongoing migrations I should be aware of?" (e.g., JavaScript to TypeScript, REST to GraphQL, monolith to microservices). This tells you which patterns are going toward and which are going away.
+
+```markdown
+## Archaeology Notes — [Service Name]
+
+**Active code (follow these patterns):**
+- src/services/ — TypeScript, async/await, clean error handling
+- src/controllers/v2/ — new API endpoints with validation middleware
+
+**Legacy code (don't touch unless breaks):**
+- src/controllers/v1/ — old API, no input validation, callback-based
+- src/legacy/ — original prototype code, still handles ~5% of traffic
+- src/utils/helpers.ts — the junk drawer, add to it only as last resort
+
+**In-progress migrations:**
+- JavaScript → TypeScript (80% complete, new code must be .ts)
+- Express callbacks → async/await (60% complete)
+- Monolith → microservices (orders service extracted, payments next)
+```
+
+**The archaeology mindset:** Legacy code isn't bad code. It's code that solved real problems for real users and has been running in production — possibly for years. Respect it. Understand it. Know its boundaries. And when you do eventually work on it, approach it like an archaeologist: carefully, with a brush, not a bulldozer.
+
+### Putting It All Together: Your Day-One Navigation Cheat Sheet
+
+After completing sections 3 and 4, you should be able to fill out this cheat sheet:
+
+```markdown
+## Navigation Cheat Sheet — [Service Name]
+### Date: [today]
+
+**Hotlinks (bookmarked):**
+- [ ] Golden signals dashboard: [URL]
+- [ ] Error tracker: [URL]
+- [ ] Logs (filtered to service): [URL]
+- [ ] Deployment pipeline: [URL]
+- [ ] On-call schedule: [URL]
+
+**Baselines captured:**
+- Request rate: _____ RPS (peak at _____)
+- p99 latency: _____ ms
+- Error rate: _____% 
+- Queue depth: _____ (normal), _____ (concerning)
+
+**Alerting:**
+- Primary on-call: _____ → escalates to: _____
+- Key alerts I should know about: _____
+
+**Entrypoints mapped:**
+- [ ] HTTP routes documented
+- [ ] Event consumers identified
+- [ ] Cron jobs listed
+
+**Architecture:**
+- Pattern: _____
+- Business logic in: _____
+- Data access in: _____
+
+**Load-bearing files (handle with care):**
+1. _____
+2. _____
+3. _____
+
+**Legacy boundary:**
+- Active patterns to follow: _____
+- Old patterns to avoid: _____
+- Migrations in progress: _____
+```
+
+With sections 0-4 complete, you can now answer two critical questions: "What is this system?" (sections 0-2) and "How do I see what it's doing and find my way around?" (sections 3-4). You have the map, the compass, and night vision. Sections 5-7 will cover incident readiness, tribal knowledge extraction, and the final beast mode checklist — the skills that turn operational awareness into operational excellence.
