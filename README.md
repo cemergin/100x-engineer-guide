@@ -14,7 +14,7 @@
 
 A comprehensive, open-source mega-guide covering every paradigm, philosophy, and hard skill needed to become a lead/staff+ engineer — organized as a narrative that builds from theory to practice.
 
-**35 chapters** · **~47,000 lines** · **~3.0 MB** · **5 parts + appendices**
+**36 chapters** · **~49,000 lines** · **~3.2 MB** · **5 parts + appendices**
 
 ```
 100x-engineer-guide/
@@ -39,6 +39,7 @@ A comprehensive, open-source mega-guide covering every paradigm, philosophy, and
 | **Ship to production** | Ch 13 (cloud), 18 (monitoring), 19 (AWS) | Ch 4, 7, 26 |
 | **Level up to staff+** | Ch 9 (leadership), 29 (career), 10 (emerging) | Ch 27, 16 |
 | **Debug a production issue NOW** | Ch 18 (debugging), 21 (networking), 24 (DB internals) | Ch 26 (war stories) |
+| **Hit the ground running (new team/company)** | Ch 36 (beast mode), 12 (tooling) | Ch 18, 28, 29 |
 | **Quick lookup** | [Glossary](./appendices/appendix-glossary.md) (250+ terms) | [Resources](./appendices/16-essential-resources.md) (49 papers/books) |
 
 ---
@@ -76,6 +77,7 @@ A comprehensive, open-source mega-guide covering every paradigm, philosophy, and
 | 25 | [API Design & DX](./part-2-applied-engineering/25-api-design.md) | Intermediate | REST conventions, error handling, pagination, versioning, idempotency, webhooks, SDK design |
 | 29 | [Career Engineering](./part-2-applied-engineering/29-career-engineering.md) | All levels | Promotion packets, brag docs, staff+ archetypes, IC vs mgmt, negotiation, influence, brand |
 | 30 | [Data Privacy & Compliance](./part-2-applied-engineering/30-data-privacy-ethics.md) | Intermediate | GDPR implementation, anonymization, crypto-shredding, consent management, HIPAA/SOC2/PCI |
+| 36 | [Beast Mode — Operational Readiness](./part-2-applied-engineering/36-beast-mode.md) | All levels | Operational readiness playbook, system mental models, observability hotlinks, incident readiness, codebase navigation, tribal knowledge |
 
 ---
 
@@ -140,6 +142,7 @@ Part II — Applied Engineering (after Part I, any order):
   Ch 23         ← benefits from Ch 1, 2, 3, 22
   Ch 25         ← benefits from Ch 3
   Ch 29, 30     ← standalone
+  Ch 36         ← benefits from Ch 12, 18; standalone
 
 Part III — Tooling & Practice (anytime):
   Ch 11, 12, 14, 15, 27, 28    ← standalone
@@ -199,7 +202,7 @@ Summary sentence.
 
 ## Interactive Learning with AI
 
-The [`course/`](./course/) directory contains **104 hands-on modules** organized in 3 progressive loops, built from the same material as the guide chapters. Each module has exercises you build on a running project (TicketPulse) so concepts compound as you go:
+The [`course/`](./course/) directory contains **108 hands-on modules** organized in 3 progressive loops, built from the same material as the guide chapters. Each module has exercises you build on a running project (TicketPulse) so concepts compound as you go:
 
 - **Loop 1** (M01–M30): Foundations — dev environment, databases, APIs, testing, security, observability
 - **Loop 2** (M31–M60): Applied — microservices, Kafka, Kubernetes, Terraform, advanced patterns
