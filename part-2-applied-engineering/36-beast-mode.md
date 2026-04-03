@@ -1321,3 +1321,549 @@ After completing sections 3 and 4, you should be able to fill out this cheat she
 ```
 
 With sections 0-4 complete, you can now answer two critical questions: "What is this system?" (sections 0-2) and "How do I see what it's doing and find my way around?" (sections 3-4). You have the map, the compass, and night vision. Sections 5-7 will cover incident readiness, tribal knowledge extraction, and the final beast mode checklist — the skills that turn operational awareness into operational excellence.
+
+---
+
+## 5. INCIDENT READINESS — THE FIRE DRILL YOU RUN BEFORE THE FIRE
+
+The whole chapter builds to this moment: the pager goes off during your first week. Your heart rate spikes. Slack is lighting up. Someone typed "SEV-1" and suddenly the room feels different.
+
+You have two options. You can freeze, scroll aimlessly through dashboards you barely understand, and silently pray someone else fixes it. Or you can execute a mental script — a rehearsed, deliberate sequence of actions that lets you *be useful* even when you don't yet understand the system deeply enough to fix the problem yourself.
+
+This section gives you that script. You might not be the one who writes the fix. But you won't make things worse, and you'll contribute in ways that experienced engineers genuinely appreciate.
+
+### 5.1 The First 5 Minutes Script
+
+When the pager fires and you're new, you need a literal step-by-step. Not "use good judgment" — a checklist. Good judgment comes later. Right now, you need a sequence.
+
+**Step 1: Check the alert details.**
+Read the actual alert. What service? What metric? What threshold was crossed? When did it fire? Is this a warning or a critical? Don't skip this — half of all incident confusion starts with someone reacting to an alert they didn't actually read.
+
+**Step 2: Open the primary dashboard.**
+This is why you bookmarked it on day one (section 3). Open it. Look at the golden signals: latency, traffic, errors, saturation. Are they normal or abnormal?
+
+**Step 3: Check recent deployments.**
+Open the CI/CD pipeline or deployment history. Was anything deployed in the last 30 minutes? The last hour? If yes, that's your leading hypothesis.
+
+**Step 4: Check the error rate.**
+Is the error rate elevated? Is it a new error type or a spike in an existing one? Open the error tracker (Sentry, Bugsnag, Datadog Error Tracking) and sort by "first seen" or "last seen."
+
+**Step 5: Open the logs.**
+Run your bookmarked error log query (from section 3). Filter to the last 15 minutes. Scan for patterns — stack traces, timeout messages, connection refused errors, OOM kills.
+
+**Step 6: Look for the obvious.**
+You're looking for one of four shapes:
+- **Spike** — a sudden jump in errors, latency, or traffic
+- **Flatline** — a metric that dropped to zero (usually means something stopped)
+- **Error storm** — a wall of identical error messages
+- **Gradual climb** — a slow increase that just crossed a threshold (memory leak, queue backup)
+
+**The cardinal rule: Don't touch anything yet. Observe before you act.**
+
+You are gathering information, not making changes. The worst thing a new engineer can do during an incident is make a change without understanding the current state. Observe, note, communicate. The decision tree below gives you a framework:
+
+```
+PAGED → Open primary dashboard
+        ├── Metrics normal? → Check if alert is stale/resolved
+        └── Metrics abnormal?
+            ├── Check recent deployments
+            │   └── Deploy in last 30 min? → Candidate for rollback
+            ├── Check error logs
+            │   └── New error type? → Likely code change
+            ├── Check traffic
+            │   └── Spike? → Likely load issue
+            └── Check dependencies
+                └── External service down? → Likely upstream
+```
+
+**Print this decision tree.** Stick it next to your monitor. When the pager fires and your brain is flooded with adrenaline, you won't remember the clever mental model you read in a book. You'll remember the piece of paper taped to your desk.
+
+Here's the checklist version you can copy into your notes:
+
+```markdown
+## First 5 Minutes — Incident Response Checklist
+
+- [ ] Read alert: service=_____ metric=_____ threshold=_____ fired_at=_____
+- [ ] Open primary dashboard — golden signals normal? Y / N
+- [ ] Check deployment history — deploy in last 30 min? Y / N
+  - If yes: SHA=_____ deployed_by=_____ deployed_at=_____
+- [ ] Check error tracker — new error type? Y / N
+  - If yes: error=_____ first_seen=_____ count=_____
+- [ ] Open logs — pattern observed: (spike / flatline / error storm / gradual climb / none)
+- [ ] Check dependency status pages — external service down? Y / N
+- [ ] Initial assessment: _____________________________________
+- [ ] Communicated to incident channel: Y / N
+```
+
+### 5.2 The "What Changed?" Reflex
+
+Here's the single most important mental habit for incident response:
+
+> **Ask "what changed?" before you ask "what's broken?"**
+
+This isn't just a good heuristic — it's backed by data. Roughly **90% of production incidents are caused by a change**. A deploy. A config update. A traffic spike. A dependency upgrade. A feature flag toggle. A database migration. A certificate expiration.
+
+Systems that were working yesterday and are broken today didn't spontaneously combust. Something changed. Your job is to find what.
+
+**The Change Checklist:**
+
+| Change Type | Where to Check | Typical Signal |
+|---|---|---|
+| **Code deploy** | CI/CD pipeline, deployment history | Errors correlate with deploy timestamp |
+| **Config change** | Config management (Consul, Parameter Store, env vars) | Behavior change without new code |
+| **Traffic spike** | Load balancer metrics, CDN analytics | Latency increase, resource saturation |
+| **Dependency update** | Package lockfiles, Docker image history | New error types from third-party code |
+| **Feature flag** | LaunchDarkly, Split, Unleash audit log | Errors only for affected user segment |
+| **Infrastructure change** | Terraform apply history, CloudFormation events | Connectivity issues, permission errors |
+| **Database migration** | Migration logs, schema change history | Query errors, timeout increases |
+| **Certificate/secret rotation** | Secret manager audit log, cert expiry dates | TLS errors, auth failures |
+
+Train yourself to run through this checklist reflexively. When someone says "the API is returning 500s," your first question should not be "what endpoint?" — it should be "what deployed in the last hour?"
+
+### 5.3 Rollback Muscle Memory
+
+Here's a scenario: it's 2 AM, the site is down, the deploy from 45 minutes ago is the obvious culprit, and you're the only one awake. You know you need to rollback. Do you know *how*?
+
+**You need to know how to rollback before you need to rollback.**
+
+This means:
+- **Know the command.** Not "I'll figure it out" — the actual command, typed out, saved in your notes.
+- **Know the pipeline.** Does rollback go through CI/CD? Is there an approval gate? Can you skip it in emergencies?
+- **Know the blast radius.** Does rolling back also roll back database migrations? (Hint: it usually doesn't, and that's a problem.)
+- **Practice it.** Roll back in staging. Do it once when nothing is on fire, so you're not learning the UI during an incident.
+
+**Rollback Cheat Sheet:**
+
+| Deployment Method | Rollback Command | Time to Effect |
+|---|---|---|
+| Git + CI/CD | `git revert <sha> && git push` | ~5 min (pipeline) |
+| Feature flags | Kill switch in LaunchDarkly/Split | ~30 sec |
+| Container (ECS/K8s) | Redeploy previous image tag | ~2 min |
+| Serverless (Lambda) | Point alias to previous version | ~30 sec |
+| Kubernetes (kubectl) | `kubectl rollout undo deployment/<name>` | ~1 min |
+| ArgoCD | Sync to previous commit in Git | ~2 min |
+
+**Important nuances:**
+- **Database migrations are usually not reversible via rollback.** If the deploy included a migration that dropped a column, reverting the code won't bring the column back. This is why good teams separate schema changes from code deploys.
+- **Feature flags are the fastest rollback.** If the new behavior is behind a flag, you can kill it in seconds without touching the deployment pipeline. This is why feature flags exist.
+- **Know who can approve an emergency rollback.** Some organizations require approval even for rollbacks. Know the escalation path *before* the incident.
+
+```bash
+# Save these in your personal runbook — fill in for your specific environment
+
+# Git revert (CI/CD rollback)
+git log --oneline -10                    # find the bad commit
+git revert <sha> --no-edit               # create revert commit
+git push origin main                     # trigger pipeline
+
+# Kubernetes rollback
+kubectl rollout history deployment/my-service  # see revision history
+kubectl rollout undo deployment/my-service     # rollback to previous
+
+# AWS ECS — force new deployment with previous task definition
+aws ecs update-service \
+  --cluster my-cluster \
+  --service my-service \
+  --task-definition my-service:PREVIOUS_REVISION \
+  --force-new-deployment
+
+# AWS Lambda — point alias to previous version
+aws lambda update-alias \
+  --function-name my-function \
+  --name live \
+  --function-version PREVIOUS_VERSION
+
+# Feature flag kill switch (LaunchDarkly CLI)
+ldcli flags --flag my-new-feature --env production --off
+```
+
+### 5.4 Communication During Incidents
+
+When you're new and an incident is happening, your instinct might be to stay quiet — don't bother the experts, don't ask dumb questions, don't get in the way. This instinct is wrong.
+
+**Your job during an incident isn't to be the hero. It's to be useful.**
+
+Here's what "useful" looks like for a new engineer:
+
+**1. Update the incident channel with what you observe.**
+Don't diagnose — describe. "Error rate on the orders-api dashboard jumped from 0.1% to 12% starting at 14:32 UTC" is far more useful than silence.
+
+**2. Ask clarifying questions.**
+"Should I check if the payment service is also affected?" is not a dumb question — it's initiative.
+
+**3. Run commands others request.**
+The senior engineer is heads-down in code and asks "can someone check the ECS task count?" You can do that. You're unblocking them.
+
+**4. Take timeline notes.**
+This is the single highest-value thing a new engineer can do during an incident. Keep a running timeline:
+
+```markdown
+## Incident Timeline — [Date]
+
+| Time (UTC) | Event | Source |
+|---|---|---|
+| 14:30 | Alert fired: orders-api error rate > 5% | PagerDuty |
+| 14:32 | Confirmed: error rate at 12% on dashboard | Datadog |
+| 14:33 | Last deploy: SHA abc1234 by @jane at 14:15 | GitHub Actions |
+| 14:35 | @jane confirms deploy included payment retry logic | Slack |
+| 14:38 | Decision: rollback deploy | Incident commander |
+| 14:40 | Rollback initiated: revert commit pushed | @jane |
+| 14:45 | Pipeline complete, new deployment rolling out | GitHub Actions |
+| 14:48 | Error rate dropping: 12% → 3% | Datadog |
+| 14:52 | Error rate back to baseline: 0.1% | Datadog |
+| 14:55 | Incident resolved, monitoring for 15 min | Team |
+```
+
+The engineer who keeps a clean timeline during an incident is worth their weight in gold. Every postmortem starts with "what happened and when?" — and if you wrote it down in real time, you just saved the team hours of reconstructing events from log timestamps.
+
+**Communication Templates:**
+
+When you first join the incident channel:
+```
+Joining incident. I'm [name], [role]. Reading alert details and checking dashboards now.
+I'll keep timeline notes unless someone else is already doing that.
+```
+
+When you observe something:
+```
+Observation: [metric/log/behavior] shows [what you see] starting at [time].
+Dashboard link: [URL]
+```
+
+When you're unsure:
+```
+Question: Should we also check [thing]? I can look into it if helpful.
+```
+
+When you've completed a task someone requested:
+```
+Done: [what you checked]. Result: [what you found].
+[paste relevant output or screenshot]
+```
+
+### 5.5 The Shadow On-Call
+
+Before you're added to the on-call rotation, you should shadow a shift. This is non-negotiable if your team supports it. Here's how:
+
+**What shadow on-call means:**
+- You're *not* the primary on-call — someone experienced is
+- You receive the same alerts (add yourself to the notification channel)
+- You follow the same process — check dashboards, read alerts, diagnose
+- You tell the primary what you would do *before* they act
+- You watch what they actually do and note the differences
+
+**What to observe during your shadow shift:**
+
+1. **What does the on-call engineer check first?** Not what the runbook says they should check — what they *actually* check. There's usually a difference.
+2. **Which dashboards do they open?** In what order? Do they have a personal bookmark bar that's different from the team's official list?
+3. **What's their decision tree?** When they see an alert, how do they decide whether to act, escalate, or snooze?
+4. **What do they ignore?** Experienced on-call engineers have learned which alerts are noisy and which are real. This knowledge is pure gold and is almost never documented.
+5. **What do they mutter under their breath?** Seriously. When the senior engineer looks at a dashboard and says "oh, it's *that* thing again," ask what *that thing* is. That's tribal knowledge leaking out.
+
+**After your shadow shift, write down:**
+- The 3 most common alerts and their usual resolution
+- Any "known noisy" alerts the team ignores
+- The actual (not documented) escalation path
+- Tools or commands the on-call engineer used that you didn't know about
+- Gaps between the runbook and reality
+
+### 5.6 Build Your Personal Runbook
+
+After your shadow shift and your first real incident, you have raw experience. Capture it before it fades.
+
+**Your personal runbook is not the team runbook.** The team runbook says "check the dashboard." Your personal runbook says "open Datadog, click on the orders-api dashboard (bookmarked in Chrome folder 'On-Call'), look at the top-left graph for error rate, compare to the number in the top-right which is the p99 latency. If error rate > 5% AND p99 > 2000ms, it's a real incident, not a blip."
+
+Your personal runbook captures *your* workflow with *your* bookmarks and *your* level of context.
+
+**Personal runbook template:**
+
+```markdown
+## My On-Call Runbook — [Service Name]
+### Last updated: [date]
+
+**When paged:**
+1. Open: [specific dashboard URL]
+2. Check: [specific metric, specific location on dashboard]
+3. Normal range: [what I expect to see]
+4. If abnormal: [my next 3 steps]
+
+**Common alerts I've seen:**
+1. [Alert name]: Usually caused by [X]. Fix: [Y]. Time to resolve: ~[Z] min.
+2. [Alert name]: Usually a false positive when [condition]. Snooze if [check].
+3. [Alert name]: Escalate immediately to [person/team]. Don't try to fix alone.
+
+**Rollback steps for this service:**
+1. [Step 1 with exact command]
+2. [Step 2]
+3. [Step 3]
+4. Verify: [how to confirm rollback worked]
+
+**Contacts:**
+- Primary escalation: [name] ([contact])
+- Database issues: [name] ([contact])
+- Infrastructure issues: [name] ([contact])
+- Third-party service issues: [vendor support link]
+
+**Things I learned the hard way:**
+- [Lesson 1]
+- [Lesson 2]
+- [Lesson 3]
+```
+
+This document compounds over time. After 3 months of on-call, your personal runbook becomes one of the most valuable documents on the team — and you should eventually merge the good parts back into the team runbook.
+
+---
+
+## 6. TEAM & TRIBAL KNOWLEDGE — THE STUFF THAT ISN'T WRITTEN DOWN
+
+Every system has an oral history. Architecture decisions that never made it into an ADR. The unwritten rule that you don't deploy on Fridays. The reason the `UserService` has two implementations and nobody deletes the old one. The engineer who built the authentication system from scratch, left two years ago, and took all the context with them.
+
+This knowledge exists in the heads of your teammates, in the chat history of old Slack threads, in the commit messages of three-year-old PRs. It's the difference between the system as documented and the system as it actually is. And if you don't deliberately extract it, you'll discover it the hard way — usually during an incident.
+
+### 6.1 The Three Conversations
+
+In your first two weeks, you need to have three specific conversations with three specific people. Not casual "hey, how's it going" chats — deliberate, prepared conversations with specific questions.
+
+**Conversation 1: The Tech Lead**
+*Purpose: Strategic view — where are we, where are we going*
+
+Ask these questions:
+
+```markdown
+## Tech Lead Conversation Template
+
+1. "Can you draw the system architecture on a whiteboard in 5 minutes?"
+   → Forces the simplified mental model. What they include and exclude tells you what matters.
+
+2. "What are we building in the next quarter?"
+   → Tells you where to focus your learning. No point going deep on a component
+     that's being replaced.
+
+3. "What's the biggest technical risk right now?"
+   → Tells you what keeps the tech lead up at night. Might be your chance to
+     contribute early.
+
+4. "If you had a week with no meetings, what would you fix?"
+   → Reveals the tech debt they're aware of but can't prioritize.
+
+5. "What should I definitely NOT do without checking with someone first?"
+   → Reveals the landmines. Every codebase has them.
+```
+
+**Conversation 2: The Longest-Tenured Engineer**
+*Purpose: Historical truth — the skeletons, the scars, the stories*
+
+```markdown
+## Longest-Tenured Engineer Conversation Template
+
+1. "What's the oldest code in the system, and why hasn't it been rewritten?"
+   → Reveals the thing that's too scary, too critical, or too poorly understood
+     to touch.
+
+2. "What breaks most often?"
+   → The answer is almost never what you'd guess from reading the code.
+
+3. "Is there a component everyone's afraid to modify?"
+   → This is the "haunted graveyard" — the code surrounded by warning comments
+     and anxiety. You need to know where it is.
+
+4. "What's a decision you'd make differently if you were starting over?"
+   → Reveals architectural regret — useful for understanding why things are the
+     way they are.
+
+5. "Who should I talk to about [specific component]?"
+   → Maps the informal knowledge graph. Not the org chart — the actual
+     "who knows what" network.
+```
+
+**Conversation 3: The On-Call Engineer**
+*Purpose: Operational truth — what actually hurts*
+
+```markdown
+## On-Call Engineer Conversation Template
+
+1. "What pages most often?"
+   → The top 3 alerts by frequency tell you more about system health than any
+     dashboard.
+
+2. "What's the usual fix for the most common page?"
+   → If the answer is "restart the service," that's a huge signal about
+     underlying issues.
+
+3. "What's the scariest alert — the one that makes your stomach drop?"
+   → This is the "if this fires, something is really wrong" alert. You need to
+     know what it is and what it means.
+
+4. "What's the most annoying false positive?"
+   → Tells you what to ignore and what the team has been too busy to fix.
+
+5. "What's missing from the runbook?"
+   → Every on-call engineer knows what the runbook doesn't cover. This question
+     surfaces it.
+```
+
+**Why these three and not others?** Because they give you three orthogonal views of the same system:
+- The tech lead sees the **intended** architecture
+- The long-tenured engineer sees the **actual** architecture
+- The on-call engineer sees the **failing** architecture
+
+The gap between these three views is where the real system lives.
+
+### 6.2 Meeting Archaeology
+
+Before you schedule those three conversations, do your homework. Read the last month of:
+
+**Team meeting notes:**
+- What topics keep recurring? That's what the team actually cares about (or is stuck on).
+- What was decided? What's still open? Don't re-ask questions that were settled last week.
+
+**Retrospective action items:**
+- What did the team commit to improving? Did they follow through?
+- Unresolved retro items tell you where the team's processes are weakest.
+
+**Incident postmortems:**
+- What broke, why, and what was the remediation?
+- Postmortems are the most honest documents in an engineering organization. Teams don't sugarcoat them (usually).
+- Pay attention to the "action items" section — the ones marked "done" show you what the team prioritizes. The ones still "open" from three months ago show you what they don't.
+
+**PR review comments:**
+- What patterns do reviewers flag? What do they approve without comment?
+- This tells you the team's actual coding standards, not the ones in the style guide.
+
+```markdown
+## Meeting Archaeology Checklist
+
+- [ ] Read last 4 weekly team meeting notes
+  - Recurring topics: _____
+  - Recent decisions: _____
+  - Open questions: _____
+
+- [ ] Read last 3 retrospective notes
+  - Top complaints: _____
+  - Action items completed: _____
+  - Action items still open: _____
+
+- [ ] Read last 3 incident postmortems
+  - Common failure modes: _____
+  - Remediation patterns: _____
+  - Outstanding action items: _____
+
+- [ ] Skim last 10 merged PRs
+  - Common review feedback: _____
+  - Patterns that get approved quickly: _____
+  - Patterns that get pushback: _____
+```
+
+This takes about 2-3 hours and is one of the highest-leverage onboarding activities you can do. You'll walk into your 1:1s with context that most new hires don't have for months.
+
+### 6.3 The Team's "Known Unknowns"
+
+Every team has a list of things they know are problems but haven't fixed. These are not secrets — ask about them and people will tell you freely. They just don't volunteer the information because they've normalized it.
+
+**Common categories of known unknowns:**
+
+| Category | Example | Why It Matters to You |
+|---|---|---|
+| **Tech debt** | "The billing service still uses the old ORM and we keep meaning to migrate" | Don't build new features on the old pattern |
+| **Flaky tests** | "The integration test suite fails ~10% of the time, just re-run it" | Don't spend hours debugging a known flake |
+| **Mystery service** | "Nobody really understands what the reconciler does anymore" | Don't touch it without finding the last person who worked on it |
+| **Scaling cliff** | "If we hit 10K concurrent users, the WebSocket server will fall over" | Know the limits before you hit them |
+| **Manual processes** | "Every month someone has to manually run the report generation script" | Automation opportunity — high-impact early contribution |
+| **Documentation rot** | "The wiki says we use Redis but we switched to DynamoDB last year" | Don't trust the docs without verifying |
+
+**How to surface known unknowns:**
+
+Ask these questions in casual conversation, not in a formal meeting:
+- "What's the thing you wish you had time to fix?"
+- "If you could mass-delete one service, which would it be?"
+- "What's the 'everybody knows' thing that a new person wouldn't know?"
+- "What workaround do you use so often you've forgotten it's a workaround?"
+
+**Why this matters for you specifically:**
+
+Known unknowns are landmines *and* opportunities:
+- **Landmine:** You accidentally build on the broken pattern because nobody warned you
+- **Opportunity:** Fixing a known unknown is one of the highest-impact things a new engineer can do, because the team has been staring at it so long they've stopped seeing it
+
+### 6.4 Document What You Learn
+
+You have a superpower that expires quickly: **fresh eyes.**
+
+Everything that's confusing to you right now is something that was confusing to the person before you, and will be confusing to the person after you. But the current team can't see it anymore — they've habituated to the complexity, the inconsistency, the missing documentation.
+
+**Your job is to write it down before you habituate too.**
+
+Here's what to document:
+
+**1. Setup instructions that don't work.**
+If the README says "run `docker-compose up`" and you had to do 4 extra things to make it actually work — update the README. This is the single most valuable documentation contribution a new engineer can make.
+
+**2. Architectural decisions that aren't recorded.**
+When the tech lead explains *why* the system is designed a certain way, write an ADR (Architecture Decision Record). Even a simple one:
+
+```markdown
+# ADR-023: Why we use SQS instead of direct HTTP calls between services
+
+## Status: Accepted (retroactive documentation)
+## Date: [today — documenting existing decision]
+## Context
+The orders service needs to notify the shipping service when an order is placed.
+Direct HTTP calls created coupling and cascading failures during shipping service
+deployments.
+
+## Decision
+Use SQS as a buffer between orders and shipping. Orders publishes an event,
+shipping consumes it asynchronously.
+
+## Consequences
+- Shipping can be deployed independently without affecting orders
+- Events can be replayed if shipping fails
+- Adds ~2 second latency to order→shipment flow
+- Requires Dead Letter Queue monitoring
+```
+
+**3. Tribal knowledge that should be team knowledge.**
+When someone tells you "don't deploy on Fridays" or "always check the cache TTL before changing the product catalog" — that's tribal knowledge. Put it in the wiki. Make it searchable.
+
+**4. The "newcomer FAQ."**
+Keep a running document of questions you had and answers you found. After a month, publish it. This becomes the single most-used onboarding document for the next new hire.
+
+```markdown
+## Newcomer FAQ — [Team Name]
+### Started collecting: [date]
+
+**Q: How do I run the test suite locally?**
+A: `make test-local` — but you need to start the Docker dependencies first with
+`make deps-up`. The README doesn't mention this. (I've submitted a PR to fix it.)
+
+**Q: Why are there two user tables in the database?**
+A: The old one (`users`) is from the monolith era. The new one (`accounts`) is
+used by the auth service. We're migrating but both are still active. New code
+should use `accounts`.
+
+**Q: What's the deal with the `legacy-gateway` service?**
+A: It's a reverse proxy that translates old API formats to new ones. About 15%
+of traffic still comes through it. It's owned by the platform team, not us, but
+our alerts fire when it's slow.
+
+**Q: Why does the CI pipeline take 20 minutes?**
+A: The integration tests spin up real AWS resources via LocalStack. There's a
+ticket to parallelize them (JIRA-4521) but it hasn't been prioritized.
+```
+
+**The ROI of documentation:**
+
+| Action | Time Cost | Impact |
+|---|---|---|
+| Fix broken README | 30 min | Saves every future new hire 2+ hours |
+| Write a retroactive ADR | 20 min | Prevents repeated architecture debates |
+| Document a tribal knowledge item | 10 min | Eliminates one "gotcha" permanently |
+| Publish newcomer FAQ | Ongoing | Becomes the team's most-referenced doc |
+
+You'll notice a pattern: documentation has *compounding* returns. The 30 minutes you spend fixing the README saves 2 hours for every person who joins after you. Over a year, that's dozens of hours. Over the life of the team, it's weeks.
+
+**The fresh-eyes window is about 3 months.** After that, you'll have habituated to the quirks and stopped noticing them. Document aggressively in your first 90 days. It's the highest-leverage onboarding contribution you can make — and it signals to your team that you're not just ramping up, you're making the ramp easier for everyone who follows.
+
+---
+
+With sections 5 and 6 complete, you now have the full operational toolkit: you can respond to incidents with a script instead of panic (section 5), and you can extract the unwritten knowledge that makes the difference between surviving on a team and thriving on it (section 6). Section 7 will bring it all together with the Beast Mode Checklist — a single-page summary you can print out and execute on day one of any new role.
