@@ -24,7 +24,7 @@ course:
   title: "The 100x Engineer Course"
   version: "1.0"
   running_example: "TicketPulse — a concert ticketing platform"
-  total_modules: 104
+  total_modules: 108
   estimated_hours: "97-145 hours"
   loops:
     - name: "Foundation — Build the Mental Model"
@@ -1904,3 +1904,76 @@ modules:
     runs_locally: false
     online_playground: "N/A — reflection and planning module"
     prereqs: [L3-M88, L3-M89]
+
+  # ---------------------------------------------------------------------------
+  # Section 3F: Operational Readiness — Beast Mode (Modules 91-91c)
+  # ---------------------------------------------------------------------------
+
+  - id: L3-M91
+    title: "Beast Mode: Access & System Mapping"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [36]
+    ticketpulse: "You've verified access to every layer of TicketPulse's stack and drawn the system architecture from infrastructure code alone."
+    summary: "Systematically verify access, draw architecture from IaC, and trace the critical purchase path end-to-end."
+    exercises:
+      - type: "🛠️ Build"
+        description: "Verify access to every TicketPulse layer: repo, monitoring, CI/CD, secrets, communication channels. Create a personal access checklist."
+      - type: "📐 Design"
+        description: "Draw TicketPulse's architecture from infrastructure code alone (docker-compose, Terraform, K8s manifests). Compare to known architecture."
+      - type: "🔍 Explore"
+        description: "Trace the ticket purchase request end-to-end through every service, queue, and database. Document each hop and identify single points of failure."
+    runs_locally: true
+    prereqs: [L2-M47, L1-M01]
+
+  - id: L3-M91a
+    title: "Beast Mode: Observability & Dashboard Wiring"
+    tier: "🟢 Core"
+    duration: "75 min"
+    source_chapters: [36]
+    ticketpulse: "You have a personal hotlinks page, know what normal looks like on every dashboard, and have audited the alerting rules."
+    summary: "Build your personal hotlinks dashboard, learn baseline metrics, and audit TicketPulse's alerting topology."
+    exercises:
+      - type: "📊 Observe"
+        description: "Study TicketPulse's Grafana dashboards for 15 minutes during calm. Write down baseline request rate, p99 latency, traffic pattern, and error rate."
+      - type: "🛠️ Build"
+        description: "Create a beast-mode-hotlinks.md with quick-access links for TicketPulse: primary dashboard, error tracker, filtered logs, deploy history, DB metrics, Kafka lag, cost dashboard."
+      - type: "🔍 Explore"
+        description: "Audit TicketPulse's alerting rules. Document each alert's trigger, threshold, and recommended response. Find one too-noisy alert and one missing alert."
+    runs_locally: true
+    prereqs: [L3-M91, L2-M45, L2-M46]
+
+  - id: L3-M91b
+    title: "Beast Mode: Incident Response Dry Run"
+    tier: "🟢 Core"
+    duration: "90 min"
+    source_chapters: [36]
+    ticketpulse: "You've practiced the first-5-minutes script, drilled three rollback methods, and written your personal incident runbook."
+    summary: "Practice incident triage as a new team member: the 'what changed?' drill, rollback muscle memory, and writing your personal runbook."
+    exercises:
+      - type: "🐛 Debug"
+        description: "Simulated outage: purchase success rate drops. Using only your hotlinks page and the 'what changed?' checklist, investigate and document findings in under 5 minutes."
+      - type: "🛠️ Build"
+        description: "Practice three rollback methods: git revert through CI/CD, redeploy previous Docker image, and feature flag kill switch. Time each method."
+      - type: "📐 Design"
+        description: "Write your personal incident runbook: first 5 minutes script, 'what changed?' checklist, rollback procedures, communication templates, and escalation contacts."
+    runs_locally: true
+    prereqs: [L3-M91a, L3-M73]
+
+  - id: L3-M91c
+    title: "Beast Mode: Tribal Knowledge & the Newcomer Superpower"
+    tier: "🟢 Core"
+    duration: "60 min"
+    source_chapters: [36]
+    ticketpulse: "You've mined TicketPulse's postmortems for patterns, written the three key onboarding conversations, and fixed the 3 most impactful documentation gaps."
+    summary: "Extract tribal knowledge through structured conversations and meeting archaeology. Use fresh eyes to fix documentation gaps."
+    exercises:
+      - type: "🔍 Explore"
+        description: "Mine TicketPulse's postmortems and retro notes. Extract top 3 recurring problems, unfinished action items, and known-but-unfixed issues. Prioritize by effort/impact."
+      - type: "🤔 Reflect"
+        description: "Write specific questions for three onboarding conversations: tech lead (architecture direction), longest-tenured engineer (skeletons), on-call engineer (what pages most)."
+      - type: "🛠️ Build"
+        description: "Fresh eyes audit: walk through TicketPulse docs as a newcomer. For every confusion point, file it. Fix the 3 most impactful documentation gaps."
+    runs_locally: false
+    online_playground: "N/A — analysis and documentation module"
+    prereqs: [L3-M91b]
