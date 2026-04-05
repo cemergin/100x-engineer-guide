@@ -541,18 +541,18 @@ With this configuration, every service-to-service call within the `ticketpulse` 
 
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-Mutual TLS means both sides verify each other's certificate. The gateway verifies the service, AND the service verifies the gateway. This prevents unauthorized services from joining the mesh.
+<summary>💡 Hint 1</summary>
+In mTLS, the server sends a `CertificateRequest` message during the TLS handshake, asking the client to present its certificate. The client responds with its certificate, and the server verifies it was signed by the trusted CA. This is the "mutual" part -- both sides prove their identity, not just the server.
 </details>
 
 <details>
-<summary>💡 Hint 2: Approach</summary>
-Create a CA (Certificate Authority), then issue certificates for each service signed by that CA. Configure each service to require client certificates and verify them against the CA.
+<summary>💡 Hint 2</summary>
+Verify mTLS is working by testing without a client cert: `curl --cacert ca-cert.pem https://localhost:3001/api/health`. This should fail with a TLS handshake error because the server requires a client certificate. Then test with the client cert: `curl --cert client-cert.pem --key client-key.pem --cacert ca-cert.pem https://localhost:3001/api/health`. This should succeed.
 </details>
 
 <details>
-<summary>💡 Hint 3: Almost There</summary>
-Use `requestCert: true, rejectUnauthorized: true, ca: [caCert]` in the Node.js HTTPS server options. Each service presents its own cert and verifies the caller's cert was signed by the same CA. In production, a service mesh (Istio, Linkerd) handles mTLS automatically.
+<summary>💡 Hint 3</summary>
+Extract the client's CN from the certificate in your Express middleware: `const clientCN = req.socket.getPeerCertificate().subject.CN`. Use this for service-level authorization: only allow `payment-service` to call `/api/internal/charge`, only allow `event-service` to call `/api/internal/availability`. This replaces API keys with cryptographic identity.
 </details>
 
 ---

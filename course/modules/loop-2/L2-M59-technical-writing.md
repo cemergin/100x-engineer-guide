@@ -93,18 +93,18 @@ builds trust and focuses the review discussion.]
 ### 🛠️ Build: Write an RFC for TicketPulse
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-Think about your audience: an RFC is for decision-makers (scope and alternatives matter), a runbook is for a half-awake engineer (commands must be copy-pasteable), a postmortem is for the team (blameless, focused on prevention).
+<summary>💡 Hint 1</summary>
+Start with the Problem section. Anchor it in data: "34% of events sell out, 12% release additional inventory later, ~200 support emails/month asking for notifications." A reviewer who sees concrete numbers trusts the problem is real. Do not describe the solution in the Problem section -- just the pain.
 </details>
 
 <details>
-<summary>💡 Hint 2: Approach</summary>
-Use the Diataxis framework to categorize your document: tutorial (learning-oriented), how-to (task-oriented), explanation (understanding), reference (information). Each has a different structure.
+<summary>💡 Hint 2</summary>
+The Alternatives Considered section is where reviewers spend the most time. Compare at least: (A) new waitlist service with its own database vs. (B) waitlist as a feature in the existing event service. For notification strategy, compare: (A) notify all 50,000 waitlisted users simultaneously vs. (B) notify in batches of 100 with a time-limited purchase window. For each alternative, give one pro and one con.
 </details>
 
 <details>
-<summary>💡 Hint 3: Almost There</summary>
-Fill in the template provided, focusing on concrete details from TicketPulse. An RFC needs problem statement, proposed solution, alternatives considered, and rollout plan. A runbook needs symptom, diagnostic steps, mitigation commands, and escalation path.
+<summary>💡 Hint 3</summary>
+Add a Non-Goals section: "This RFC does NOT address dynamic pricing for waitlisted users, transferable waitlist positions, or waitlist priority based on loyalty tier." Non-goals prevent scope creep during review. Add success metrics: "Within 30 days of launch, 15% of sold-out event page visitors join the waitlist, and 8% of waitlisted users complete a purchase when notified."
 </details>
 
 
