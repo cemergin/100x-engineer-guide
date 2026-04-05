@@ -26,6 +26,10 @@ The spec is the product. The code is the artifact.
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before reading, think: what is the difference between a spec a human can follow and a spec an AI agent can execute from? What information do you take for granted that an AI would need spelled out?
+
 ## Prereq Check
 
 Before starting this module, confirm you can:
@@ -666,6 +670,16 @@ The AI agent does not need to see the RFC for code generation. The RFC is for hu
 
 ## Design Exercise: The Smart Pricing Spec Stack (30 minutes)
 
+<details>
+<summary>💡 Hint 1: Your CLAUDE.md update should include the "prices in cents" constraint</summary>
+If you do not explicitly state that prices are integers in cents (not floats in dollars), the AI will generate floating-point math that introduces rounding errors. Add it to the Code Conventions section alongside your existing naming and error-handling rules.
+</details>
+
+<details>
+<summary>💡 Hint 2: Write the Gherkin scenarios BEFORE the OpenAPI spec</summary>
+The acceptance criteria ("GIVEN event in 45 days, base price 5000 THEN currentPrice 4000, tier early_bird") force you to pin down the exact pricing rules. Once those are concrete, the OpenAPI response schema writes itself. Ambiguity in the Gherkin means ambiguity in the spec.
+</details>
+
 TicketPulse wants to add smart ticket pricing: dynamic prices that adjust based on demand, time to event, artist popularity, and historical sales data. This is a significant feature that touches multiple services.
 
 Your task: write the complete spec stack for this feature.
@@ -827,6 +841,10 @@ Before moving on, confirm you have completed:
 | **Agent-compatible spec** | A specification formatted and structured so that an AI coding agent can parse it, understand scope, and generate code that adheres to it. |
 
 ---
+
+### 🤔 Reflection Prompt
+
+After building the spec stack, how did the quality of AI-generated code change when you gave it a CLAUDE.md + OpenAPI + Gherkin spec vs a plain English description? What does this tell you about where to invest your time as an engineer in 2026?
 
 ## Further Reading
 

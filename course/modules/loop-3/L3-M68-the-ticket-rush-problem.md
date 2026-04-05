@@ -119,6 +119,16 @@ Under 50K concurrent requests, this is not a theoretical risk. It will happen. C
 
 ## 3. Solution 1: Optimistic Locking
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered combining the check and update into a single atomic SQL statement? The `WHERE status = 'available'` clause in the UPDATE is your compare-and-swap -- only the first request to reach the row succeeds.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+For "give me any available ticket," use `FOR UPDATE SKIP LOCKED` in a subquery. Without `SKIP LOCKED`, all 50K queries serialize on the same row. With it, concurrent requests each grab a different available ticket -- throughput scales with the number of available rows.
+</details>
+
 Instead of separate check-and-update steps, combine them into a single atomic operation:
 
 ```sql
@@ -248,6 +258,16 @@ User clicks "Buy"
 ```
 
 ### Build: The Virtual Queue
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered using a Redis sorted set with timestamp as the score? `ZADD NX` gives you atomic enqueue with deduplication (same user cannot join twice), and `ZPOPMIN` gives you FIFO dequeue of the earliest joiner.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+The score formula is just `Date.now()` -- lower timestamp = higher priority. Use `ZRANK` to get a user's current position. Push position updates to users via WebSocket every 2 seconds so they see "You are #42 in queue..." counting down.
+</details>
 
 ```typescript
 import Redis from 'ioredis';
@@ -569,6 +589,16 @@ Run the load test. Check: exactly 50 sold? No duplicates? No stuck reservations?
 ---
 
 ## 6. Debug: The 51st Ticket
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered that the application-level count check (`getAvailableCount`) and the actual `UPDATE` are not atomic? Between those two operations, another processor can sell the last ticket.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+The fix is a database-level constraint, not an application-level check. Add a `tickets_sold` counter on the `events` table with `CHECK (tickets_sold <= capacity)`. Increment it inside the purchase transaction. If it exceeds capacity, the CHECK constraint rolls back the entire transaction -- the database enforces correctness even if your application logic has a bug.
+</details>
 
 A race condition has allowed one extra sale. The database shows 51 confirmed tickets for a 50-ticket event. How?
 

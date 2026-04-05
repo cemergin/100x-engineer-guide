@@ -14,6 +14,10 @@ Now it is time to look back at what you know, look forward at what comes next, a
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before starting the self-assessment, predict which domain you will rate "Strong" and which "Gap." Then do the assessment honestly. The distance between your prediction and reality reveals your blind spots.
+
 ## Part 1: The Knowledge Map (30 minutes)
 
 ### Self-Assessment
@@ -651,6 +655,11 @@ This module draws on all chapters of the 100x Engineer Guide, but these are most
 | **Architecture review** | A structured examination of a system's design with the goal of identifying risks, failure modes, and improvement opportunities. |
 | **Failure mode analysis** | The practice of systematically identifying what happens when each component of a system fails. |
 | **Review finding** | A documented observation from an architecture or code review, including severity, description, and recommendation. |
+
+### 🤔 Reflection Prompt
+
+Looking at your completed knowledge map, what is the single most valuable thing you learned in this entire course? Not the most technically impressive -- the one that changed how you think about engineering.
+
 ---
 
 ## What's Next

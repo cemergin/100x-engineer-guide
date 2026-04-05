@@ -102,12 +102,12 @@ The pattern is nested quantifiers: a quantifier inside a group that itself has a
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Look for nested quantifiers -- a quantifier inside a group that itself has a quantifier, like `(a+)+` or `(\w+\s?)+`. These are the ReDoS patterns that took down Cloudflare.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Grep for `new RegExp` and regex literals in the codebase. For each one, check: is the input user-supplied? Is there a length bound before the regex runs? Add a ReDoS test case with `'a'.repeat(50) + 'b'` and assert it finishes in under 100ms.
 </details>
 
 
@@ -186,12 +186,12 @@ describe('regex ReDoS safety', () => {
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+The Cloudflare lesson is not just about regex -- it is about config changes that bypass the deploy pipeline. What changes in TicketPulse skip code review and canary deployment?
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Check feature flags, rate limiting rules, database migrations, and Terraform changes. If any of these go to 100% of production simultaneously without a canary step, you have the same vulnerability Cloudflare had.
 </details>
 
 
@@ -292,12 +292,12 @@ The lesson: the write-path during a split-brain event may be only seconds. The r
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Query the same aggregation (e.g., sold ticket count per event) on both primary and replica, then compare. A mismatch with zero replication lag means split-brain.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Run the consistency check every 60 seconds. Use `Promise.all` to query primary and replica in parallel, then diff the results. If any event_id has a count mismatch, alert immediately and optionally pause ticket sales for affected events.
 </details>
 
 
@@ -359,12 +359,12 @@ async function checkReplicaConsistency(): Promise<void> {
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Focus on where stale reads are dangerous vs tolerable. Event catalog can be stale for 30 seconds; ticket inventory cannot -- overselling is a financial and trust catastrophe.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Check whether TicketPulse uses automatic failover (Patroni, RDS Multi-AZ) and whether the old primary is fenced. If you use read replicas for ticket availability checks, you risk selling already-sold tickets during replication lag.
 </details>
 
 
@@ -443,12 +443,12 @@ Each individual shortcut seemed reasonable. The combination was catastrophic. Th
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+A kill switch must be changeable WITHOUT a deployment -- feature flags in a fast config store (Redis, LaunchDarkly). Knight Capital had no kill switch at all; it took 45 minutes to stop $10M/minute losses.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Design toggle interfaces for: purchasesEnabled, paymentProcessingEnabled, readOnlyMode. Store in Redis, audit every toggle, and run a quarterly drill where you actually flip the switch in production during a low-traffic window.
 </details>
 
 
@@ -511,12 +511,12 @@ If you skip the quarterly drill, the kill switch might not work when you need it
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Knight Capital's disaster accumulated from years of small shortcuts: dead code, reused feature flags, unverified deployments. Audit your own codebase for the same patterns -- `git log --grep="temp\|hack\|fixme"` is a good starting point.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+After every rolling deploy, verify all pods are running the expected image: `kubectl get pods -o jsonpath='{.items[*].spec.containers[*].image}'`. If this check is not automated in CI/CD, you have the same partial-deployment vulnerability Knight Capital had.
 </details>
 
 
@@ -556,12 +556,12 @@ KNIGHT CAPITAL VULNERABILITY CHECK
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+The template should enforce blameless language: "Contributing Factors" not "Who caused it," "Missing Safeguards" not "Human error." Every action item needs an owner, priority, and due date -- otherwise it is a wish, not a commitment.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Include these sections in order: Impact (who was affected), Timeline (what happened when), Root Cause (trigger + contributing factors + missing safeguards), What Went Well, What Went Wrong, Action Items, and a 5 Whys analysis. The 5 Whys should always end at a systemic fix, never at "someone made a mistake."
 </details>
 
 
@@ -665,12 +665,12 @@ Here is the template TicketPulse should use:
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Pick one scenario and fill in every section of the template -- especially the 5 Whys and action items. The act of writing action items with owners and due dates is what separates a useful postmortem from a blame document.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+For Scenario A (NOT NULL migration), the 5 Whys chain might end at "we have no pre-deploy migration verification." For Scenario B (idempotency key bug), it might end at "we have no integration test for payment idempotency." Follow the chain until you reach a systemic fix.
 </details>
 
 
@@ -690,12 +690,12 @@ For the scenario you choose, answer every section of the postmortem. Do not skip
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Synthesize across all three war stories: Cloudflare (config changes without canary), GitHub (split-brain and recovery cost), Knight Capital (dead code, partial deploys, no kill switch). Each becomes a yes/no audit question.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+For each "No" answer, write an action item with an owner and due date. The highest-priority items are ones where the blast radius is large AND you have no detection mechanism -- that combination is how 27-minute outages and $440M losses happen.
 </details>
 
 

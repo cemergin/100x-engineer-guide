@@ -319,12 +319,12 @@ Before filling in this comparison, predict: which platform will have more resour
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Have you considered comparing not just price, but the number of distinct resources you had to create? Count every VPC, subnet, security group, IAM role -- the "resource count" is a proxy for operational burden.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Compare the AWS NAT Gateway cost ($0.045/hr + $0.045/GB) against GCP's Cloud Run, which has no equivalent charge. That single line item often explains the cost difference at small to medium scale.
 </details>
 
 
@@ -370,12 +370,12 @@ The best cloud is the one your team knows. Switching costs are enormous.
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Have you considered that the NAT Gateway and cross-AZ data transfer are the two costs most teams miss? Start your estimate there, then layer on compute and managed services.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Work category by category: Fargate (vCPU-hr + memory-hr x 3 tasks), ALB (per-LCU + hourly), RDS (instance + Multi-AZ surcharge + storage), ElastiCache, SQS, NAT Gateway, data transfer out. The NAT Gateway alone is often ~$50/month.
 </details>
 
 

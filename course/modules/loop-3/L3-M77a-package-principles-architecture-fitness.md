@@ -208,12 +208,12 @@ UNHEALTHY (cycles, cross-feature imports):
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+The fix for circular dependencies is dependency inversion at the package level: extract shared types (interfaces, enums, event schemas) into a new `@ticketpulse/domain-types` package that both sides depend on.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+If order-service imports PaymentResult from payment-service and vice versa, move both types into domain-types. Replace direct cross-feature imports with imports from the shared package. Run `npx depcruise --output-type err` to verify the cycle is gone.
 </details>
 
 
@@ -242,12 +242,12 @@ AFTER (acyclic):
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Encode architectural rules as dependency-cruiser `forbidden` entries: no circular deps (ADP), shared packages cannot import feature packages (SDP), feature packages cannot import each other directly, domain types cannot depend on infrastructure.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+The `.dependency-cruiser.cjs` config uses `from.path` and `to.path` regexes to match violations. For cross-feature imports, use a capture group: `from: { path: "^packages/features/([^/]+)" }, to: { path: "^packages/features/(?!\\1)" }` -- this matches imports between different feature packages.
 </details>
 
 
@@ -427,12 +427,12 @@ Resilience:
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Architecture fitness functions go beyond structural rules. Think performance (p99 < 200ms), security (no secrets in code), operational (every service has /health), and resilience (every external call has a timeout). Each is an automated check in CI.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Use ESLint `no-restricted-imports` with `overrides` to enforce layer boundaries within a service: API handlers cannot import from `repositories/` or `db/` directly -- they must go through the service layer. Apply the restriction only to files in `routes/`, `handlers/`, or `controllers/`.
 </details>
 
 

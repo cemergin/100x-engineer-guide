@@ -25,6 +25,10 @@ Most engineers never open-source anything because they think their code is not g
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before reading, think: which TicketPulse component would be most useful to other developers if extracted as a standalone library? What makes a component "open-sourceable" vs tightly coupled to your domain?
+
 ## 1. Choose a Component to Extract
 
 ### Stop and Think (5 minutes)
@@ -44,13 +48,13 @@ Pick one. For this module, we will use the **webhook delivery system** as the ex
 ### 📐 Exercise: Component Readiness Assessment
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+<summary>💡 Hint 1: Dependency count is the first filter</summary>
+Run a dependency audit on the component you are considering. If it drags in half of TicketPulse's internals, it is not extractable yet -- refactor the imports until the component depends only on its own types and one or two well-known libraries.
 </details>
 
 <details>
-<summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+<summary>💡 Hint 2: Semantic versioning tells you if the API is stable</summary>
+Try writing the CHANGELOG entry for a hypothetical v1.0.0. If you cannot describe the public API in a single "Added" section without hedging, the API is not stable enough to publish. Narrow the surface area until you can.
 </details>
 
 
@@ -237,13 +241,8 @@ Before finalizing your README, study three well-known projects:
 ### 📐 README Critique Exercise
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
-</details>
-
-<details>
-<summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+<summary>💡 Hint 1: The 10-second test is ruthless</summary>
+Open the README, start a timer, and look away after 10 seconds. If you cannot state what the library does and how to install it, the README fails. Apply the same test to your own draft.
 </details>
 
 
@@ -506,13 +505,13 @@ Step 5: Respond to review quickly and graciously
 ### 🛠️ Exercise: Your First Real Contribution
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+<summary>💡 Hint 1: Start with a failing test, not a code fix</summary>
+The highest-acceptance-rate first PR is a test that exposes an existing issue. Write a failing test that reproduces the bug, then fix the code to make it pass. Maintainers love PRs that come with proof.
 </details>
 
 <details>
-<summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+<summary>💡 Hint 2: Read the CONTRIBUTING.md before touching a single line</summary>
+Check whether the project uses a specific commit convention (Conventional Commits, squash-and-merge, signed commits). Getting the process wrong is the fastest way to get a PR ignored regardless of code quality.
 </details>
 
 
@@ -698,6 +697,10 @@ You have:
 | **Maintainer** | A person responsible for reviewing contributions, merging changes, and guiding the direction of an open-source project. |
 | **Good first issue** | A GitHub label used by maintainers to mark issues that are appropriate for new contributors. |
 | **Scope creep** | The gradual expansion of a project's goals beyond its original intent, often making it harder to use and maintain. |
+
+### 🤔 Reflection Prompt
+
+After preparing the component for release, what surprised you about the gap between "works inside TicketPulse" and "works as a standalone library"? What assumptions about the host project did you have to remove?
 
 ## Further Reading
 

@@ -94,17 +94,17 @@ builds trust and focuses the review discussion.]
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Think about your audience: an RFC is for decision-makers (scope and alternatives matter), a runbook is for a half-awake engineer (commands must be copy-pasteable), a postmortem is for the team (blameless, focused on prevention).
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Use the Diataxis framework to categorize your document: tutorial (learning-oriented), how-to (task-oriented), explanation (understanding), reference (information). Each has a different structure.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Fill in the template provided, focusing on concrete details from TicketPulse. An RFC needs problem statement, proposed solution, alternatives considered, and rollout plan. A runbook needs symptom, diagnostic steps, mitigation commands, and escalation path.
 </details>
 
 
@@ -219,17 +219,17 @@ Include names, PagerDuty schedules, Slack channels.]
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Think about your audience: an RFC is for decision-makers (scope and alternatives matter), a runbook is for a half-awake engineer (commands must be copy-pasteable), a postmortem is for the team (blameless, focused on prevention).
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Use the Diataxis framework to categorize your document: tutorial (learning-oriented), how-to (task-oriented), explanation (understanding), reference (information). Each has a different structure.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Fill in the template provided, focusing on concrete details from TicketPulse. An RFC needs problem statement, proposed solution, alternatives considered, and rollout plan. A runbook needs symptom, diagnostic steps, mitigation commands, and escalation path.
 </details>
 
 
@@ -409,17 +409,17 @@ slow escalation?]
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Think about your audience: an RFC is for decision-makers (scope and alternatives matter), a runbook is for a half-awake engineer (commands must be copy-pasteable), a postmortem is for the team (blameless, focused on prevention).
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Use the Diataxis framework to categorize your document: tutorial (learning-oriented), how-to (task-oriented), explanation (understanding), reference (information). Each has a different structure.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Fill in the template provided, focusing on concrete details from TicketPulse. An RFC needs problem statement, proposed solution, alternatives considered, and rollout plan. A runbook needs symptom, diagnostic steps, mitigation commands, and escalation path.
 </details>
 
 

@@ -460,6 +460,69 @@ spec:
 
 ---
 
+> **What did you notice?** Feature flags decouple deployment from release — you can ship code to production without exposing it. But flag cleanup is a real maintenance burden. How would you track which flags are stale?
+
+## Exercises
+
+### 🛠️ Build: Migrate to LaunchDarkly/Unleash SDK
+
+Replace the hand-rolled Redis flag system with an SDK from LaunchDarkly or Unleash. The SDK handles local caching, streaming updates, and evaluation without a Redis round-trip on every request.
+
+<details>
+<summary>💡 Hint 1</summary>
+Install the Unleash client: `npm install unleash-client`. Initialize with `const unleash = initialize({ url: 'http://localhost:4242/api', appName: 'ticketpulse', customHeaders: { Authorization: '<API-token>' } })`. Replace `isEnabled('dynamic_pricing', userId)` with `unleash.isEnabled('dynamic_pricing', { userId })`. The SDK maintains an in-memory cache and streams flag changes via SSE -- no Redis needed.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Map your existing flag features to Unleash concepts: `rolloutPercent` becomes a "Gradual Rollout" activation strategy with `stickiness: userId`. `targetUserIds` becomes a "UserIDs" strategy. The deterministic bucketing you built with SHA-256 is handled automatically by Unleash's MurmurHash-based bucketing -- same user always gets the same variant.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Run both systems in parallel during migration: evaluate the flag from both Redis and Unleash, log disagreements, and alert if the results diverge for more than 0.1% of evaluations. Once you confirm parity, remove the Redis-based system. This is the same expand-and-contract pattern from L2-M54, applied to feature flag infrastructure.
+</details>
+
+### 🐛 Debug: Users Flickering Between Variants
+
+Some users report seeing dynamic pricing on one page load but not the next. The flag is at 10% rollout and should be deterministic.
+
+<details>
+<summary>💡 Hint 1</summary>
+Deterministic bucketing requires a stable `userId`. If the user is not logged in and you are using a session ID or cookie value that changes, the bucket changes on every request. Check what value is being passed as `userId` to `isEnabled()` -- if it is `undefined` or `null` for anonymous users, the hash is not stable.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Add logging to the flag evaluation: `console.log(\`[flag] user=${userId} flag=dynamic_pricing bucket=${deterministicBucket(userId, 'dynamic_pricing')} result=${result}\`)`. If the same userId produces different buckets across requests, the hash input is changing. If the bucket is stable but the result changes, the flag config is being updated between requests (check if someone is adjusting `rolloutPercent` via the admin API).
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+For anonymous users, assign a stable device-level ID stored in a first-party cookie with a long expiry (e.g., `tp_device_id`). Use this as the bucketing key: `isEnabled('dynamic_pricing', req.cookies.tp_device_id || req.user?.id)`. This ensures deterministic evaluation even before login. LaunchDarkly and Unleash both support this pattern natively via "context" keys.
+</details>
+
+### 📐 Design: Flag Governance for a Growing Team
+
+TicketPulse now has 5 teams and 40 flags. Three flags reference code paths that were deleted months ago. Two flags have the same name prefix (`checkout_v2` and `checkout_v2_pricing`) and nobody knows which controls what.
+
+<details>
+<summary>💡 Hint 1</summary>
+Require every flag to have an owner (team or individual), a description, and a mandatory `expiresAt` date at creation time. The flag hygiene cron job (Section 6) should alert the owner when `expiresAt` passes, and auto-disable flags that are 30 days past expiration. LaunchDarkly and Unleash both support flag metadata and ownership fields.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Add a naming convention: `<team>.<feature>.<purpose>` (e.g., `payments.dynamic-pricing.experiment`, `checkout.prisma-migration.infrastructure`). Enforce the convention in the admin API's `PUT /flags/:name` endpoint by rejecting names that do not match the pattern. This prevents the `checkout_v2` vs `checkout_v2_pricing` ambiguity.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Use `grep -r "isEnabled\|useFlag\|feature_flag" --include="*.ts" --include="*.tsx"` to find all flag references in the codebase. Compare this list to the flags in Redis/Unleash. Flags in the system but not in the code are candidates for deletion. Flags in the code but not in the system are bugs (the flag was deleted but the branch was not cleaned up). Run this check in CI as a weekly job.
+</details>
+
+---
+
 ## Checkpoint
 
 Before continuing, verify:

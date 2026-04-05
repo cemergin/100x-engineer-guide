@@ -230,17 +230,17 @@ npm install kafkajs
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+The producer needs a persistent connection initialized once at startup. The critical decision is the partition key: using `event_id` means all purchases for the same event land in the same partition, guaranteeing order per event.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Create a `connectKafkaProducer()` called at startup, and a `publishEvent(topic, key, event)` function. Use `producer.send({ topic, messages: [{ key, value: JSON.stringify(event), headers: {...} }] })`. Add headers for event-type and timestamp for debugging.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Wire `publishEvent('ticket-purchases', req.params.eventId, event)` into the purchase endpoint alongside the existing RabbitMQ publish. Both can coexist during migration. Handle the case where the producer is not connected (log a warning, do not crash the purchase).
 </details>
 
 
@@ -399,17 +399,17 @@ Call `producer.send({ topic, messages: [{ key, value: JSON.stringify(event), hea
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+The notification consumer needs its own `groupId: 'notification-service'` so it tracks offsets independently from the analytics consumer. Use `fromBeginning: false` -- it only needs new events, not historical replay.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Subscribe to `['ticket-purchases', 'event-updates']`. In the `eachMessage` handler, parse `message.value` as JSON and switch on `event.type` to route to the correct handler (TicketPurchased, EventUpdated, etc.).
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Handle graceful shutdown by disconnecting the consumer on SIGTERM/SIGINT. Log the topic, partition, and offset for each message so you can trace exactly where the consumer is in the log when debugging.
 </details>
 
 
@@ -507,17 +507,17 @@ The consumer's `eachMessage` handler receives `{ topic, partition, message }`. P
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+The analytics consumer uses `groupId: 'analytics-service'` -- a different group from notifications, so both independently consume every message. The key difference: use `fromBeginning: true` to replay all historical events on first startup.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Maintain in-memory counters (totalPurchases, totalRevenue, purchasesByEvent Map). On each TicketPurchased event, increment the counters. In production you would write to a data warehouse instead.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+When you kill and restart this consumer, it resumes from its last committed offset -- not from the beginning (offsets are already committed). Only a brand-new consumer group with `fromBeginning: true` replays history. This is Kafka's superpower over RabbitMQ.
 </details>
 
 
@@ -650,17 +650,17 @@ Both services process all 10 messages independently:
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Stop the notification service with `docker compose stop notification-service`, then buy 5 more tickets. Check Kafka UI's Consumer Groups view -- the notification-service group should show consumer lag = 5.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Restart with `docker compose start notification-service` and watch the logs. The consumer resumes from its last committed offset and processes exactly the 5 missed messages. No messages were lost because Kafka retained them in the topic log.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Compare this to RabbitMQ: with RabbitMQ, once a consumer acks a message, it is gone. With Kafka, the message stays in the partition log for the configured retention period (default 7 days). Any consumer group can replay from any offset at any time.
 </details>
 
 

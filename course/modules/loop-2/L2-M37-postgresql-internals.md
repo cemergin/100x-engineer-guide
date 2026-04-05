@@ -328,17 +328,17 @@ Dead tuples cause:
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Query `pg_stat_user_tables` for `n_dead_tup` before and after running `UPDATE tickets SET updated_at = NOW() WHERE event_id BETWEEN 1 AND 10`. The dead tuple count should jump by the number of rows updated.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Calculate the dead tuple percentage: `round(n_dead_tup::numeric / NULLIF(n_live_tup, 0) * 100, 1)`. Also check `pg_total_relation_size('tickets')` -- the table grows even though the live data has not changed, because dead tuples still occupy pages.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+After creating bloat, run `VACUUM tickets` and query `n_dead_tup` again -- it should drop to near zero. But check `pg_total_relation_size` -- it has NOT shrunk. VACUUM marks space as reusable but does not return it to the OS. Only `VACUUM FULL` (which locks the table) actually shrinks the file.
 </details>
 
 
@@ -394,17 +394,17 @@ Calculate `dead_pct` as `round(n_dead_tup::numeric / NULLIF(n_live_tup, 0) * 100
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Note the `n_dead_tup` count before running `VACUUM tickets`. After it completes, query `pg_stat_user_tables` again -- the count should drop to near zero. Compare `last_vacuum` timestamp to confirm it ran.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+VACUUM marks dead tuple space as reusable in the Free Space Map but does NOT shrink the file on disk. To reclaim disk space, you would need `VACUUM FULL` -- but it takes an ACCESS EXCLUSIVE lock that blocks all reads and writes. In production, prefer regular VACUUM.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+For TicketPulse's tickets table, tune autovacuum per-table: `ALTER TABLE tickets SET (autovacuum_vacuum_scale_factor = 0.01, autovacuum_vacuum_cost_delay = 0)`. This triggers vacuum at 1% dead tuples instead of the default 20%, and runs without throttling. Use `pg_stat_activity` to find long-running transactions that block vacuum.
 </details>
 
 

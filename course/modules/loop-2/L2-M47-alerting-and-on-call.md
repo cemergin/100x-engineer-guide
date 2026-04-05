@@ -56,6 +56,21 @@ The principle: **alert on symptoms (user-visible impact), not causes (infrastruc
 
 We defined SLOs in earlier modules. Now we turn them into alerts.
 
+<details>
+<summary>💡 Hint 1: Burn Rate Math</summary>
+Burn rate = (actual error rate) / (SLO error budget rate). For a 99.9% SLO, the error budget is 0.1%. A 14.4x burn rate means errors are occurring at 14.4 * 0.1% = 1.44% -- you will exhaust 30 days of budget in about 2 days. Use two thresholds: 14.4x for critical (page) and 6x for warning (ticket).
+</details>
+
+<details>
+<summary>💡 Hint 2: Multi-Window Structure</summary>
+Each burn-rate alert uses two PromQL windows joined by <code>and</code>: a long window (1h or 6h) ensures the problem is sustained, and a short window (5m or 30m) ensures the problem is still happening right now. This prevents both false positives from brief spikes and stale alerts from resolved issues.
+</details>
+
+<details>
+<summary>💡 Hint 3: Routing with PagerDuty</summary>
+In Alertmanager's <code>route</code> config, match on the <code>severity</code> label: <code>critical</code> routes to a PagerDuty receiver (pages the on-call), <code>warning</code> routes to Slack (creates a ticket). Use <code>group_by: ['alertname', 'slo']</code> to avoid alert storms where one root cause triggers multiple pages.
+</details>
+
 ### SLO 1: 99.9% Availability
 
 **What it means:** Over a 30-day window, at most 0.1% of requests can be errors. That is 43.2 minutes of total error time per month.
@@ -299,6 +314,21 @@ receivers:
 ## 4. Build: A Runbook for "High Error Rate"
 
 Every alert needs a runbook. A runbook is a step-by-step guide that an on-call engineer -- who may not be familiar with this service -- can follow at 3 AM.
+
+<details>
+<summary>💡 Hint 1: First 5 Minutes</summary>
+Start the runbook with scope identification: <code>sum by (service) (rate(http_requests_total{status_code=~"5.."}[5m]))</code> tells you which service is erroring. Then check for recent deployments: <code>kubectl rollout history deployment -n ticketpulse</code>. A deployment in the last 30 minutes is the likely cause.
+</details>
+
+<details>
+<summary>💡 Hint 2: Copy-Pasteable Commands</summary>
+Every runbook command should work as-is when pasted into a terminal at 3 AM. Include the full namespace, full label selectors, and exact flags. For example: <code>kubectl logs -n ticketpulse -l app=payment-service --tail=100 --since=10m | grep ERROR</code> -- not "check the payment service logs."
+</details>
+
+<details>
+<summary>💡 Hint 3: Mitigation Before Root Cause</summary>
+The runbook should prioritize stopping the bleeding. If a deployment caused it: <code>kubectl rollout undo deployment/&lt;service&gt; -n ticketpulse</code>. If an external dependency is down, check its status page and verify the circuit breaker is active. Investigate root cause AFTER the error rate is back within SLO.
+</details>
 
 Create a runbook for the HighErrorRate alert:
 

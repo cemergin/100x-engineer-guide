@@ -110,6 +110,21 @@ This copies each image from your local Docker daemon into the kind node. Without
 
 We will write every manifest by hand. No Helm charts, no generators. You need to understand what every line does.
 
+<details>
+<summary>💡 Hint 1: Structure</summary>
+Every Deployment YAML needs four nested layers: metadata (name + namespace + labels), spec.selector.matchLabels (how the Deployment finds its pods), spec.template.metadata.labels (must match the selector), and spec.template.spec.containers (the actual container definition with image, ports, resources, probes).
+</details>
+
+<details>
+<summary>💡 Hint 2: Apply and Verify</summary>
+After writing each manifest, run <code>kubectl apply -f &lt;file&gt;</code> and immediately verify with <code>kubectl get &lt;resource&gt; -n ticketpulse</code>. For Deployments specifically, <code>kubectl get pods -n ticketpulse</code> shows whether pods are actually running.
+</details>
+
+<details>
+<summary>💡 Hint 3: Debugging Creation</summary>
+If a resource fails to create, <code>kubectl describe &lt;resource&gt; -n ticketpulse &lt;name&gt;</code> shows the Events section at the bottom -- that tells you exactly what went wrong and when. For example, a Deployment that references a missing ConfigMap will show a FailedCreate event.
+</details>
+
 Create a directory for your K8s manifests:
 
 ```bash
@@ -466,6 +481,21 @@ curl -s http://localhost:3000/health | jq .
 ## 6. Debug: Intentional Failures
 
 You need to recognize common failures by sight. Let us cause them on purpose.
+
+<details>
+<summary>💡 Hint 1: Distinguishing Failure Modes</summary>
+Run <code>kubectl describe pod -n ticketpulse &lt;pod-name&gt;</code> and look at the <strong>Last State</strong> section. OOMKilled shows Exit Code 137 (SIGKILL from the kernel). CrashLoopBackOff from a code bug shows the app's own exit code (often 1). ImagePullBackOff never starts the container at all.
+</details>
+
+<details>
+<summary>💡 Hint 2: Reading Events</summary>
+The Events section at the bottom of <code>kubectl describe</code> is chronologically ordered. For OOMKilled, look for "OOMKilled" in the reason field. For ImagePullBackOff, look for "Failed to pull image" messages with exponentially increasing backoff times.
+</details>
+
+<details>
+<summary>💡 Hint 3: Using --previous</summary>
+When a container crashes and restarts, <code>kubectl logs &lt;pod&gt; --previous</code> shows the stdout/stderr from the LAST run before it crashed. This is essential for CrashLoopBackOff -- the current container may have no logs yet, but the previous one logged the error that caused the crash.
+</details>
 
 ### Failure 1: ImagePullBackOff
 

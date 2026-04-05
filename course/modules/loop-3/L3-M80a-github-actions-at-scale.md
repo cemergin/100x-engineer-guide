@@ -24,6 +24,10 @@ This is what happens when CI/CD does not scale with the platform. The workflow f
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before reading further, think about what happens when your team has 12 services each with their own CI workflow file. Where do you expect the drift, duplication, and operational pain to concentrate?
+
 ## Prereq Check
 
 You should be comfortable with:
@@ -1173,6 +1177,10 @@ Total: commit → all regions: ~60-90 min
 | **Repository dispatch** | A GitHub event that allows one repository to trigger workflows in another repository via the API. |
 | **Reusable workflow** | A workflow defined with `workflow_call` that can be invoked from other workflows, even across repositories. |
 | **DORA metrics** | Four metrics (deployment frequency, lead time, change failure rate, MTTR) that measure software delivery performance. |
+
+### 🤔 Reflection Prompt
+
+After building reusable actions and cross-repo workflows, what was the biggest time savings you identified? How does centralizing CI/CD logic change the operational burden as you add new services?
 
 ## Further Reading
 

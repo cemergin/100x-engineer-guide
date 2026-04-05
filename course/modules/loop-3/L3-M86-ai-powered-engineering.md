@@ -23,6 +23,10 @@ The engineers who get the most from AI are not the ones who type the cleverest p
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before starting the AI-assisted feature build, estimate: what percentage of the waitlist feature code do you expect AI to produce correctly on the first try? Where do you expect it to need the most human correction -- data model, business logic, or edge cases?
+
 ## 1. The Feature: Waitlist When Events Sell Out
 
 ### Product Requirements
@@ -38,6 +42,16 @@ When an event sells out, users should be able to join a waitlist. If tickets bec
 - A user cannot join the waitlist if they already have tickets for the event
 
 ### Stop and Design (10 minutes)
+
+<details>
+<summary>💡 Hint 1: Design the concurrency model before you touch the AI</summary>
+The waitlist position assignment is a classic read-modify-write race. Decide now whether you will use a serializable transaction, a database sequence, or an advisory lock. This is the exact thing AI will get wrong if you do not specify it in your prompt constraints.
+</details>
+
+<details>
+<summary>💡 Hint 2: Use Claude API tool_use to structure your prompts as typed contracts</summary>
+When prompting for implementation, specify exact input/output types, error codes, and Kafka event names as constraints. The more your prompt reads like an OpenAPI spec, the less correction the output needs. Vague prompts produce vague code.
+</details>
 
 Before using AI, spend 10 minutes designing this yourself:
 
@@ -666,6 +680,11 @@ You have:
 | **Adversarial review** | A technique where the AI is asked to critique and attack its own output, simulating a skeptical reviewer. |
 | **Constraint-first prompting** | A prompting style that specifies what the output must NOT do before describing what it should do. |
 | **Incremental refinement** | An AI workflow pattern where complex output is built in small, verifiable steps rather than generated all at once. |
+
+### 🤔 Reflection Prompt
+
+Compare your prediction about AI accuracy with what actually happened. Where did the AI surprise you (better than expected) and where did it disappoint (worse than expected)? How does this shape your workflow going forward?
+
 ---
 
 ## What's Next

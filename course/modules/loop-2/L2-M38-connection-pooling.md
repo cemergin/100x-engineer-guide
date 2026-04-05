@@ -51,17 +51,17 @@ And that's before counting the actual data in shared_buffers.
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Set `max_connections = 20` in Postgres via `ALTER SYSTEM`, restart the container, then fire 50 concurrent requests with a bash loop. Watch for `FATAL: too many connections` errors in the service logs.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Query `pg_stat_activity` grouped by `datname`, `usename`, and `state`. Most connections will be `idle` -- hoarding connections they are not actively using. The ratio of idle to active connections reveals the waste.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Run `SELECT count(*) FROM pg_stat_activity` and compare to `SHOW max_connections`. The gap between used and max is your headroom. With 5 microservices each opening 20 connections, you need 100 slots -- but Postgres defaults to 100 total. One more service replica and you are over the limit.
 </details>
 
 
@@ -181,17 +181,17 @@ TicketPulse Services               PgBouncer              PostgreSQL
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Add PgBouncer as a Docker Compose service with `POOL_MODE: transaction` and `DATABASE_URL` pointing to Postgres. Expose port 6432. Use the `edoburu/pgbouncer` image for simplicity.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Set `DEFAULT_POOL_SIZE: 20` (based on the formula: for an 8-core DB, (8*2)+1 = 17, rounded up). Set `MAX_CLIENT_CONN: 500` -- client connections to PgBouncer are cheap. Add `SERVER_RESET_QUERY: DISCARD ALL` to clean session state between pool checkouts.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Change ALL service DATABASE_URL values from `postgres://...@postgres:5432/...` to `postgres://...@pgbouncer:6432/...`. Reduce each service's app-level pool size to 2-5 (let PgBouncer handle the multiplexing). After restarting, run `SHOW POOLS` in PgBouncer's admin console to verify `sv_active` stays around 20 even with 200+ clients.
 </details>
 
 
@@ -275,17 +275,17 @@ Use `POOL_MODE: transaction` for web apps (connection returned after each COMMIT
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Every service needs its DATABASE_URL changed from port 5432 (direct Postgres) to port 6432 (PgBouncer). The hostname changes from `postgres` to `pgbouncer`. Everything else stays the same.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+If your app uses Prisma, add `?pgbouncer=true` to the connection string to disable prepared statements (they break with transaction pooling). For node-postgres, no changes needed beyond the URL.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Watch for "double pooling": if your app already has a pool of 20 connections AND PgBouncer has a pool of 20, your app holds 20 connections to PgBouncer that it rarely uses. Reduce the app pool to 2-5 per instance. Run `pgbench -c 100 -T 30` through PgBouncer to verify throughput is better than or equal to direct Postgres.
 </details>
 
 
@@ -486,17 +486,17 @@ WHERE backend_type = 'client backend';
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Start by querying `pg_stat_activity` grouped by state. Count the `idle`, `active`, and `idle in transaction` connections. Most connection exhaustion comes from `idle in transaction` sessions hoarding connections without doing work.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Check five things in order: (1) who is consuming connections (`pg_stat_activity`), (2) idle-in-transaction sessions, (3) connection leaks in app code, (4) PgBouncer `SHOW POOLS` for `cl_waiting > 0`, (5) app-level pool sizes (reduce to 2-5 per instance when using PgBouncer).
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Set `idle_in_transaction_session_timeout = '5min'` in Postgres and `transaction_timeout = 60` in PgBouncer as safety nets. If `SHOW POOLS` shows `cl_waiting > 0` consistently, either increase `default_pool_size` (but do not exceed the formula) or optimize slow queries holding connections.
 </details>
 
 

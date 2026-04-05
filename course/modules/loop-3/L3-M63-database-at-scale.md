@@ -84,12 +84,12 @@ All writes go to the primary. Reads can be distributed across replicas. This eff
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Have you considered applying a "read-your-writes" window? Any read within a few seconds of a user's own write should hit the primary, while stale-tolerant browsing reads go to replicas.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Writes and atomicity-dependent reads (ticket reservation, order insert) always hit primary. Analytics aggregations always hit a dedicated replica. The tricky one is "available ticket count" -- it depends on whether you are displaying it or gating a purchase on it.
 </details>
 
 
@@ -183,12 +183,12 @@ Before looking at the lag-aware pool implementation, sketch out what data you wo
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Have you considered polling replica lag on a background interval (every 10s) rather than checking on every request? The lag check itself is a query -- you do not want it on the hot path.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Query `pg_last_xact_replay_timestamp()` on each replica periodically. If the delta exceeds your threshold (e.g., 5 seconds), remove that replica from the routing pool. Fall back to primary if all replicas are lagging.
 </details>
 
 
@@ -326,12 +326,12 @@ Use `transaction` mode for TicketPulse. Each request gets a server connection on
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Have you considered that raising `max_connections` past ~300 on PostgreSQL degrades performance due to lock contention? PgBouncer in transaction mode is the multiplexer that decouples client connections from server connections.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Reserve 20 connections for admin/migrations. Divide the remaining 180 across your services. PgBouncer `max_client_conn` can be 2000+ safely since client connections are cheap -- the expensive resource is the server-side pool.
 </details>
 
 
@@ -544,12 +544,12 @@ DELETE FROM tickets WHERE event_date < '2025-04-01';
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Have you considered that smaller partitions may need a lower `autovacuum_vacuum_scale_factor`? The default (0.2 = 20% of table dead tuples) on a 3M-row partition means autovacuum triggers after 600K dead tuples -- that might be too late.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Query `pg_stat_user_tables` filtered by `tablename LIKE 'tickets_%'` and check `n_dead_tup` and `last_autovacuum` per partition. A healthy setup shows recent autovacuum timestamps and near-zero dead tuples on active partitions.
 </details>
 
 
@@ -600,12 +600,12 @@ Sharding splits data across multiple independent database servers. Each shard is
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Have you considered which access pattern dominates? TicketPulse's hot path is per-event (browse tickets, reserve, purchase). The shard key should make that path shard-local.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Shard by `event_id`. The entire purchase flow (lookup, availability check, reserve, confirm) stays on one shard. Cross-shard queries like "all orders for user X" are the cold path -- handle them with a secondary index or CQRS read model.
 </details>
 
 
@@ -733,12 +733,12 @@ Cross-shard queries (list all files for a user) use a secondary index. This trad
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Have you considered using Citus (PostgreSQL extension) before building your own router? It handles distribution column routing, parallel queries, and rebalancing with minimal application changes.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+If you do build a custom router, the hash function must be deterministic and stable. Changing it means migrating every row. Use a consistent hashing approach (as in M65) if you anticipate adding shards later.
 </details>
 
 

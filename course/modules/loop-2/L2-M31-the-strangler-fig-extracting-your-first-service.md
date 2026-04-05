@@ -67,17 +67,17 @@ Martin Fowler named this after the strangler fig tree, which grows around a host
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Score each candidate (Notifications, Payments, Search) on four axes: coupling to the monolith, blast radius if extraction fails, value of independence, and data ownership clarity. The best first extraction is not always the easiest one.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Notifications is already async via RabbitMQ (lowest coupling), but it teaches you nothing about synchronous communication or failure handling. Payments has a clean data boundary (payments, refunds, ledger_entries) and forces you to solve the hard problems: HTTP client timeouts, idempotency, and network errors.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Choose Payments. It has a clear business justification (PCI-DSS compliance isolation), a clean data boundary, and forces you to deal with synchronous service-to-service calls, which is the hardest part of microservices you will face in every future extraction.
 </details>
 
 
@@ -191,17 +191,17 @@ We will extract Payments. If you chose Notifications, that is a perfectly valid 
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+The Payments service needs its own directory under `services/payment-service/` with its own `package.json`, `tsconfig.json`, and `Dockerfile` -- completely independent from the monolith's build.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Create a standalone Express server on port 3001 with three endpoints: `POST /api/payments` (process), `GET /api/payments/:id` (lookup), and `POST /api/payments/:id/refund`. Use an in-memory Map for storage now; M35 will give it its own database.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+In the monolith, replace the local `processPaymentLocally()` call with an HTTP call to `http://payment-service:3001/api/payments`. Add an nginx `location /api/payments` block that proxies to the new service. The key: the client never sees the change -- same URLs, same response shapes.
 </details>
 
 
@@ -719,17 +719,17 @@ Use `const controller = new AbortController()` with `setTimeout(() => controller
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Add `ARTIFICIAL_DELAY: 5000` to the payment service's environment in docker-compose.yml. The monolith's purchase endpoint will now take 5+ seconds because it waits for the payment service to respond.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Without a timeout, a slow payment service cascades: the monolith holds the request open, the client waits, and if enough requests pile up, the monolith's connection pool is exhausted. This is the cascading failure pattern.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Use `const controller = new AbortController()` with `setTimeout(() => controller.abort(), 5000)` passed as the `signal` option to `fetch()`. Catch `AbortError` specifically and throw a meaningful timeout error like "Payment service timed out after 5000ms."
 </details>
 
 

@@ -25,6 +25,10 @@ Nix solves this by making the entire development environment declarative, reprod
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before reading, estimate: how many hours per month does your team lose to "works on my machine" issues? What would it be worth to guarantee that every developer and CI runner has the exact same environment?
+
 ## 1. The Nix Mental Model
 
 ### Purely Functional Package Management
@@ -564,6 +568,16 @@ Every engineer runs the same Nix environment but can layer personal customizatio
 
 ### Exercise: Add a Custom Tool Not in nixpkgs
 
+<details>
+<summary>💡 Hint 1: Use a placeholder hash and let Nix tell you the real one</summary>
+Set `hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";` in your `fetchFromGitHub`. Run `nix develop` -- it will fail with the correct hash in the error message. Replace the placeholder and rebuild. This two-pass approach is the standard Nix workflow.
+</details>
+
+<details>
+<summary>💡 Hint 2: Add the custom tool to devShells.default alongside your existing buildInputs</summary>
+Your `flake.nix` already has a `devShells.default` with `buildInputs`. Define your custom derivation with `pkgs.buildGoModule` (or `buildNpmPackage`, etc.) in a `let` binding, then add it to the same `buildInputs` list. Run `nix develop` and verify the tool is on your PATH.
+</details>
+
 Occasionally you need a tool that is not in nixpkgs. Nix can build it from source:
 
 ```nix
@@ -678,6 +692,11 @@ You have:
 | **narHash** | The cryptographic hash of a Nix Archive (NAR), used to verify that a downloaded input has not changed since the lockfile was created. |
 | **shellHook** | A Nix attribute that runs shell commands when entering a `nix develop` shell, used to set environment variables and aliases. |
 | **Selective pinning** | The practice of using different nixpkgs channels for different packages to balance freshness and stability. |
+
+### 🤔 Reflection Prompt
+
+After setting up the Nix flake, was the learning curve worth the reproducibility guarantee? For your current team size and project, where is the line between "Nix is overkill" and "we need this"?
+
 ---
 
 ## What's Next

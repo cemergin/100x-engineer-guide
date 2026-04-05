@@ -592,6 +592,69 @@ The producer includes the `event_id` in every delivery. The consumer is responsi
 
 ---
 
+> **What did you notice?** Webhook delivery seems simple until you consider retries, idempotency, ordering, and receiver failures. How does the reliability challenge compare to Kafka consumer delivery from M33?
+
+## Exercises
+
+### 🛠️ Build: Verify Webhook HMAC Signatures
+
+Write a test that constructs a webhook payload, signs it with HMAC-SHA256, and verifies the signature on the consumer side -- including the timestamp replay protection.
+
+<details>
+<summary>💡 Hint 1</summary>
+The signing format is `t=<unix_timestamp>,v1=<hex_digest>`. Construct the signed payload as `${timestamp}.${JSON.stringify(event)}`, then compute `crypto.createHmac('sha256', secret).update(signedPayload).digest('hex')`. The consumer reconstructs the same signed payload from the timestamp header and raw body, computes the HMAC, and compares with `crypto.timingSafeEqual`.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Test the replay protection: create a valid signature with a timestamp from 10 minutes ago. The consumer should reject it because `timestamp < Math.floor(Date.now() / 1000) - 300`. Also test that re-serializing the JSON body (which may change whitespace) breaks the signature -- this is why the consumer must use `express.raw()` instead of `express.json()` before verification.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Write three test cases: (1) valid signature and recent timestamp -> accepted, (2) valid signature but timestamp 10 minutes old -> rejected with "replay attack" error, (3) tampered payload with original signature -> rejected with "invalid signature" error. Use `crypto.timingSafeEqual(Buffer.from(received), Buffer.from(expected))` -- NOT `===` -- to prevent timing-based signature guessing.
+</details>
+
+### 🐛 Debug: Webhook Deliveries Silently Failing
+
+A partner reports they are not receiving webhook events, but your delivery logs show `status: 'delivered'` for all recent events.
+
+<details>
+<summary>💡 Hint 1</summary>
+Check the `response_status` and `response_body` columns in `webhook_deliveries`. A status of `delivered` means the HTTP request returned 2xx, but the partner's endpoint might be returning 200 without actually processing the event (e.g., a load balancer health check response, or the endpoint is returning 200 to everything including malformed payloads).
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Ask the partner to check their `processed_webhook_events` table. If events are not there, their signature verification might be failing silently (returning 200 but not processing). Have them log the raw `X-Webhook-Signature` header and compare it with a manually computed HMAC using their stored secret. A common bug: the partner URL-decoded the secret or stored it with leading/trailing whitespace.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Send a test webhook using webhook.site or a `curl` command that mimics the exact payload and headers: `curl -X POST https://partner-url/webhooks -H 'Content-Type: application/json' -H 'X-Webhook-Signature: t=...,v1=...' -H 'X-Webhook-Timestamp: ...' -d '{"eventType":"ticket.purchased",...}'`. If webhook.site receives it but the partner's server does not, it is a network/firewall issue on their end.
+</details>
+
+### 📐 Design: At-Least-Once vs Exactly-Once Delivery
+
+TicketPulse's webhook system guarantees at-least-once delivery. A partner complains that their system double-charged a customer because the `ticket.purchased` webhook was delivered twice. Who is responsible for deduplication?
+
+<details>
+<summary>💡 Hint 1</summary>
+At-least-once delivery means the producer (TicketPulse) guarantees every event is delivered at least once, but may deliver it more than once (network timeout after the consumer processed it, retry fires). The consumer is responsible for idempotency -- they must deduplicate by `event_id` using a `processed_webhook_events` table as shown in Section 3.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Document this contract explicitly in your webhook API docs: "Webhook events include a unique `X-Webhook-ID` header. Your endpoint may receive the same event more than once. You MUST deduplicate by checking `X-Webhook-ID` against your processed events before taking action." This is the same contract that Stripe, GitHub, and Shopify use.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Exactly-once delivery across a network boundary is impossible without coordination (the Two Generals problem). The industry standard is at-least-once delivery with consumer-side idempotency. Help the partner implement it: `INSERT INTO processed_events (event_id) VALUES ($1) ON CONFLICT DO NOTHING RETURNING event_id` -- if the insert returns no rows, the event was already processed.
+</details>
+
+---
+
 ## Checkpoint
 
 Before continuing, verify:

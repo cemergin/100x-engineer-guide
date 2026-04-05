@@ -97,12 +97,12 @@ DO NOT WRITE AN ADR WHEN:
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Follow the ADR template: Status, Context (forces at play), Decision (specific, not vague), Consequences (what becomes easier AND harder), and a reversal condition. The key is listing rejected alternatives with reasons -- that is the information future engineers actually need.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+For each ADR, force yourself to name at least two alternatives you considered and why you rejected them. If you cannot name alternatives, the decision may be too obvious for an ADR -- or you have not explored the design space enough.
 </details>
 
 

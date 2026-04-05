@@ -783,9 +783,24 @@ Any PR that modifies `.github/workflows/` will require approval from `@your-org/
 
 ## Try It
 
-### Exercise 1: Refactor to Reusable Workflows
+### 🛠️ Build Exercise 1: Refactor to Reusable Workflows
 
 Take your L1-M15 `ci.yml` and split it into a reusable template plus per-service callers.
+
+<details>
+<summary>💡 Hint 1</summary>
+Create `ci-template.yml` with `on: workflow_call:` and define inputs for `working-directory` (required, string), `service-name` (required, string), and `node-version` (optional, string, default '22'). Use `secrets: inherit` in the callers to pass all repository secrets without listing them individually.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Each per-service caller is ~15 lines: trigger on `push/pull_request` with `paths: ['services/<name>/**']`, then a single job that calls `uses: ./.github/workflows/ci-template.yml` with the appropriate `working-directory` and `service-name`. Use `matrix` in the template's test job to run against Node 20 and 22 simultaneously.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Validate your YAML before pushing: `python3 -c "import sys, yaml; yaml.safe_load(sys.stdin)" < .github/workflows/ci-template.yml`. After pushing, verify with `gh run list --limit 5` that only the expected workflows triggered. If a reusable workflow call fails with "not found," check that the template file is in `.github/workflows/` (not a subdirectory) and is on the same branch.
+</details>
 
 ```bash
 cd ticketpulse
@@ -810,7 +825,22 @@ gh run list --limit 5
 gh run watch
 ```
 
-### Exercise 2: Test Path Filtering
+### 🐛 Debug Exercise 2: Test Path Filtering
+
+<details>
+<summary>💡 Hint 1</summary>
+When using `on.push.paths` with reusable workflows, the path filter applies to the caller workflow, not the template. If you change `packages/shared/src/types.ts`, only callers whose `paths` array includes `packages/shared/**` will trigger. Add `'packages/shared/**'` to every service caller's path filter.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+If all three CIs trigger when you only changed payment-service, check whether `dorny/paths-filter` is configured in a top-level workflow that conditionally calls per-service jobs. The `if: needs.changes.outputs.payment-service == 'true'` guard must match the exact output name from the filter step.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+To debug which paths were detected as changed, add a logging step in the `detect-changes` job: `echo "Changed files:" && git diff --name-only $BASE ${{ github.sha }}`. Compare this against your path filters. On PRs, `github.event.pull_request.base.sha` is the merge base; on pushes, `github.event.before` is the previous commit.
+</details>
 
 ```bash
 # Make a change to only payment-service
@@ -833,7 +863,7 @@ git push
 gh run list --limit 10
 ```
 
-### Exercise 3: Set Up OIDC (or Understand It)
+### 📐 Design Exercise 3: Set Up OIDC (or Understand It)
 
 If you have an AWS account:
 
@@ -952,6 +982,8 @@ Now change to `fail-fast: false` and push again:
 3. **OIDC trust boundaries.** Your trust policy uses `repo:your-org/ticketpulse:*`, which allows any branch, any workflow, any environment. In a real production setup, what would you restrict the `sub` claim to? Why does it matter if someone can push a branch with a modified workflow?
 
 ---
+
+> **What did you notice?** GitHub Actions workflows can model complex deployment pipelines with matrix builds and environment approvals. How does this compare to the CI/CD you set up in Loop 1? What new capabilities did you gain?
 
 ## Checkpoint
 

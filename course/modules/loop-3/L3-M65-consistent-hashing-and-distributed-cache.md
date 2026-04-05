@@ -333,12 +333,12 @@ Redis uses the content inside `{}` for the hash calculation. This guarantees co-
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Have you considered that L1 (in-process) is dangerous for data that changes during flash sales? Ticket counts stale by even 30 seconds in L1 can mislead users. Reserve L1 for truly slow-moving data like feature flags and event metadata.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Rate limiter counters must be in Redis (L2) because they need atomic increments shared across all instances. User sessions must also be in L2 (sticky routing is not guaranteed). Event images skip L1 and L2 entirely -- the CDN (L3) is purpose-built for large binary blobs.
 </details>
 
 

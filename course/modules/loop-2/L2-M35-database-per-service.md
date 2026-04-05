@@ -138,17 +138,17 @@ WHERE o.user_id = $1;
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Create four Postgres containers, each on a unique port: events=5432, orders=5433, payments=5434, users=5435. Each has its own POSTGRES_DB, POSTGRES_USER, and volume.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Use `docker-entrypoint-initdb.d` volumes to auto-run migration SQL on first startup. Put migration scripts in separate directories: `db/migrations/events/`, `db/migrations/orders/`, etc. Update each service's DATABASE_URL environment variable.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Replace all cross-service foreign keys with plain INTEGER or VARCHAR columns. The orders table stores `event_id` and `payment_id` as opaque IDs with no FK constraint -- those tables live in other databases now. The `orders.event_id` JOIN becomes an API call to the event service.
 </details>
 
 
@@ -468,17 +468,17 @@ Use `Promise.all()` for parallel API calls. The batch endpoint should accept `/a
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Query orders from the orders database first. Collect unique `event_id` and `payment_id` values from the results. Then make two batch API calls in parallel using `Promise.all()`.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Design batch endpoints like `GET /api/events?ids=1,2,3` that accept comma-separated IDs and use `WHERE id = ANY($1)` in SQL. Limit batch size (max 100) to prevent abuse. Build Maps from the results for O(1) lookup during assembly.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+The application-level join uses `eventMap.get(order.event_id)` to look up each order's event details. Handle missing data gracefully: `event?.title || 'Unknown Event'`. This replaces the 4-table SQL JOIN with 3 network calls but gains service independence.
 </details>
 
 
@@ -621,17 +621,17 @@ Both the business data and the event are written in one transaction. Either both
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+The outbox table lives in the payment service's database. It stores events that need to be published to Kafka. The critical property: business data and outbox event are written in the same `BEGIN/COMMIT` transaction.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Create an `outbox` table with columns: `aggregate_type` (e.g., 'Payment'), `aggregate_id`, `event_type`, `topic`, `payload` (JSONB), and `published_at` (NULL means not yet published). Add an index: `CREATE INDEX ... ON outbox (created_at) WHERE published_at IS NULL`.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+In the payment handler, wrap `INSERT INTO payments`, `INSERT INTO ledger_entries`, and `INSERT INTO outbox` in a single `BEGIN/COMMIT`. If any fails, all roll back. The outbox publisher polls with `SELECT ... WHERE published_at IS NULL FOR UPDATE SKIP LOCKED LIMIT 100`, publishes to Kafka, then marks rows with `published_at = NOW()`.
 </details>
 
 
@@ -744,17 +744,17 @@ In the payment handler, wrap `INSERT INTO payments` and `INSERT INTO outbox` in 
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+The publisher is a separate process (or a setInterval loop) that polls the outbox table every 1 second for unpublished events. It reads rows where `published_at IS NULL` and sends them to Kafka.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Use `FOR UPDATE SKIP LOCKED` in the SELECT query -- this prevents two publisher instances from grabbing the same row, enabling safe horizontal scaling. After publishing to Kafka, mark the row: `UPDATE outbox SET published_at = NOW() WHERE id = $1`.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+If Kafka publishing fails for a specific row, do NOT mark it as published. It will be retried on the next poll. This gives you at-least-once delivery. Downstream consumers must be idempotent (they already are from M34's idempotent payment design).
 </details>
 
 

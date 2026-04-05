@@ -52,17 +52,17 @@ In production, use a battle-tested gateway (Kong, Envoy, Traefik). Building your
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Think about what the gateway needs to do before forwarding: authenticate the user, attach a correlation ID, check rate limits. What order should these run in?
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Use Express middleware layers in order: strip headers, correlation ID, logging, auth, rate limiting. Use http-proxy-middleware for routing to backend services.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+The BFF aggregates data from multiple internal services into a single mobile-optimized response. Use Promise.all for parallel fetches and transform the result to include only mobile-relevant fields.
 </details>
 
 
@@ -573,17 +573,17 @@ docker compose logs payment-service | grep "abc-123"
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+The web app downloads 5KB per event (full descriptions, artist bios, venue maps). The mobile app only needs ~500 bytes (title, date, venue city, lowest price, availability status, thumbnail). Both hit the same generic API.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Create a `GET /api/mobile/events` endpoint in the gateway that fetches from the event service and availability service in parallel using `Promise.all()`, then transforms the combined data into a mobile-optimized shape.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Compute availability status from remaining percentage: >20% = "available", >0% = "few_left", 0% = "sold_out". Truncate descriptions to 200 chars. Append image size params for thumbnails: `?w=200&h=200&fit=crop`. Build a Map from the availability response for O(1) lookups.
 </details>
 
 

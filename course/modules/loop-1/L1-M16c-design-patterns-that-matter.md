@@ -74,7 +74,22 @@ Good. Let us build five patterns.
 
 **Solution:** Define a `PricingStrategy` interface. Each pricing model is a separate class. The caller picks the strategy at runtime.
 
-### Build: PricingStrategy Interface + 4 Implementations
+### 🛠️ Build: PricingStrategy Interface + 4 Implementations
+
+<details>
+<summary>💡 Hint 1: The Interface Is One Method</summary>
+`interface PricingStrategy { readonly name: string; calculate(basePriceCents: number, quantity: number): number; }`. Each implementation (FlatPricing, PercentageDiscountPricing, EarlyBirdPricing, VipSurchargePricing) owns its multiplier or discount logic. The caller never sees an if/else chain.
+</details>
+
+<details>
+<summary>💡 Hint 2: Constructor Parameters Configure the Strategy</summary>
+`new PercentageDiscountPricing(0.2)` stores the 20% rate internally. `new EarlyBirdPricing(0.2, cutoffDate, purchaseDate)` takes the discount, the cutoff, and optionally the current date (for testability). Validate in the constructor: reject discount rates outside 0-1.
+</details>
+
+<details>
+<summary>💡 Hint 3: A Context Function Selects the Strategy</summary>
+Write `getPricingStrategy(event, ticketType, purchaseDate)` that returns the right `PricingStrategy`. VIP tickets always get `VipSurchargePricing`. Early bird tickets get `EarlyBirdPricing` with a cutoff 30 days before the event. Conference events get `PercentageDiscountPricing(0.15)`. Default: `FlatPricing`.
+</details>
 
 ```typescript
 // src/patterns/pricing-strategy.ts
@@ -253,7 +268,22 @@ npx jest src/patterns/pricing-strategy.test.ts
 
 **Solution:** Emit a `TicketPurchased` event. Listeners handle side effects independently. The purchase function does not know or care who is listening.
 
-### Build: EventBus
+### 🛠️ Build: EventBus
+
+<details>
+<summary>💡 Hint 1: A Map of Event Types to Handler Arrays</summary>
+The EventBus stores `Map<string, EventHandler[]>`. The `on(type, handler)` method pushes the handler into the array for that type. The `emit(event)` method looks up handlers by `event.type` and calls them all. Use `Promise.allSettled()` so one failing handler does not block the others.
+</details>
+
+<details>
+<summary>💡 Hint 2: DomainEvent Has a Standard Shape</summary>
+Define `interface DomainEvent { type: string; timestamp: Date; payload: Record<string, unknown>; }`. The `TicketPurchased` event carries `orderId`, `userId`, `eventId`, `quantity`, `totalInCents` in its payload. The purchase function emits it; listeners handle side effects independently.
+</details>
+
+<details>
+<summary>💡 Hint 3: Listeners Are Independent -- Adding One Never Touches Another</summary>
+Register 4 listeners: email confirmation, analytics tracking, inventory update, Slack notification. Each is a standalone async function. Adding a fifth (say, a webhook) means writing one function and one `eventBus.on('TicketPurchased', handler)` call. The purchase flow never changes.
+</details>
 
 ```typescript
 // src/patterns/event-bus.ts
@@ -874,7 +904,22 @@ npx jest src/patterns/caching-event-repository.test.ts
 
 **Solution:** A factory function creates the right sender based on the user's preference.
 
-### Build: NotificationSender Interface + Implementations
+### 🛠️ Build: NotificationSender Interface + Implementations
+
+<details>
+<summary>💡 Hint 1: One Interface, Three Implementations</summary>
+`interface NotificationSender { send(to: string, subject: string, body: string): Promise<void>; }`. Then `EmailNotificationSender`, `SmsNotificationSender`, `PushNotificationSender` each implement it. SMS truncates to 160 chars. Push uses a device token instead of an email address.
+</details>
+
+<details>
+<summary>💡 Hint 2: The Factory Uses a Static Map</summary>
+`NotificationFactory` holds `Map<NotificationType, NotificationSender>` with pre-created instances. `create('email')` looks up and returns the sender. Throw for unknown types. Add a `register()` method so tests can inject fake senders.
+</details>
+
+<details>
+<summary>💡 Hint 3: The Caller Picks the Right Address</summary>
+`notifyUser(user, subject, body)` reads `user.notificationPreference` to select the factory type, then picks the delivery address: `user.email` for email, `user.phone` for SMS, `user.pushToken` for push. Throw if the required field (phone, pushToken) is null.
+</details>
 
 ```typescript
 // src/notifications/notification-sender.ts

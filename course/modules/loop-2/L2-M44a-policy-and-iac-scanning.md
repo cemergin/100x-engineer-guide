@@ -100,6 +100,21 @@ Each layer catches different problems. Checkov finds issues in your `.tf` files 
 
 Checkov scans Terraform, CloudFormation, Kubernetes manifests, Helm charts, and Dockerfiles against 1,000+ built-in policies covering CIS, SOC2, HIPAA, and PCI-DSS benchmarks.
 
+<details>
+<summary>💡 Hint 1: Running Checkov</summary>
+Run <code>checkov -d .</code> from your Terraform directory. Each failed check includes a CKV ID (like CKV_K8S_22), a description, and the exact file and line range. Use <code>checkov -d . --check CKV_K8S_22</code> to run a single specific check while you fix it.
+</details>
+
+<details>
+<summary>💡 Hint 2: Fixing Security Contexts</summary>
+Most Kubernetes check failures are fixed by adding a <code>security_context</code> block: set <code>run_as_non_root = true</code>, <code>read_only_root_filesystem = true</code>, and <code>allow_privilege_escalation = false</code>. In HCL, the security_context goes inside the <code>container</code> block of your Deployment spec.
+</details>
+
+<details>
+<summary>💡 Hint 3: Custom Checkov YAML Policies</summary>
+Custom Checkov policies use a YAML format with <code>cond_type: "attribute"</code>, a <code>resource_types</code> list, and an <code>operator</code> (e.g., <code>exists</code>, <code>equals</code>). Run them with <code>checkov -d . --external-checks-dir ./policies/checkov/</code>. Give each a unique ID like <code>CKV2_TICKETPULSE_1</code>.
+</details>
+
 ### 2a. Run Checkov Against TicketPulse
 
 Navigate to your Terraform directory from L2-M44 and run Checkov:
@@ -416,6 +431,21 @@ terraform show -json tfplan > tfplan.json
 The JSON file contains every resource change Terraform will make, including computed values. This is what conftest evaluates.
 
 ### 3b. Write Your First Rego Policy
+
+<details>
+<summary>💡 Hint 1: OPA Rego Structure</summary>
+Rego policies use <code>deny contains msg if { ... }</code> to block and <code>warn contains msg if { ... }</code> to advise. The <code>input</code> variable holds the Terraform plan JSON. Navigate it with <code>input.resource_changes</code> to iterate over every resource Terraform will create, modify, or destroy.
+</details>
+
+<details>
+<summary>💡 Hint 2: Accessing Plan Fields</summary>
+In the Terraform plan JSON, each resource change has <code>resource.type</code> (e.g., "kubernetes_deployment"), <code>resource.change.actions</code> (create/update/delete), and <code>resource.change.after</code> containing the planned attribute values. Use <code>some resource in input.resource_changes</code> to iterate.
+</details>
+
+<details>
+<summary>💡 Hint 3: Running conftest</summary>
+Generate the plan JSON with <code>terraform plan -out=tfplan && terraform show -json tfplan > tfplan.json</code>, then run <code>conftest test tfplan.json --policy policy/</code>. A non-zero exit code on any <code>deny</code> rule means CI fails and the merge button stays red.
+</details>
 
 Create the policy directory:
 
@@ -1135,6 +1165,8 @@ Every misconfiguration has at least two chances to get caught. Most have three.
 > Consider: (1) Trivy scanning of container images for CVEs before deployment, (2) a Kyverno policy that requires image signatures (cosign) to ensure only images built by your CI can run, (3) Sentinel or OPA policies in Terraform Cloud for cost controls, (4) AWS SCPs to restrict which regions and services TicketPulse can use.
 
 ---
+
+> **What did you notice?** Automated policy scanning catches issues that even careful code review misses — like overly permissive IAM policies or unencrypted storage. What percentage of your IaC issues do you think manual review would have caught?
 
 ## 8. Checkpoint
 

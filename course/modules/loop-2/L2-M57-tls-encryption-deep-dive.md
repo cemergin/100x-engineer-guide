@@ -225,17 +225,17 @@ Data flows before the handshake completes. But there is a catch:
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Trace the TLS 1.3 handshake message by message: ClientHello, ServerHello, certificate, key exchange. What information is exchanged at each step?
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Use openssl s_client to watch the handshake live. For self-signed certs, use openssl req -x509 to generate them. For mTLS, both client and server need certificates.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Configure HTTPS with the generated certificates. For Kubernetes, use cert-manager with Let's Encrypt for automatic certificate rotation. Validate the full certificate chain including intermediates.
 </details>
 
 
@@ -297,17 +297,17 @@ Inspect the certificate with `openssl x509 -in cert.pem -text -noout`. You shoul
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Trace the TLS 1.3 handshake message by message: ClientHello, ServerHello, certificate, key exchange. What information is exchanged at each step?
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Use openssl s_client to watch the handshake live. For self-signed certs, use openssl req -x509 to generate them. For mTLS, both client and server need certificates.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Configure HTTPS with the generated certificates. For Kubernetes, use cert-manager with Let's Encrypt for automatic certificate rotation. Validate the full certificate chain including intermediates.
 </details>
 
 
@@ -409,17 +409,17 @@ This is used for:
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Trace the TLS 1.3 handshake message by message: ClientHello, ServerHello, certificate, key exchange. What information is exchanged at each step?
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Use openssl s_client to watch the handshake live. For self-signed certs, use openssl req -x509 to generate them. For mTLS, both client and server need certificates.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Configure HTTPS with the generated certificates. For Kubernetes, use cert-manager with Let's Encrypt for automatic certificate rotation. Validate the full certificate chain including intermediates.
 </details>
 
 
@@ -765,6 +765,8 @@ Answer these questions:
 4. **If you had to choose between mTLS and JWT-based service authentication, what are the trade-offs of each?**
 
 ---
+
+> **What did you notice?** TLS involves a surprising amount of ceremony (certificates, CAs, key management) for something we take for granted every time we see the lock icon in a browser. How does mTLS between services change your security model?
 
 ## Checkpoint
 

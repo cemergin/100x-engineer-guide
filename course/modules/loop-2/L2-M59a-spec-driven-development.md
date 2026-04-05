@@ -1393,6 +1393,8 @@ Answer these questions:
 
 ---
 
+> **What did you notice?** Spec-driven development inverts the usual workflow: design the contract first, then implement. How would adopting this approach have changed any of the APIs you built earlier in Loop 2?
+
 ## Checkpoint
 
 Before moving on, verify:

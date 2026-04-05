@@ -184,6 +184,21 @@ Open http://localhost:9090 in your browser. You should see the Prometheus UI. Op
 
 Prometheus collects metrics by pulling (scraping) a `/metrics` endpoint from your application. You need to expose that endpoint.
 
+<details>
+<summary>💡 Hint 1: Metric Types</summary>
+Use a Counter for things that only go up (total requests, errors, tickets sold). Use a Histogram for distributions you want percentiles from (request duration, payment latency). Use a Gauge for values that go up and down (active connections, available tickets). Avoid Summary -- histograms are aggregatable across instances; summaries are not.
+</details>
+
+<details>
+<summary>💡 Hint 2: Label Cardinality</summary>
+Labels let you slice metrics (by method, path, status_code), but each unique label combination creates a separate time series. Normalize paths to avoid high cardinality: <code>/api/events/123</code> becomes <code>/api/events/:id</code>. Never use user IDs, request IDs, or UUIDs as label values.
+</details>
+
+<details>
+<summary>💡 Hint 3: Verifying Scraping</summary>
+After instrumenting, verify with <code>curl -s http://localhost:3000/metrics | head -30</code>. You should see lines like <code># TYPE http_requests_total counter</code> followed by metric values. In Prometheus UI, check Status -> Targets to confirm all services show state "UP."
+</details>
+
 Install the Prometheus client library:
 
 ```bash
@@ -499,6 +514,21 @@ increase(ticketpulse_tickets_sold_total[1h])
 
 ## 4. Build: Grafana Dashboard
 
+<details>
+<summary>💡 Hint 1: Essential PromQL Queries</summary>
+For request rate: <code>sum by (service) (rate(http_requests_total[5m]))</code>. For error rate percentage: <code>sum(rate(http_requests_total{status_code=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) * 100</code>. For p99 latency: <code>histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))</code>.
+</details>
+
+<details>
+<summary>💡 Hint 2: Dashboard JSON Export</summary>
+After building your dashboard manually, click the share icon and export as JSON. Save this JSON to <code>monitoring/grafana/provisioning/dashboards/</code> so the dashboard is version-controlled and auto-provisioned on startup. Add a dashboard provider YAML file pointing to that directory.
+</details>
+
+<details>
+<summary>💡 Hint 3: Threshold Lines</summary>
+In each Grafana panel, add threshold lines at your SLO boundaries. For error rate, add a red line at 0.1% (your 99.9% availability SLO). For latency, add a line at 1s (your p99 target). These visual references make it instant to see whether you are within SLO.
+</details>
+
 Open Grafana at http://localhost:3100 (admin/ticketpulse).
 
 ### Create the dashboard manually
@@ -604,6 +634,21 @@ Watch the error rate panel spike. Watch the latency percentiles jump. This is wh
 ## 6. Build: Alert Rules
 
 Alerts turn metrics into notifications. The goal: alert on symptoms (user impact), not causes (CPU usage).
+
+<details>
+<summary>💡 Hint 1: Alert Rule Structure</summary>
+Each Prometheus alert rule needs an <code>expr</code> (PromQL expression that returns true when the alert should fire), a <code>for</code> duration (how long the condition must be true before firing -- prevents flapping), <code>labels</code> (severity for routing), and <code>annotations</code> (human-readable summary and description with a runbook URL).
+</details>
+
+<details>
+<summary>💡 Hint 2: Reload After Changes</summary>
+After editing <code>monitoring/alert-rules.yml</code>, reload Prometheus with <code>curl -X POST http://localhost:9090/-/reload</code> (requires the <code>--web.enable-lifecycle</code> flag). Verify rules loaded with <code>curl -s http://localhost:9090/api/v1/rules | jq '.data.groups[].rules[].name'</code>.
+</details>
+
+<details>
+<summary>💡 Hint 3: Testing Alert Firing</summary>
+To trigger an alert, stop the database (<code>docker compose stop postgres</code>) and generate traffic. Watch the alert at <code>http://localhost:9090/alerts</code> transition from inactive to pending (threshold crossed) to firing (the <code>for</code> duration elapsed). Restart postgres to resolve.
+</details>
 
 ```yaml
 # monitoring/alert-rules.yml

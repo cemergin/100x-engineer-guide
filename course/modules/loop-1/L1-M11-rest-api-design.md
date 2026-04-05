@@ -52,6 +52,21 @@ TicketPulse needs to support these user stories:
 
 ### Reflect: Design the Endpoints First
 
+<details>
+<summary>💡 Hint 1: HTTP Methods Map to CRUD</summary>
+Each HTTP method has a standard meaning: GET = read, POST = create, PATCH = partial update, DELETE = remove. Map each user story to the appropriate method. Browsing events is a GET; creating an event is a POST.
+</details>
+
+<details>
+<summary>💡 Hint 2: Resources Are Nouns, Nested by Ownership</summary>
+URLs should be plural nouns: `/api/events`, not `/api/getEvents`. Tickets belong to events, so they nest as a sub-resource: `/api/events/:id/tickets`. Think about which resources "own" which.
+</details>
+
+<details>
+<summary>💡 Hint 3: Status Codes Tell the Story</summary>
+201 for successful creation (POST), 204 for successful deletion with no body (DELETE), 404 when the resource ID does not exist, 409 when a business rule blocks the action (e.g., sold out). Match each endpoint to the right success and error codes.
+</details>
+
 > **Before reading on**, take 5 minutes and design the endpoint signatures yourself.
 >
 > For each user story above, write down:
@@ -101,6 +116,21 @@ Tickets are a sub-resource of events because a ticket cannot exist without an ev
 ---
 
 ## 2. Build: Set Up the Router
+
+<details>
+<summary>💡 Hint 1: Express Router Basics</summary>
+Use `Router()` from Express. Each route handler takes `(req: Request, res: Response, next: NextFunction)`. The `next(err)` call passes errors to your error-handling middleware instead of crashing the server. Mount the router with `app.use('/api/events', eventsRouter)`.
+</details>
+
+<details>
+<summary>💡 Hint 2: Parameterized Routes and Sub-resources</summary>
+Express captures URL parameters with `:id` syntax -- access it via `req.params.id`. For the tickets sub-resource router, use `Router({ mergeParams: true })` so the nested router can read `:id` from the parent mount path `/api/events/:id/tickets`.
+</details>
+
+<details>
+<summary>💡 Hint 3: Dynamic PATCH with Parameterized Queries</summary>
+For PATCH, build the SQL SET clause dynamically -- only include fields the client actually sent. Use a `paramIndex` counter to generate `$1`, `$2`, etc. for each field, push values into an array, and join with commas: `SET title = $1, venue = $2 WHERE id = $3`.
+</details>
 
 Create the route file for events. We will use Express with TypeScript:
 
@@ -646,6 +676,21 @@ The database uses `snake_case` (`total_tickets`, `available_tickets`). The `form
 ---
 
 ## 6. Query Parameters: Filtering, Sorting, Pagination
+
+<details>
+<summary>💡 Hint 1: Parse and Clamp Pagination Inputs</summary>
+Read `page` and `limit` from `req.query`, parse them with `parseInt()`, and clamp them to sane ranges: `page` minimum 1, `limit` between 1 and 100. Calculate the SQL OFFSET as `(page - 1) * limit`. Always run a COUNT query alongside the data query so you can return `totalPages`.
+</details>
+
+<details>
+<summary>💡 Hint 2: Build WHERE Clauses Dynamically</summary>
+Start with `conditions = ['cancelled = false']` and `values = []`. For each filter (city, venue, dateFrom, dateTo), push a parameterized condition like `city ILIKE $1` and push the value. Use ILIKE for case-insensitive partial matching: `%${req.query.city}%`.
+</details>
+
+<details>
+<summary>💡 Hint 3: Sort Safely With an Allowlist</summary>
+Never interpolate user input directly into ORDER BY -- that is a SQL injection vector. Define an allowlist of sortable columns (`date`, `title`, `price_in_cents`). Map camelCase query params to snake_case DB columns. Support a `-` prefix for descending: `?sort=-date` becomes `ORDER BY date DESC`.
+</details>
 
 Our `GET /api/events` endpoint currently returns everything. That does not scale. Let us add filtering, sorting, and pagination.
 

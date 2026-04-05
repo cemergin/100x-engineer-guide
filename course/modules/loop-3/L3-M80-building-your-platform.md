@@ -24,6 +24,10 @@ At 5 engineers, this was fine. Everyone knew how everything worked. At 20, it do
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before reading, estimate: how long does it take a new engineer on your team to go from "laptop opened" to "first PR merged"? What percentage of that time is spent on infrastructure setup vs actual coding?
+
 ## Part 1: Measuring Developer Experience
 
 ### 📊 Observe: The Developer Experience Audit
@@ -148,12 +152,12 @@ For a team of 500+: full internal platform with self-service.
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+The template should give you a deployable, monitored service in 30 seconds. Include: structured logging, OpenTelemetry tracing, Prometheus metrics, health checks, Dockerfile, CI pipeline, K8s manifests, and a Grafana dashboard -- all pre-configured.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Start from the order-service as a reference. Strip the business logic, keep the infrastructure: middleware (logging, tracing, error handling, auth), health endpoint, graceful shutdown, Dockerfile with multi-stage build, and the CI workflow. Parameterize the service name with `{{SERVICE_NAME}}` placeholders.
 </details>
 
 
@@ -573,6 +577,10 @@ The answers drive the roadmap. Not the tools you think are cool. Not what other 
 | **Self-service** | The ability for developers to provision resources, create services, or perform operations without filing tickets. |
 | **Service catalog** | A registry of available internal services and components, including documentation and ownership information. |
 | **DevEx** | Developer Experience; the overall satisfaction and productivity developers feel when using internal tools and platforms. |
+
+### 🤔 Reflection Prompt
+
+After designing the platform, where is the line between "helpful standardization" and "annoying rigidity" for your team size? What is the smallest platform investment that would give the biggest developer experience improvement?
 
 ## Further Reading
 

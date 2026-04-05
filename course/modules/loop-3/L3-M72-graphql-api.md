@@ -38,6 +38,16 @@ Before reading the reference schema, sketch your own GraphQL types for TicketPul
 
 ### Design: TicketPulse GraphQL Schema
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered naming mutations after domain actions (`purchaseTicket`) rather than CRUD operations (`createOrder`)? The schema should speak the business language. Also decide your non-null strategy upfront -- making a nullable field non-null later is safe, the reverse is a breaking change.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Core types: Event, Venue, TicketType, Order, Ticket, User. Use Relay-style connections (`EventConnection` with `edges`, `pageInfo`, `totalCount`) for any list that needs pagination. Include an `idempotencyKey` field in `PurchaseTicketInput` -- GraphQL mutations need idempotency just like REST endpoints.
+</details>
+
 Stop and design the schema yourself first. What types does TicketPulse need? What queries? What mutations?
 
 Then compare with this reference:
@@ -326,6 +336,16 @@ SELECT * FROM venues WHERE id = 'v1';  -- duplicate! Same venue as event 1
 That is 21 queries. DataLoader batches and deduplicates them into 2.
 
 ### Build: DataLoaders for TicketPulse
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered that without DataLoader, a `events(first: 20)` query with venue resolution fires 21 SQL queries (1 + N)? DataLoader batches those 20 venue lookups into a single `WHERE id IN (...)` query. This is not an optimization -- it is a requirement for a usable GraphQL API.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+The critical contract: DataLoader's batch function must return results in the same order as the input IDs. Use `inputIds.map(id => results.find(r => r.id === id))`. Create fresh loaders per request (`createLoaders()` in context) -- sharing loaders across requests leaks data between users.
+</details>
 
 ```javascript
 function createLoaders() {

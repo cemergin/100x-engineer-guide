@@ -23,6 +23,10 @@ This module takes TicketPulse's K8s deployment from "works" to "production-grade
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before reading about network policies, think: in your current Kubernetes cluster, which pod-to-pod communication paths are actually necessary? If you enforced "default deny," how many explicit allow rules would you need?
+
 ## 1. NetworkPolicies: Default Deny, Explicit Allow
 
 ### The Problem
@@ -48,6 +52,11 @@ Internet → Ingress → API Gateway → Backend Services → Databases
 No shortcuts. No direct database access from the gateway. No cross-service communication that bypasses the intended architecture.
 
 ### Build: Default Deny All
+
+<details>
+<summary>💡 Hint 1: Do not forget the DNS egress rule</summary>
+A default-deny egress policy will break DNS resolution for every pod in the namespace. Apply the CoreDNS egress allow (port 53 UDP/TCP to kube-system) immediately after the deny-all, or your pods will not resolve any service names.
+</details>
 
 Start by denying all ingress and egress traffic. Then explicitly allow what is needed.
 
@@ -346,6 +355,11 @@ spec:
 `minAvailable: 2` means Kubernetes will refuse to evict a pod if doing so would leave fewer than 2 replicas running. This requires you to have at least 3 replicas so that draining one node is always possible.
 
 ### Try It: Drain a Node
+
+<details>
+<summary>💡 Hint 1: Check your PDB math before draining</summary>
+If your PDB says `minAvailable: 2` and you only have 2 replicas, the drain will block forever -- Kubernetes cannot evict a pod without violating the budget. You need at least N+1 replicas where N is your minAvailable value. Verify with `kubectl get pdb -n ticketpulse`.
+</details>
 
 ```bash
 # See which nodes your pods are on
@@ -665,6 +679,10 @@ Your HPA scales the order-processor based on Kafka consumer lag. But if the Kafk
 ---
 
 **Next module**: L3-M84 — Nix & Reproducible Builds, where we eliminate "works on my machine" by defining TicketPulse's exact development environment in a single file.
+
+### 🤔 Reflection Prompt
+
+After hardening the cluster, which security control gave you the most "I can not believe this was not already in place" reaction? What is the single cheapest security improvement any Kubernetes deployment should have from day one?
 
 ## Key Terms
 

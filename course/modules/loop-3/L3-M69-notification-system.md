@@ -107,6 +107,16 @@ The key insight: the **Notification Gateway** is a single entry point that handl
 
 Not all notifications are equal. A 2FA code must be delivered in seconds. A marketing email can wait an hour.
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered encoding priority and timestamp into a single sorted set score? `priority * 1e13 + timestamp` ensures all CRITICAL notifications sort before all HIGH notifications, with FIFO ordering within the same priority level.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Use `ZPOPMIN` to dequeue -- it returns the lowest-score member (highest priority, earliest timestamp). At production scale, migrate to separate Kafka topics per priority (`notifications.critical` with 50 consumers, `notifications.low` with 5) so critical notifications get dedicated throughput.
+</details>
+
 ### Using Redis Sorted Sets
 
 ```javascript

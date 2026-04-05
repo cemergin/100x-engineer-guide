@@ -23,6 +23,10 @@ You have built the monitoring stack in L2-M45 and L2-M46. You wired up Prometheu
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before starting, open your monitoring tool right now. Can you tell within 10 seconds whether the system is healthy? If not, that is the problem this module solves.
+
 ## The Scenario
 
 **You are now two days into your TicketPulse rotation.** You verified access and mapped the architecture in L3-M91. Today, your tech lead says:
@@ -112,13 +116,13 @@ Daily traffic shape:
 ### 🛠️ Build: Your One-Page Incident Reference
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+<summary>💡 Hint 1: Organize by action, not by tool</summary>
+Group your hotlinks by what you need to DO during an incident -- "Check golden signals," "Find recent deploys," "Read error logs," "Roll back" -- not by tool name. At 2 AM you think in actions, not in "Grafana vs Prometheus vs kubectl."
 </details>
 
 <details>
-<summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+<summary>💡 Hint 2: Every log query should be copy-paste ready</summary>
+Include the full Loki/kubectl log query with real label selectors already filled in. `{app="order-service"} |= "error" | json` is useful at 2 AM. `{app="YOUR_SERVICE"} |= "YOUR_FILTER"` is not.
 </details>
 
 
@@ -409,6 +413,10 @@ I found and filled an alerting gap  │
 > During this module, where did observable truth differ from what you expected based on documentation or code? What assumptions did the metrics correct? If you were building a brand-new system tomorrow, at what point in development would you start capturing baselines — and would that be earlier than you would have said before this exercise?
 
 ---
+
+### 🤔 Reflection Prompt
+
+After building your hotlinks page and studying baselines, how long would it take you to answer "is TicketPulse healthy right now?" Compare that with how long it took before this module. That time difference is your incident response speed advantage.
 
 ## Further Reading
 

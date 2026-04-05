@@ -193,7 +193,22 @@ Four responsibilities. Four different actors who might request changes to this c
 
 > **Reflect:** If the marketing team asks you to change the email template, you are editing the same file that handles payments. If you introduce a bug, you break the purchase flow. Is that acceptable?
 
-### Refactor: Extract Each Responsibility
+### 🛠️ Refactor: Extract Each Responsibility
+
+<details>
+<summary>💡 Hint 1: One Class Per Actor</summary>
+Create separate services: `PaymentService` (handles Stripe), `OrderEmailService` (handles email composition and sending), and `AnalyticsService` (handles event tracking). Each class has a single reason to change. The OrderService becomes an orchestrator that delegates to these services.
+</details>
+
+<details>
+<summary>💡 Hint 2: The Orchestrator Pattern</summary>
+The refactored `OrderService.createOrder()` should read like a recipe: validate input, calculate price, create order record, process payment, send email, track analytics. Each step is a one-liner that calls the appropriate service. The method is 15 lines, not 150.
+</details>
+
+<details>
+<summary>💡 Hint 3: Inject Dependencies Through the Constructor</summary>
+Pass `PaymentService`, `OrderEmailService`, and `AnalyticsService` into the `OrderService` constructor. In production, inject real implementations. In tests, inject mocks. This is why SRP and DIP work together -- separating responsibilities makes dependency injection natural.
+</details>
 
 Create focused services:
 
@@ -374,7 +389,22 @@ git add -A && git commit -m "refactor: extract payment, email, analytics from Or
 
 Look at `calculatePrice()`. To add a new ticket type -- say, "group_discount" or "student" -- you must modify this function. Every modification risks breaking existing pricing for general, VIP, and early bird tickets.
 
-### Refactor: Strategy Pattern
+### 🛠️ Refactor: Strategy Pattern
+
+<details>
+<summary>💡 Hint 1: Define a PricingStrategy Interface</summary>
+Create `interface PricingStrategy { calculate(basePriceCents: number, quantity: number): number; }`. Each ticket type becomes a class that implements this interface: `FlatPricing`, `VipPricing`, `EarlyBirdPricing`. The if/else chain in `calculatePrice()` disappears.
+</details>
+
+<details>
+<summary>💡 Hint 2: A Registry Maps Ticket Types to Strategies</summary>
+Create a `Map<string, PricingStrategy>` that maps `'general' -> new FlatPricing()`, `'vip' -> new VipPricing(2.5)`, etc. Look up the strategy by ticket type string. Adding a new type means adding one entry to the map and one new class -- zero changes to existing code.
+</details>
+
+<details>
+<summary>💡 Hint 3: Each Strategy Encapsulates Its Own Math</summary>
+`VipPricing.calculate()` does `Math.round(basePriceCents * 2.5 * quantity)`. `EarlyBirdPricing` takes a `cutoffDate` in its constructor and checks `new Date() < cutoffDate` to decide the discount. The strategy owns all its logic -- the caller just calls `.calculate()`.
+</details>
 
 ```typescript
 // src/services/pricing-strategy.ts
@@ -829,7 +859,22 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 `OrderService` directly creates and uses a Postgres connection pool. It is welded to PostgreSQL. Testing requires a real database. You cannot swap in an in-memory store for fast tests.
 
-### Refactor: Inject Abstractions
+### 🛠️ Refactor: Inject Abstractions
+
+<details>
+<summary>💡 Hint 1: Define Repository Interfaces First</summary>
+Create `interface OrderRepository { save(order): Promise<Order>; findById(id): Promise<Order | null>; }` and `interface EventRepository { findById(id): Promise<Event | null>; }`. These are the abstractions that high-level code (OrderService) depends on -- not the `pg` Pool directly.
+</details>
+
+<details>
+<summary>💡 Hint 2: Constructor Injection for Everything</summary>
+The OrderService constructor takes `OrderRepository`, `EventRepository`, `PaymentService`, `EmailService`. In production, pass the Postgres implementations. In tests, pass in-memory fakes: `new InMemoryOrderRepository()` that uses a `Map<string, Order>` internally. Zero database needed for unit tests.
+</details>
+
+<details>
+<summary>💡 Hint 3: The Composition Root Wires It All Together</summary>
+Create a `src/composition-root.ts` that instantiates the real Postgres pool, creates `PostgresOrderRepository(pool)`, `StripePaymentService(stripe)`, etc., and injects them into `new OrderService(...)`. This is the ONE place that knows about concrete implementations. Everything else depends only on interfaces.
+</details>
 
 We already created the interfaces (`OrderReader`, `OrderWriter`, etc.) in the ISP refactoring. Now we wire them up through constructor injection:
 

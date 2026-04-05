@@ -463,17 +463,17 @@ Not every service needs an HTTP API. The notification service does not serve req
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+The notification service has no HTTP API -- it only consumes events. Think about how to structure a message consumer that reacts to different event types.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Use amqplib to connect to RabbitMQ, set prefetch(1) for one-at-a-time processing, and map event types to handler functions with a Record lookup.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Parse message JSON, look up a handler by event.type, call it, then ack the message. On error, nack with requeue only on first failure. Handle SIGTERM for graceful shutdown.
 </details>
 
 

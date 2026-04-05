@@ -370,18 +370,18 @@ res.redirect('/dashboard');
 ### 🛠️ Build: Implement the Full OAuth2 Flow
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+<summary>💡 Hint 1</summary>
+The PKCE flow has two parts: before the redirect, generate a `code_verifier` (random 32 bytes, base64url-encoded) and compute `code_challenge = SHA256(code_verifier)` (also base64url-encoded). Store the `code_verifier` in the server-side session -- it must survive the redirect round-trip to Google and back.
 </details>
 
 <details>
-<summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+<summary>💡 Hint 2</summary>
+In the callback handler, exchange the authorization code by POSTing to `https://oauth2.googleapis.com/token` with `grant_type=authorization_code`, the `code` from the query string, and the `code_verifier` from the session. Google verifies that `SHA256(code_verifier) === code_challenge` from step 1 -- this is how PKCE prevents authorization code interception by a malicious app on the same device.
 </details>
 
 <details>
-<summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+<summary>💡 Hint 3</summary>
+Validate the `id_token` JWT by fetching Google's public keys from `https://www.googleapis.com/oauth2/v3/certs` (JWKS endpoint). Verify the `iss` is `accounts.google.com`, the `aud` matches your `GOOGLE_CLIENT_ID`, and `exp` is in the future. Store your own session JWT in an `httpOnly; Secure; SameSite=Lax` cookie -- never in `localStorage` where XSS can steal it.
 </details>
 
 
@@ -511,18 +511,18 @@ if (process.env.NODE_ENV === 'development') {
 
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-OAuth2 authorization code flow has four steps: redirect to provider, user authorizes, provider redirects back with a code, your server exchanges the code for tokens.
+<summary>💡 Hint 1</summary>
+Create `GET /auth/google` that generates a random `state` parameter (16 bytes hex), stores it in `req.session.oauthState`, and redirects to `https://accounts.google.com/o/oauth2/v2/auth` with query params: `client_id`, `redirect_uri`, `response_type=code`, `scope=openid email profile`, `state`, `code_challenge`, `code_challenge_method=S256`.
 </details>
 
 <details>
-<summary>💡 Hint 2: Approach</summary>
-Create two endpoints: `GET /auth/google` (redirects to Google with client_id and redirect_uri) and `GET /auth/google/callback` (receives the authorization code, exchanges it for tokens, creates/finds the user, and issues your own JWT).
+<summary>💡 Hint 2</summary>
+In `GET /auth/google/callback`, first verify `req.query.state === req.session.oauthState` to prevent CSRF. Then POST to `https://oauth2.googleapis.com/token` with `Content-Type: application/x-www-form-urlencoded` body containing `grant_type=authorization_code`, the `code` from the query, your `client_id`, `client_secret`, `redirect_uri`, and the `code_verifier` from the session.
 </details>
 
 <details>
-<summary>💡 Hint 3: Almost There</summary>
-Use the `state` parameter to prevent CSRF attacks — generate a random state, store it in the session, and verify it matches when the callback comes back. Exchange the code using a server-side POST to Google's token endpoint (never expose client_secret to the browser).
+<summary>💡 Hint 3</summary>
+After receiving tokens, decode the `id_token` JWT to get `sub` (Google user ID -- stable and unique), `email`, `name`, and `picture`. Upsert the user: `INSERT INTO users (google_id, email, name) VALUES ($1, $2, $3) ON CONFLICT (google_id) DO UPDATE SET email = $2, name = $3 RETURNING id`. Issue your own TicketPulse JWT with the user's internal ID and set it in an httpOnly cookie.
 </details>
 
 ### 🔍 Try It: Walk Through Each Redirect
@@ -728,17 +728,17 @@ router.post('/auth/refresh', async (req, res) => {
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Trace the OAuth2 flow step by step: the browser redirect to Google, the authorization code callback, the token exchange, and the id_token validation. Which step prevents token interception?
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Generate a PKCE code_verifier and code_challenge before the redirect. Send the code_challenge to Google; send the code_verifier when exchanging the authorization code for tokens.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Store tokens in httpOnly cookies (not localStorage) to prevent XSS attacks. Use the client_credentials grant for service-to-service auth where no user is involved.
 </details>
 
 
@@ -807,6 +807,8 @@ Answer these questions in your engineering journal:
 4. **If TicketPulse supported "Login with GitHub" too, what would change in the code?** What would stay the same?
 
 ---
+
+> **What did you notice?** OAuth2 adds significant complexity but removes the burden of password management from your application. For TicketPulse, was the trade-off worth it? When would you stick with simple JWT auth?
 
 ## Checkpoint
 

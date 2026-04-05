@@ -24,6 +24,10 @@ This module covers the backend patterns that make mobile apps work well: push no
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before reading, think about the last time you used a mobile app on a subway or flight. What worked offline? What did not? What backend changes would have been needed to make the broken parts work?
+
 ## 1. Push Notifications: FCM/APNs Architecture
 
 ### The Flow
@@ -435,6 +439,11 @@ Good: "3 tickets sold for Summer Festival" → single push (batched over 30s win
 These exercises build on the architecture in Section 1. They cover the scenarios that trip up most engineers implementing push for the first time.
 
 ### Exercise 1: Implement Notification Batching
+
+<details>
+<summary>💡 Hint 1: The BFF layer is where batching belongs, not the individual services</summary>
+The mobile BFF (Backend For Frontend) aggregates notifications across services before pushing to the device. If each service pushes independently, you cannot enforce the 30-second batching window. Centralize the batching logic in the notification service that the BFF calls.
+</details>
 
 The naive implementation sends one push per event. An active user might get 30 notifications in a minute when a popular event sells out and their friends share it. Users turn off notifications entirely.
 
@@ -861,6 +870,11 @@ You have:
 | **Notification batching** | Aggregating multiple related notifications into a single push to reduce notification volume and prevent fatigue. |
 | **Delivery receipt** | A confirmation sent from the app back to the server when a push notification is received or opened. |
 | **Conflict resolution** | The strategy for handling simultaneous mutations to the same data from different clients or actors. |
+
+### 🤔 Reflection Prompt
+
+Which mobile backend pattern required the most change to your existing API design -- offline-first, push notifications, or API optimization? Where does "mobile-friendly" conflict with "web-optimized"?
+
 ---
 
 ## What's Next

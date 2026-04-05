@@ -181,7 +181,7 @@ Use MATCH with a pattern like (a)-[:REL]->(b) and add WHERE clauses to filter. U
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+The Cypher query follows the MATCH/WHERE/RETURN pattern. Pay attention to the node labels, relationship types, and property filters specific to this use case.
 </details>
 
 
@@ -313,7 +313,7 @@ Use MATCH with a pattern like (a)-[:REL]->(b) and add WHERE clauses to filter. U
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+The Cypher query follows the MATCH/WHERE/RETURN pattern. Pay attention to the node labels, relationship types, and property filters specific to this use case.
 </details>
 
 
@@ -344,7 +344,7 @@ Use MATCH with a pattern like (a)-[:REL]->(b) and add WHERE clauses to filter. U
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+The Cypher query follows the MATCH/WHERE/RETURN pattern. Pay attention to the node labels, relationship types, and property filters specific to this use case.
 </details>
 
 
@@ -519,7 +519,7 @@ Use MATCH with a pattern like (a)-[:REL]->(b) and add WHERE clauses to filter. U
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+The Cypher query follows the MATCH/WHERE/RETURN pattern. Pay attention to the node labels, relationship types, and property filters specific to this use case.
 </details>
 
 
@@ -599,7 +599,7 @@ Use MATCH with a pattern like (a)-[:REL]->(b) and add WHERE clauses to filter. U
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+The Cypher query follows the MATCH/WHERE/RETURN pattern. Pay attention to the node labels, relationship types, and property filters specific to this use case.
 </details>
 
 

@@ -89,6 +89,21 @@ Open http://localhost:16686 in your browser. You should see the Jaeger UI with a
 
 OpenTelemetry (OTel) is the vendor-neutral standard for traces, metrics, and logs. It works with Jaeger, Zipkin, Datadog, Honeycomb, Grafana Tempo, and any other backend that speaks OTLP.
 
+<details>
+<summary>💡 Hint 1: Load Order Matters</summary>
+The tracing setup file (<code>src/tracing.ts</code>) MUST be imported before any other code -- before Express, before database connections, before anything. Auto-instrumentation works by monkey-patching library modules at import time. If Express loads first, the HTTP instrumentation misses it.
+</details>
+
+<details>
+<summary>💡 Hint 2: OTEL_SERVICE_NAME</summary>
+Set <code>OTEL_SERVICE_NAME</code> as an environment variable for each service (api-gateway, event-service, payment-service). This is how Jaeger groups spans by service in the UI. Without it, all services appear as one blob and the trace waterfall is unreadable.
+</details>
+
+<details>
+<summary>💡 Hint 3: Span Attributes for Debugging</summary>
+Add business-relevant attributes to manual spans: <code>span.setAttribute('event.id', eventId)</code>, <code>span.setAttribute('ticket.price_cents', 7500)</code>, <code>span.setAttribute('payment.method', 'stripe')</code>. These let you search in Jaeger: "show me all traces where event.id = 42 and duration > 1s." Never add PII (emails, credit cards) as span attributes.
+</details>
+
 Install the OpenTelemetry packages:
 
 ```bash
@@ -454,6 +469,21 @@ Read this waterfall:
 ---
 
 ## 7. Debug: Add an Artificial Delay
+
+<details>
+<summary>💡 Hint 1: Finding the Gap</summary>
+In the Jaeger waterfall, look for gaps between spans -- time not accounted for by any child span. A 500ms gap between the span start and the first child span means something is blocking before the first instrumented operation. Common causes: connection pool wait, DNS resolution, or a missing <code>await</code>.
+</details>
+
+<details>
+<summary>💡 Hint 2: Error Spans</summary>
+Failed spans show <code>SpanStatusCode.ERROR</code> in Jaeger (displayed in red). Click the error span to see the recorded exception message and stack trace. Use <code>span.recordException(error)</code> in your catch blocks to capture this automatically.
+</details>
+
+<details>
+<summary>💡 Hint 3: Comparing Traces</summary>
+In Jaeger, compare a fast trace and a slow trace side by side. If the slow trace shows 500ms more in the payment-service span but the Stripe call took the same time, the extra latency is inside your service -- check for connection pool exhaustion, slow serialization, or missing indexes.
+</details>
 
 Let us make the bottleneck obvious:
 

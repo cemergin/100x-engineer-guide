@@ -109,6 +109,21 @@ For TicketPulse, the split should be roughly:
 
 ## 2. Build: Unit Test the Pricing Function
 
+<details>
+<summary>💡 Hint 1: Extract Pure Logic, Then Test It</summary>
+Move pricing logic out of the route handler into a standalone function in `src/services/pricing.ts`. It takes `basePriceInCents`, `tier`, `quantity`, `eventDate`, and `purchaseDate` -- all plain values, no database. This is what makes it unit-testable: zero dependencies on external systems.
+</details>
+
+<details>
+<summary>💡 Hint 2: Jest Matchers for Numbers and Errors</summary>
+Use `expect(result.totalInCents).toBe(10350)` for exact number matches. For error cases, use `expect(() => calculateTicketPrice({...input, quantity: 0})).toThrow('Quantity must be a positive integer')`. The `toThrow` matcher accepts a string or regex to match against the error message.
+</details>
+
+<details>
+<summary>💡 Hint 3: Test Boundary Conditions Explicitly</summary>
+Test the exact boundary: what happens at exactly 30 days before the event (early bird cutoff)? At 29 days? Test zero price, maximum quantity (10), and one over the maximum (11). Test that all results are integers with `expect(Number.isInteger(result.totalInCents)).toBe(true)` to catch rounding bugs.
+</details>
+
 First, let us extract the ticket pricing logic into a pure function. Pure functions are the easiest things to test -- no side effects, no database, no state.
 
 ```typescript
@@ -415,6 +430,21 @@ Time:        1.2s
 ---
 
 ## 3. Build: Integration Test the Ticket Purchase Flow
+
+<details>
+<summary>💡 Hint 1: Supertest Hits Your Express App Without Starting a Server</summary>
+Import your Express `app` and pass it to `request(app)`. Supertest binds to an ephemeral port automatically. Chain `.post('/api/events').send({...}).expect(201)` to assert both the response status and body. Use `res.body.data` to access the returned resource.
+</details>
+
+<details>
+<summary>💡 Hint 2: Clean Database State in beforeEach</summary>
+Run `DELETE FROM tickets; DELETE FROM events;` in `beforeEach` to start each test with a clean slate. Reset sequences with `ALTER SEQUENCE events_id_seq RESTART WITH 1` so IDs are predictable. Close the pool in `afterAll` with `await pool.end()` to avoid connection leaks.
+</details>
+
+<details>
+<summary>💡 Hint 3: Test the Full Purchase Flow End-to-End</summary>
+Create an event with only 2 tickets. Buy both, then try a third -- expect a 409 with `error.code === 'SOLD_OUT'`. Also verify `availableTickets` decremented by checking `GET /api/events/:id` after each purchase. Use `toMatchObject()` for partial matching when you do not care about every field.
+</details>
 
 Unit tests verify individual functions. Integration tests verify that the pieces work together -- your route handler, your database queries, your transaction logic.
 
@@ -746,6 +776,21 @@ Common reasons tests fail in CI but pass locally:
 ---
 
 ## 6. TDD Mini-Exercise: Discount Codes
+
+<details>
+<summary>💡 Hint 1: Red -- Write Tests for an Interface That Does Not Exist Yet</summary>
+Define what `applyDiscount(priceInCents, discountCode)` should do BEFORE writing the function. Test: 20% off 10000 = 8000. Test: expired code throws "Discount code has expired". Test: code at max uses throws. The tests will fail with "Cannot find module" -- that is the Red phase.
+</details>
+
+<details>
+<summary>💡 Hint 2: Green -- Write the Minimum Code to Pass</summary>
+Create `src/services/discounts.ts` with the `DiscountCode` interface and `applyDiscount` function. Validate `percentOff` is 0-100, check `expiresAt` against `new Date()`, check `currentUses >= maxUses`. Calculate the discount as `Math.round(priceInCents * (percentOff / 100))` and subtract it.
+</details>
+
+<details>
+<summary>💡 Hint 3: Refactor -- Only When Green</summary>
+Once all 7 tests pass, look for improvements. Is the validation order logical? Could you extract a `validateDiscountCode` helper? The key TDD discipline: never refactor while tests are red. The green tests are your safety net -- if refactoring breaks something, the tests catch it immediately.
+</details>
 
 Let us practice Test-Driven Development. Write the tests FIRST, then implement the feature.
 

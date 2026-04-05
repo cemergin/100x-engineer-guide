@@ -27,6 +27,10 @@ You see all of this. But the superpower fades. Within a few weeks, you will norm
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before starting, think about your current team: how much critical operational knowledge exists only in people's heads? If your most experienced engineer left tomorrow, what would break first -- not the code, but the team's ability to operate?
+
 ## Phase 1: Meeting Archaeology (~20 min)
 
 ### 🔍 Explore: Mining the Historical Record
@@ -242,13 +246,13 @@ On-Call Eng.  │                                     │
 ### 🛠️ Build: Documenting What Confuses You
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+<summary>💡 Hint 1: Walk the README setup steps literally, in order, on a clean checkout</summary>
+Every step you have to google, every flag you have to guess, every service that fails silently is a P0 or P1 documentation gap. Log it in the fresh-eyes audit immediately -- your confusion is data.
 </details>
 
 <details>
-<summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+<summary>💡 Hint 2: Check if the architecture diagram still matches reality</summary>
+Compare every service box in the architecture diagram against `docker-compose.yml` and the Kubernetes manifests. If a service was decommissioned or renamed, that is a high-severity "Outdated" finding -- future newcomers will waste hours chasing a ghost service.
 </details>
 
 
@@ -391,6 +395,10 @@ I make the team faster, not just myself           │
 > Think about all the tribal knowledge you accumulated during this course — the quirks of TicketPulse, the patterns that worked, the gotchas you discovered, the shortcuts you found. How much of that is documented? How would you pass it on to someone starting the course after you? Write a short "letter to the next student" that captures the three most important things you learned that are NOT in any module — the tribal knowledge of THIS course. That letter is the proof that you understand the concept.
 
 ---
+
+### 🤔 Reflection Prompt
+
+Look back at the Beast Mode series as a whole. What is the single most reusable artifact you produced -- the access matrix, the architecture map, the hotlinks page, or the tribal knowledge document? Which one will you bring to your next job on day one?
 
 ## Further Reading
 

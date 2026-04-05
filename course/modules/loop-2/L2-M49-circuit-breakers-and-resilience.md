@@ -101,6 +101,21 @@ Every request goes to the failing service. Every request waits for a response. E
 
 ## 1. Build the Circuit Breaker (15 minutes)
 
+<details>
+<summary>💡 Hint 1: Config Values</summary>
+Start with these Resilience4j-style defaults: <code>failureThreshold: 5</code> (5 failures to open), <code>failureWindowMs: 10_000</code> (within 10 seconds), <code>openDurationMs: 30_000</code> (stay open 30 seconds before probing), <code>halfOpenMaxProbes: 3</code> (3 successful probes to close). Tune based on your service's p99 latency and traffic volume.
+</details>
+
+<details>
+<summary>💡 Hint 2: State Transitions</summary>
+CLOSED (normal) -> OPEN (after failureThreshold failures in the window) -> HALF_OPEN (after openDurationMs expires) -> back to CLOSED (if halfOpenMaxProbes succeed) or back to OPEN (if any probe fails). Log every transition with <code>[circuit:payment-service] CLOSED -> OPEN</code> for debugging.
+</details>
+
+<details>
+<summary>💡 Hint 3: Layering Order</summary>
+Wrap resilience patterns in this order from outside to inside: Bulkhead (limits concurrency) -> Circuit Breaker (stops calling dead services) -> Retry with exponential backoff and jitter (handles transient failures) -> Timeout (hard limit on any single call). Each layer addresses a different failure mode.
+</details>
+
 A circuit breaker has three states:
 
 ```
@@ -359,6 +374,21 @@ After 30 seconds, the circuit transitions to HALF_OPEN, sends probe requests, an
 ---
 
 ## 3. Build: Fallback Queue (10 minutes)
+
+<details>
+<summary>💡 Hint 1: CircuitOpenError Detection</summary>
+When the circuit is open, your code throws a <code>CircuitOpenError</code>. Catch this specifically with <code>if (error instanceof CircuitOpenError)</code> and route to the fallback queue instead of returning an error to the user. Other errors (network timeouts, 400s) should propagate normally.
+</details>
+
+<details>
+<summary>💡 Hint 2: Queue Processing</summary>
+Process the fallback queue when the circuit transitions back to CLOSED. Use a max retry count (3 attempts) per queued item. Items that fail all retries go to a dead letter queue -- log them, alert ops, and handle them manually. Never silently drop failed payments.
+</details>
+
+<details>
+<summary>💡 Hint 3: User Experience</summary>
+When a payment is queued (not processed immediately), return a "pending" status to the user: "Your order is confirmed -- payment processing may take a few minutes." This is a product decision, not just engineering. Discuss with your team what TicketPulse shows the user and how to handle queued payments that eventually fail.
+</details>
 
 Failing fast is better than failing slow, but failing is still bad. When the payment circuit is open, instead of telling the user "sorry, try again later," queue the purchase for processing when the service recovers.
 

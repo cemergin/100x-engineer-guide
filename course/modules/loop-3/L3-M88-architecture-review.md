@@ -24,6 +24,10 @@ This module is not building anything new. It is the culmination: synthesizing ev
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before starting the review, try to explain TicketPulse's architecture in 3 sentences to a non-technical person. Then try in 3 sentences to a staff engineer. What changes between the two? That gap is what C4 levels address.
+
 ## 1. The C4 Model: Four Levels of Zoom
 
 ### Why C4?
@@ -183,6 +187,11 @@ You do not need Level 4 for the entire system. Only zoom in this far when explai
 For each major decision, document what you chose, what you rejected, and what would make you reconsider.
 
 ### Stop and Write (20 minutes)
+
+<details>
+<summary>💡 Hint 1: The "RECONSIDER IF" section is what separates a good ADR from a mediocre one</summary>
+Every decision has a set of assumptions that could change. Write a concrete fitness function for each ADR -- for example, "reconsider Kafka if sustained event throughput drops below 100/s" gives a future engineer a clear trigger to revisit, not a vague "if things change."
+</details>
 
 Complete an ADR for at least 5 of these decisions. Use this template:
 
@@ -610,6 +619,11 @@ Architecture clarity is a compounding skill. Every review cycle — even a pract
 | **Risk assessment** | The process of identifying potential threats to a system and evaluating their likelihood and impact. |
 | **Scaling plan** | A documented strategy for how the system will handle increased load, including horizontal and vertical scaling options. |
 | **Fitness function** | An automated test that continuously validates whether a specific architectural quality attribute is maintained. |
+
+### 🤔 Reflection Prompt
+
+After presenting the architecture review, what was the hardest question to answer -- and what does that tell you about where your understanding is deepest vs where it is thinnest?
+
 ---
 
 ## What's Next

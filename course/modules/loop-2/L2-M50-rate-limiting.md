@@ -38,6 +38,21 @@ If your database connection pool is 20, requests 21-100 queue up. Response times
 
 ## 1. Build: Token Bucket with Redis (15 minutes)
 
+<details>
+<summary>💡 Hint 1: Token Bucket Algorithm</summary>
+A bucket starts with <code>capacity</code> tokens. Each request consumes one token. Tokens refill at <code>refillRate</code> per second. If the bucket is empty, the request is rejected with 429. The burst capacity equals the bucket size -- a full bucket allows that many requests instantly before refill rate kicks in.
+</details>
+
+<details>
+<summary>💡 Hint 2: Atomic Lua Script</summary>
+The check-and-decrement MUST be atomic. If two pods both read "1 token remaining" simultaneously, both allow the request and the limit is exceeded. Redis Lua scripts execute atomically -- the entire script runs as one operation. Use <code>redis.defineCommand('tokenBucket', { numberOfKeys: 1, lua: SCRIPT })</code> in ioredis.
+</details>
+
+<details>
+<summary>💡 Hint 3: Response Headers</summary>
+Always include rate limit headers in responses, even on success: <code>X-RateLimit-Limit</code> (the cap), <code>X-RateLimit-Remaining</code> (tokens left), <code>X-RateLimit-Reset</code> (when the window resets). On 429 responses, add <code>Retry-After</code> in seconds. Well-behaved API clients use these headers to back off automatically.
+</details>
+
 The token bucket algorithm: imagine a bucket that holds tokens. Tokens are added at a fixed rate. Each request consumes one token. If the bucket is empty, the request is rejected.
 
 Why Redis? Because TicketPulse runs multiple replicas in Kubernetes. Rate limit state must be shared across all pods. An in-memory counter per pod would allow `N * limit` total requests (where N is the number of pods).
@@ -423,6 +438,21 @@ end
 
 Not all endpoints are equal. Browsing events is cheap. Purchasing tickets is expensive (database writes, payment processing, seat locking).
 
+<details>
+<summary>💡 Hint 1: Tier Your Endpoints</summary>
+Assign limits by cost: GET endpoints (browsing, listing) get generous limits (30 req/s). Search endpoints get moderate limits (10 req/s -- heavier on the database). POST /api/orders (purchases) gets strict limits (1-3 req/s per user -- expensive downstream operations). This protects expensive paths while keeping browsing smooth.
+</details>
+
+<details>
+<summary>💡 Hint 2: Layered Limiting</summary>
+Apply both global and per-user limits. The global limit (1000 req/s across all users) protects the system from total overload. The per-user limit (10 req/s per user) prevents any single client from monopolizing capacity. Check global first -- if the system is saturated, reject early without checking per-user state.
+</details>
+
+<details>
+<summary>💡 Hint 3: Choosing an Algorithm</summary>
+Token bucket allows bursts up to capacity (good for most APIs). Leaky bucket enforces a constant output rate (good for protecting downstream services from bursts). Sliding window gives the smoothest enforcement across window boundaries. For the purchase endpoint, a leaky bucket at 1 req/s prevents checkout stampedes.
+</details>
+
 ```typescript
 // src/middleware/endpoint-rate-limits.ts
 
@@ -526,6 +556,8 @@ Alert Rule:
 ```
 
 ---
+
+> **What did you notice?** Token bucket and sliding window algorithms feel simple in isolation, but distributed rate limiting across multiple gateway instances is genuinely hard. What trade-offs did you see between accuracy and performance?
 
 ## Checkpoint
 

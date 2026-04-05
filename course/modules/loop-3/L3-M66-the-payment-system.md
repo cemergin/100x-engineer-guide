@@ -129,12 +129,12 @@ Request 2: POST /api/payments { idempotency_key: "idem_abc123", amount: 5000 }
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Have you considered Stripe's own idempotency key pattern? The client generates the key, and the server uses it for both the local database lookup and the Stripe API call -- two layers of deduplication with one key.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Store the idempotency key with a request hash in PostgreSQL. If the same key arrives with a different request body, reject it (key reuse). Use a Redis lock (`SET NX EX 30`) to prevent concurrent processing of the same key. Return the cached response for replays.
 </details>
 
 
@@ -285,12 +285,12 @@ Every money movement in TicketPulse creates exactly two ledger entries: a debit 
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Have you considered that the ledger must be append-only? No UPDATEs, no DELETEs. To reverse a transaction, insert new reversal entries. This preserves the full audit trail that regulators and fraud detection require.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Every transaction creates balanced debit/credit entries: customer debited $50, merchant credited $45, platform credited $5. The golden query (`SUM(debits) - SUM(credits)`) must always return zero. If it does not, stop everything.
 </details>
 
 
@@ -406,12 +406,12 @@ Reconciliation is the process of comparing TicketPulse's ledger with the payment
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Have you considered that the scariest mismatch category is "in Stripe but not in TicketPulse"? That means a customer was charged but has no ticket. Your reconciliation must flag this as an immediate escalation, not a batch-resolved item.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Export from both systems by time range, compare by `payment_intent_id`, and classify mismatches into three buckets: (A) in TicketPulse only, (B) in Stripe only, (C) amount mismatch. Category B is the fire drill. Auto-resolve Category A if the status is still "pending."
 </details>
 
 
@@ -457,12 +457,12 @@ Daily at 2:00 AM UTC:
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Have you considered what the customer experiences in each mismatch scenario? Category B (charged but no ticket) is the worst UX -- the customer sees money gone and no confirmation. Your SLA for resolving that should be under 1 hour.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+For Category A (in your system, not in Stripe): check if the PaymentIntent exists via the Stripe API. If not, reverse the ledger entry. For Category B: create the ticket immediately and send a delayed confirmation email. Investigate root cause (likely a webhook delivery failure).
 </details>
 
 
@@ -583,12 +583,12 @@ The ledger entries are already written. The Stripe refund call fails (network ti
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Have you considered that you need defense in depth here? No single mechanism (idempotency, webhooks, or reconciliation) catches every failure mode. The question is how the three layers compose.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+The client retries with the same Stripe idempotency key -- Stripe returns the original charge without double-billing. If the client never retries, the `payment_intent.succeeded` webhook fires asynchronously and the webhook handler creates the missing ticket. Daily reconciliation is the final safety net.
 </details>
 
 

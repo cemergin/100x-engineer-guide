@@ -55,6 +55,16 @@ The simplest collaborative filter: for each pair of events, count how many users
 
 ### Build: Co-Occurrence Matrix
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered that collaborative filtering only works when you have enough co-occurrence signal? Set a `HAVING COUNT(*) >= 3` threshold to filter noise. Refresh the materialized view nightly with `CONCURRENTLY` so reads are never blocked.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+The self-join `user_attendance a JOIN user_attendance b ON a.user_id = b.user_id AND a.event_id < b.event_id` gives you every co-attended event pair. Sum `shared_users` across all of a user's attended events to rank recommendations. Higher co-occurrence score = stronger signal.
+</details>
+
 ```sql
 -- User attendance history
 CREATE TABLE user_attendance (
@@ -218,6 +228,16 @@ This is crude but effective. A user who attended 5 jazz events and 1 rock event 
 Genre tags are coarse. "Jazz" includes everything from Miles Davis tributes to smooth jazz brunches. Embeddings capture semantic nuance by representing events as points in a high-dimensional vector space. Events that are similar in meaning are close together, even if they do not share the same genre tag.
 
 ### Build: Generate Event Embeddings
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered what text to embed? Concatenating title, description, genre, venue, and price range into a single string gives the embedding model rich context. The `text-embedding-3-small` model is cheap enough (~$0.00002 per call) to embed every event.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Store embeddings in a `vector(1536)` column with pgvector. Create an IVFFlat index (`lists = sqrt(num_rows)`) for approximate nearest neighbor search. The user's preference vector is the average of their attended events' embeddings -- query with `ORDER BY embedding <=> $1::vector` for cosine distance.
+</details>
 
 ```javascript
 const { OpenAI } = require('openai');

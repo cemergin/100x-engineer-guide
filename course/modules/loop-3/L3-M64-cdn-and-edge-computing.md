@@ -92,12 +92,12 @@ Before reading the caching strategy table, write down your own Cache-Control hea
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Have you considered the difference between `max-age` (browser cache) and `s-maxage` (CDN/shared cache)? You often want the CDN to cache aggressively while the browser does not, especially for API responses.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Hashed static assets get `immutable` (the hash changes when content changes). User-specific endpoints get `private, no-store`. Everything else is a spectrum -- use `s-maxage` with `stale-while-revalidate` for the best latency/freshness trade-off.
 </details>
 
 
@@ -157,12 +157,12 @@ app.use((req, res, next) => {
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Have you considered testing with CloudFront cache behaviors if you are on AWS? Each behavior can have different TTLs, origin settings, and compression policies per path pattern (e.g., `/api/*` vs `/assets/*`).
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Cloudflare free tier is the fastest path to a working CDN. Point your DNS to Cloudflare nameservers, enable "Full (strict)" SSL mode, and verify cache hits via the `cf-cache-status` response header.
 </details>
 
 
@@ -268,12 +268,12 @@ Timeline:
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Have you considered the staleness tolerance of each resource? Ticket availability during a flash sale can tolerate at most ~5 seconds of staleness, while event reviews can tolerate 5 minutes.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+User-specific endpoints (`/api/users/me`) must be `private, no-store` -- if you accidentally cache them on the CDN, one user sees another user's data. For ticket counts, keep `s-maxage` very short (5-10s) with `stale-while-revalidate` as a buffer.
 </details>
 
 
@@ -356,12 +356,12 @@ Cons: Only works for assets where you control the URL. Does not work for API res
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Have you considered combining short TTLs as the baseline with active purge via Pub/Sub for critical updates? TTL handles the common case; active invalidation handles "event cancelled" urgency.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Use versioned URLs for static assets (never invalidate -- the hash changes). For event pages, publish an `EventUpdated` message to a cache invalidation worker that calls the CDN purge API for the affected URLs. CloudFront charges $0.005 per invalidation path after the first 1000/month.
 </details>
 
 
@@ -462,12 +462,12 @@ await consumer.run({
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Have you considered that "Event cancelled" and "doors time changed" have very different urgency profiles? Not every update warrants a purge API call.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+For Scenario C (immutable JS bundle with a vulnerability): you cannot purge `immutable` from browser caches. The answer is always to change the URL -- your build tool generates a new hash when content changes. The old URL stays cached but is no longer referenced by any HTML.
 </details>
 
 
@@ -519,12 +519,12 @@ Edge compute platforms run your code at CDN edge locations. Instead of caching r
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Have you considered the rule: if it needs a database transaction, it stays at the origin; if it is a local computation (JWT verify, hash, KV lookup), it belongs at the edge?
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+JWT validation is a local crypto operation (verify signature with a public key) -- perfect for the edge. Ticket purchases require strong consistency and payment processing -- must stay at origin. Geo-based recommendations can use a pre-computed index synced to edge KV.
 </details>
 
 

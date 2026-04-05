@@ -25,6 +25,10 @@ The difference between a helpful new engineer and a panicking new engineer is no
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before starting the dry run, think: as the new person on the team, what is your biggest fear when the pager fires? Is it not knowing where to look, not knowing what to do, or not knowing how to communicate? This module addresses all three.
+
 ## The Scenario
 
 **You are five days into your TicketPulse rotation.** You completed your Beast Mode setup in L3-M91 and L3-M91a. You have access, you have your architecture map, you have your hotlinks page, and you know what normal looks like on the dashboards.
@@ -55,13 +59,13 @@ You are the on-call engineer. You are new. The clock is ticking.
 ### 🐛 Debug: Systematic Investigation Under Pressure
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+<summary>💡 Hint 1: "What changed?" beats "What broke?"</summary>
+Run `gh run list --limit 5` and `kubectl rollout history` before reading any logs. If a deployment landed in the last 30 minutes, that is your prime suspect. Correlate the deploy timestamp with the alert start time on Grafana.
 </details>
 
 <details>
-<summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+<summary>💡 Hint 2: Spend 60 seconds per check, then move on</summary>
+Set a literal timer. If the deploy history looks clean, check config changes, then traffic spikes, then dependency health. The checklist order matters -- most incidents are caused by things that changed, not things that were always broken.
 </details>
 
 
@@ -190,13 +194,13 @@ Overall investigation time  │                      │
 ### 🛠️ Build: Three Rollback Methods, Timed
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+<summary>💡 Hint 1: Know the previous good image tag BEFORE you need it</summary>
+Run `kubectl rollout history deployment/order-service -n ticketpulse` now and bookmark the output format. During an incident, `kubectl rollout undo` is one command -- but only if you trust the previous revision. Verify it deploys cleanly in a dry run today.
 </details>
 
 <details>
-<summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+<summary>💡 Hint 2: Feature flag toggle is fastest but only works if the flag exists</summary>
+Check which TicketPulse features are behind flags right now. If the broken code path is not flagged, your options are git-revert-through-CI (safe, slow) or `kubectl set image` to the previous tag (fast, skips tests). Pick based on severity.
 </details>
 
 
@@ -339,13 +343,13 @@ Reason:              _______________________________________________
 ### 📐 Design: The Document You Open at 2 AM
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+<summary>💡 Hint 1: Structure it as a decision tree, not a reference page</summary>
+Start with "Is the alert about latency, errors, or saturation?" and branch from there. Sleep-deprived you needs a flowchart that narrows the problem space, not a flat list of every possible command.
 </details>
 
 <details>
-<summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+<summary>💡 Hint 2: Include the rollback commands verbatim with real service names</summary>
+Your runbook should have `kubectl rollout undo deployment/order-service -n ticketpulse` as a copy-paste line, not "run the rollback command for the affected service." Zero thinking required at 2 AM is the goal.
 </details>
 
 
@@ -575,6 +579,10 @@ I know when and how to escalate          │
 > Compare your confidence now to when you first did L3-M73 (Incident Response Simulation). In M73, you had the advantage of experience — you knew the system. Here, you had the advantage of preparation — you had your Beast Mode setup. Which advantage mattered more? In a real incident on a system you just joined, what is the one thing you would do differently now that you have completed this dry run? Write down that one thing and put it at the top of your runbook.
 
 ---
+
+### 🤔 Reflection Prompt
+
+After the dry run, how did having Beast Mode preparation (access verified, dashboards bookmarked, architecture mapped) change your confidence compared to the M73 incident simulation where you had full context? Which is more important for incident response: deep system knowledge or systematic preparation?
 
 ## Further Reading
 

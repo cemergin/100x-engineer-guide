@@ -118,12 +118,12 @@ UNKNOWN:
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Correlate the symptom onset time (3:55 PM) against the deployment log, traffic graphs, and external dependency health checks -- the answer is almost always in the timing.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Check the deploy log first. A deployment 7 minutes before impact is never a coincidence. If nothing deployed, check traffic spikes, then external dependencies (database, Kafka, payment provider).
 </details>
 
 
@@ -230,12 +230,12 @@ SEV-4: Cosmetic or low-impact issue
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+As Communications Lead, your job is to acknowledge the user-visible symptoms without speculating about cause. Describe what users experience, not your internal architecture.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Three elements: (1) acknowledge the problem exists, (2) describe the user-facing symptom in plain language, (3) set an expectation for the next update. Do NOT mention gRPC endpoints or Kafka consumer lag.
 </details>
 
 
@@ -360,12 +360,12 @@ ROOT CAUSE: Missing index on transactions table
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+The Incident Commander owns the timeline, not the investigation. Write timestamps as you go -- this artifact becomes the backbone of the blameless postmortem.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Start from the deployment timestamp (3:48 PM) and fill in every state change: when the migration failed, when slow queries appeared, when connection pools saturated, when alerts fired. Gaps in the timeline are gaps in your understanding.
 </details>
 
 
@@ -432,12 +432,12 @@ Option D: Rollback + apply index in parallel
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+The IC's job is to stop the bleeding first, fix root cause second. Ask: which option restores service fastest with the lowest risk of making things worse?
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Rollback and index creation are independent actions -- you can run them in parallel. Rollback gives immediate relief (3-5 min), while CREATE INDEX CONCURRENTLY runs in the background without blocking reads.
 </details>
 
 
@@ -465,12 +465,12 @@ SQL
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Each update should advance the status (Investigating -> Identified -> Mitigating -> Resolved) and set the expectation for the next update. Users need a timeline, not technical details.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+The "Identified" update names the cause at a user-relevant level ("a database performance issue") and gives an ETA. The "Mitigating" update confirms the fix is in progress and tells users what to do ("retry your purchase").
 </details>
 
 
@@ -557,12 +557,12 @@ Beyond the status page, you need to communicate internally.
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+The resolution update is the one users screenshot and share. It should answer: what happened, who was affected, what to do now, and that you are preventing recurrence.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Include the impact window (3:55-4:25 PM), the user-facing symptom (purchase failures), the reassurance (no duplicate charges), and the action for affected users (retry now). Keep it under 100 words.
 </details>
 
 
@@ -645,12 +645,12 @@ DEPLOY CHECKLIST (before re-deploy)
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Use the blameless postmortem template: Summary, Impact, Timeline, Root Cause, Contributing Factors, What Went Well, What Went Wrong, Action Items. Every contributing factor maps to a systemic fix, never to a person.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+For each "What Went Wrong" item, ask "Why did the system allow this?" -- not "Who should have caught this?" Action items must be concrete ("Make migration failures block deployments"), have an owner, a priority, and a due date. "Be more careful" is never an action item.
 </details>
 
 

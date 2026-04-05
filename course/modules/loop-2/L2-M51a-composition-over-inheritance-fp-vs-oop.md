@@ -646,6 +646,69 @@ These are naturally FP. No state to manage. Each function transforms data and pa
 
 ---
 
+> **What did you notice?** Composition tends to produce more flexible code while inheritance creates tighter coupling. Think about the TicketPulse codebase — where has inheritance helped, and where has it created rigidity?
+
+## Exercises
+
+### 🛠️ Build: Add a Rate Limiting Middleware
+
+Create a `RateLimitMiddleware` and inject it into `EventService` without touching the inheritance chain (because there is none). The rate limiter should use a sliding window counter in Redis.
+
+<details>
+<summary>💡 Hint 1</summary>
+Define the interface: `interface RateLimitMiddleware { checkLimit(key: string, maxRequests: number, windowSeconds: number): Promise<void> }`. The implementation uses Redis INCR + EXPIRE to track request counts per key per window. Throw a `RateLimitExceededError` if the count exceeds `maxRequests`.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Inject it into `EventService` alongside the existing middleware: `constructor(private db: Pool, private auth: AuthMiddleware, private logging: LoggingMiddleware, private caching: CachingMiddleware, private rateLimit: RateLimitMiddleware)`. Call `this.rateLimit.checkLimit(userId, 100, 60)` at the start of write operations. The `PublicEventService` can use a different limit or skip it entirely -- no hierarchy modification needed.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Compare this to how you would add rate limiting in the old inheritance hierarchy: you would need to insert a `RateLimitedService` between `CachedService` and `EventService`, change the constructor chain, and force every service to carry rate limiting even if they do not need it. With composition, each service picks exactly the middleware it needs.
+</details>
+
+### 🐛 Debug: Pricing Pipeline Off-by-One
+
+The pricing pipeline returns `$54.68` for a VIP ticket that should cost `$54.00`. The early bird discount and volume discount are both applying, but the final amount is wrong.
+
+<details>
+<summary>💡 Hint 1</summary>
+The `pipe` function applies steps left-to-right: `getBasePrice -> applyEarlyBirdDiscount -> applyVolumeDiscount -> addServiceFee -> addTax`. Since each step is pure, log the `PricingContext` between steps by temporarily wrapping: `pipe(getBasePrice, ctx => { console.log(ctx); return ctx; }, applyEarlyBirdDiscount, ...)`. Check which step introduces the discrepancy.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+The bug is likely in how `applyVolumeDiscount` interacts with `applyEarlyBirdDiscount`. Early bird sets `currentPriceCents` but volume discount operates on `totalCents`. If volume discount recalculates `totalCents` from `currentPriceCents * quantity` instead of applying the percentage to the already-computed `totalCents`, rounding errors accumulate. Check whether `Math.round` is applied once at the end or at each step.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Fix: ensure each discount step applies its percentage to `totalCents` (the running total) rather than recomputing from `currentPriceCents`. The rule is that `totalCents` is the single source of truth for the order total, and `currentPriceCents` is informational (per-ticket). Apply `Math.round` only when setting `totalCents`, never when setting `currentPriceCents`.
+</details>
+
+### 📐 Design: FP vs OOP for Order State Machine
+
+TicketPulse's `Order` entity has states: `pending -> confirmed -> shipped -> delivered` (and `cancelled` from any state). Should this be modeled as an OOP class with state transitions or as FP pure functions?
+
+<details>
+<summary>💡 Hint 1</summary>
+The Order has invariants: a shipped order cannot be cancelled, a delivered order cannot go back to confirmed. These invariants are naturally expressed as guards on state transitions. OOP encapsulation (`private status`) ensures the invariants cannot be bypassed -- external code cannot set `order.status = 'delivered'` directly.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Compare: an FP approach would use a `transition(order: Order, action: Action): Order` function that returns a new Order with the updated status. The invariant checks live in `transition`. This works, but the caller must remember to always use `transition` -- nothing prevents direct field mutation in TypeScript without additional type tricks (branded types or `Readonly`).
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+The pragmatic answer: use OOP for the Order aggregate (state + invariants + lifecycle) and FP for the operations on orders (pricing calculation via `pipe`/`compose`, order reporting via data transformation pipelines). This is the "OOP shell, FP core" pattern from the When OOP, When FP section.
+</details>
+
+---
+
 ## Checkpoint
 
 Before continuing, verify:

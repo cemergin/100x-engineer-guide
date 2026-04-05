@@ -85,17 +85,17 @@ With 100 events, you should see 201 queries: 1 for the event list, 100 for venue
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Look at the query log pattern: if you see the same query shape repeated N times with different parameter values, that is the N+1 problem. The fix depends on context: JOIN, batch load, or ORM includes.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Collect all unique IDs first, then fetch ALL related data in one query using WHERE id = ANY($1). Build a Map for O(1) lookups when assembling the response.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+The optimized version uses 3 queries total: one for the list, one batch fetch for related entity A, one batch fetch for related entity B. Assembly happens in application code using Maps.
 </details>
 
 
@@ -306,17 +306,17 @@ Do:
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Look at the query log pattern: if you see the same query shape repeated N times with different parameter values, that is the N+1 problem. The fix depends on context: JOIN, batch load, or ORM includes.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Collect all unique IDs first, then fetch ALL related data in one query using WHERE id = ANY($1). Build a Map for O(1) lookups when assembling the response.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+The optimized version uses 3 queries total: one for the list, one batch fetch for related entity A, one batch fetch for related entity B. Assembly happens in application code using Maps.
 </details>
 
 

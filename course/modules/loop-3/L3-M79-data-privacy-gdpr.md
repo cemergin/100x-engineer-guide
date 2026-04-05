@@ -22,6 +22,10 @@ This is not a legal problem. It is an engineering problem. The law says "delete 
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before reading the implementation, list every place in TicketPulse where user PII might live: databases, caches, event stores, logs, search indices, backups. How many did you count? The answer is almost certainly more than you think.
+
 ## Part 1: Right to Access -- Data Export
 
 ### The Requirement
@@ -69,12 +73,12 @@ WHERE USER DATA LIVES
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Article 15 requires a "commonly used, machine-readable format" within 30 days. Fan out requests to each service in parallel, aggregate into a single JSON/ZIP, and upload to a time-limited S3 presigned URL.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Each service exposes an internal-only `/internal/users/:id/export` endpoint. Use `Promise.allSettled` to handle partial failures gracefully -- if one service is down, send a partial export rather than failing entirely. The GDPR requirement is "best effort within 30 days," not "all or nothing."
 </details>
 
 
@@ -105,12 +109,12 @@ Data Export Service:
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+The export endpoint is internal-only (service mesh auth, not user auth). Each service returns its data in a standard `{ service, exported_at, data }` format so the aggregation service can combine them uniformly.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Query all user-related tables in the service, including indirect references (tickets via orders, notifications via preferences). Encrypt the export at rest (S3 SSE), set a 7-day expiration on the presigned download URL, and delete the file after download or expiration.
 </details>
 
 
@@ -265,12 +269,12 @@ WHY DELETION IS HARD IN DISTRIBUTED SYSTEMS
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Article 17 (right to erasure) requires deletion across every data store. The hard parts: Kafka events are immutable (use crypto-shredding), financial records must be retained for 7 years (anonymize, do not delete), and backups contain deleted data (maintain a deletion log that replays after every restore).
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Implement in three phases: (1) soft delete immediately (revoke sessions, remove from search), (2) hard delete async within 30 days (fan out to each service, anonymize financial records, crypto-shred Kafka events), (3) verify by running the export endpoint -- it should return empty.
 </details>
 
 
@@ -311,12 +315,12 @@ Phase 3: VERIFICATION
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+You cannot delete Kafka messages, but you can make them unreadable. Encrypt PII with a per-user key stored in a separate key store. When the user requests deletion, delete the key -- the encrypted PII becomes permanently irrecoverable.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Each Kafka event stores PII as `{ ciphertext, key_id }`. Consumers call `keyStore.get(key_id)` to decrypt. After deletion, `keyStore.get` returns null and the consumer returns `[DELETED]`. This means every consumer must handle missing keys gracefully.
 </details>
 
 
@@ -389,12 +393,12 @@ async function shredUserData(userId: string): Promise<void> {
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+If you restore from yesterday's backup, deleted users come back. Maintain a deletion log (user_id, deleted_at) that survives independently of the main database, and replay it after every restore.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Query the deletion log for all users deleted after the backup timestamp, then re-execute the deletion for each. This must be a mandatory step in every restore runbook -- not optional, not "if we remember."
 </details>
 
 
@@ -425,12 +429,12 @@ async function reapplyDeletions(): Promise<void> {
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+GDPR requires consent to be granular (per purpose), recorded (who, when, which policy version), and withdrawable (as easy to withdraw as to give). Never UPDATE consent rows -- always INSERT new ones to maintain an audit trail.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+The consent table needs: user_id, purpose (marketing_email, analytics, etc.), granted (boolean), policy_version, granted_at, and withdrawn_at. No consent record means no consent (opt-in model). Before sending any marketing email, check `canSendMarketingEmail(userId)`.
 </details>
 
 
@@ -514,12 +518,12 @@ COMMON PII LEAKS IN LOGS
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+The better approach is not logging PII in the first place: log user_id, not email. But as a safety net, build a scrubbing middleware that replaces email addresses, IP addresses, and card numbers with `[REDACTED]` tokens before they reach the log store.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Define regex patterns for emails, IPv4, credit card numbers, and phone numbers. Apply them to both the message string and any JSON metadata. Wrap your logger with `createSafeLogger(baseLogger)` that scrubs before every info/warn/error call.
 </details>
 
 
@@ -591,12 +595,12 @@ logger.info("User alice@example.com logged in from 192.168.1.1");
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Walk through the GDPR checklist as if a regulator is auditing tomorrow. The biggest gaps are usually: no data inventory (Article 30), PII in logs without scrubbing, and no tested deletion path for Kafka events.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+For each checklist item, answer concretely: "Can we fulfill a right-to-erasure request (Article 17) within 30 days across all 5 services, Elasticsearch, Kafka, Redis, and log archives?" If the answer is "we would need to figure it out," that is your biggest gap.
 </details>
 
 
@@ -670,6 +674,10 @@ YOUR BIGGEST GAP: _____________________________________________
 | **PII** | Personally Identifiable Information; any data that can be used to identify a specific individual. |
 | **Consent** | A GDPR requirement that users must give informed, explicit permission before their personal data is processed. |
 | **Data export** | The ability for users to download their personal data in a portable, machine-readable format as required by GDPR. |
+
+### 🤔 Reflection Prompt
+
+Which data location surprised you most during the PII audit? If you had to implement GDPR compliance retroactively on a system that was not designed for it, what would be the most expensive part?
 
 ## Further Reading
 

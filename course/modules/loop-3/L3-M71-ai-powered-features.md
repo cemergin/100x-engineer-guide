@@ -66,6 +66,16 @@ RAG (Retrieval-Augmented Generation) means: retrieve relevant data first, then o
 
 ### Build: Semantic Search Endpoint
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered that pure vector search misses exact matches? "Taylor Swift" should match Taylor Swift events even if another event has a higher cosine similarity. Combine vector similarity (70%) with BM25 text search (30%) in a hybrid query.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Embed the user's query with `text-embedding-3-small`, then query pgvector with `ORDER BY embedding <=> $1::vector`. Apply hard filters (date, city, price) as SQL WHERE clauses -- do not rely on the embedding to handle structured constraints.
+</details>
+
 You already have event embeddings from L3-M70. Now expose them as a search endpoint:
 
 ```javascript
@@ -327,6 +337,16 @@ User: "What jazz events are happening this weekend?"
 This is RAG applied to conversation. The LLM never "makes up" events -- it only talks about events that were retrieved from the database.
 
 ### Build: Chat Endpoint
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered that the chatbot should never invent events? Use RAG: retrieve real events from your database first, then inject them as context for the LLM. The system prompt must explicitly say "ONLY recommend events from the provided context."
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Two LLM calls: (1) extract structured filters (city, date, genre) from the natural language query using `gpt-4o-mini` with JSON response format, (2) use those filters + hybrid search to retrieve events, then generate a conversational response grounded in the results. Add a verification layer that checks every event mentioned in the response exists in the retrieved set.
+</details>
 
 ```javascript
 async function chat(userId, message, conversationHistory = []) {

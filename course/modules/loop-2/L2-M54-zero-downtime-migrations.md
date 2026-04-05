@@ -428,6 +428,69 @@ Run three workers: one for IDs 1-3.3M, one for 3.3M-6.6M, one for 6.6M-10M.
 
 ---
 
+> **What did you notice?** Zero-downtime migrations require the expand-and-contract pattern: add the new thing, migrate, remove the old thing. This is slower than a breaking change but avoids any gap in service. When is the extra effort justified?
+
+## Exercises
+
+### 🛠️ Build: Expand-Contract for Renaming `ticket_type` to `tier_name`
+
+Implement the full four-step expand-and-contract migration to rename `ticket_type` to `tier_name` on a table with 10M rows, including the dual-write application code.
+
+<details>
+<summary>💡 Hint 1</summary>
+Phase 1 (Expand): `ALTER TABLE tickets ADD COLUMN tier_name VARCHAR(50)` -- instant, nullable, no lock. Phase 2 (Deploy): update `issueTicket()` to write the same value to both `ticket_type` and `tier_name` in the INSERT statement. This ensures no new rows are missing `tier_name` from this point forward.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Phase 3 (Backfill): reuse the batched backfill pattern with `FOR UPDATE SKIP LOCKED`: `UPDATE tickets SET tier_name = ticket_type WHERE tier_name IS NULL AND id IN (SELECT id FROM tickets WHERE tier_name IS NULL LIMIT 5000 FOR UPDATE SKIP LOCKED)`. Run with `--dry-run` first. The backfill is idempotent -- rerun if it crashes.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Phase 4 (Contract): switch reads to `tier_name`, then drop `ticket_type`. Do NOT drop the old column in the same deploy as the code change -- wait for all pods to roll over to the new code first. If any old-code pod reads `ticket_type` after the column is dropped, it will crash. Wait at least one full rolling deployment cycle before running `ALTER TABLE tickets DROP COLUMN ticket_type`.
+</details>
+
+### 🐛 Debug: Backfill Halted at 60%
+
+The backfill script updated 6M of 10M rows and then stopped making progress. The script reports `0 rows affected` on every batch, but `SELECT COUNT(*) FROM tickets WHERE seat_number IS NULL` still shows 4M remaining.
+
+<details>
+<summary>💡 Hint 1</summary>
+`FOR UPDATE SKIP LOCKED` skips rows that are locked by other transactions. If another process is holding long-running transactions (e.g., a reporting query with `FOR SHARE` or a stuck migration), those rows are permanently skipped. Run `SELECT pid, state, query, age(clock_timestamp(), xact_start) FROM pg_stat_activity WHERE state != 'idle' ORDER BY xact_start` to find long-running transactions.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Check if there is an open transaction holding locks: `SELECT locktype, relation::regclass, mode, granted, pid FROM pg_locks WHERE relation = 'tickets'::regclass AND NOT granted`. If rows show `RowExclusiveLock` not granted, another transaction is blocking. Terminate the blocking session with `SELECT pg_terminate_backend(<pid>)` after confirming it is safe.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Alternative fix: remove `FOR UPDATE SKIP LOCKED` temporarily and replace with plain `WHERE seat_number IS NULL LIMIT 5000`. This will wait for locks instead of skipping, which is slower but guarantees progress. Once the blocking transaction is resolved, switch back to `SKIP LOCKED` for the remaining rows.
+</details>
+
+### 📐 Design: Type Change from INTEGER to UUID
+
+TicketPulse needs to change `event_id` from `INTEGER` to `UUID` across the `tickets`, `orders`, and `pricing_tiers` tables. Design the expand-and-contract migration plan including foreign key handling.
+
+<details>
+<summary>💡 Hint 1</summary>
+The expand-and-contract pattern applies to type changes too: add a new `event_id_uuid UUID` column, dual-write both columns, backfill old rows with a mapping (either generate UUIDs deterministically from the integer, or maintain a `event_id_mapping` lookup table). The foreign keys on `tickets.event_id` and `orders.event_id` must be duplicated to point at the new column.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+The tricky part is foreign key consistency. You cannot add a FK constraint on `event_id_uuid` until all rows have been backfilled. Use the same NOT VALID + VALIDATE trick: `ALTER TABLE tickets ADD CONSTRAINT fk_tickets_event_uuid FOREIGN KEY (event_id_uuid) REFERENCES events(id_uuid) NOT VALID` (instant), then `ALTER TABLE tickets VALIDATE CONSTRAINT fk_tickets_event_uuid` (scans but does not block writes).
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Create the migration plan as a document with explicit phases and rollback at each step: Phase 1 (add columns, no FK), Phase 2 (deploy dual-write code), Phase 3 (backfill with batched UPDATE), Phase 4 (add FK constraints NOT VALID + VALIDATE), Phase 5 (switch reads to UUID columns), Phase 6 (drop old integer columns). Each phase has a rollback: phases 1-4 can be rolled back by dropping the new columns; phases 5-6 require code rollback first.
+</details>
+
+---
+
 ## Checkpoint
 
 Before continuing, verify:

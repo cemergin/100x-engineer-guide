@@ -26,6 +26,10 @@ This matters because you will change teams. You will switch companies. You will 
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before starting the exercise, estimate: how many systems, tools, and credentials would you need to access to debug a production issue at a new job? Write down your guess. The real number is almost always higher.
+
 ## The Scenario
 
 **You have just "joined" the TicketPulse team.** Forget everything you know about the system. Open a fresh terminal. Pretend the only thing you have been told is:
@@ -43,13 +47,13 @@ Your goal over the next 75 minutes: become operational. Not an expert. Operation
 ### 🛠️ Build: Your Access Checklist
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+<summary>💡 Hint 1: Build the access matrix row by row -- system, URL, status</summary>
+For each row in the checklist, record three columns: the system name, the exact URL or command you used to verify, and a status (green/red/blocked). A blocked entry with "need to request from [person]" is more useful than a blank row you will forget about.
 </details>
 
 <details>
-<summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+<summary>💡 Hint 2: docker-compose.yml and Kubernetes manifests are your cheat sheet</summary>
+Every service, database, and broker in the stack is declared in infra code. Parse `docker-compose.yml` service names and ports to generate rows for your access matrix automatically -- that way you do not miss the one obscure sidecar nobody told you about.
 </details>
 
 
@@ -160,13 +164,13 @@ grep -r "secrets\." .github/workflows/
 ### 📐 Design: Draw the System from Code
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+<summary>💡 Hint 1: Start with the data stores, not the services</summary>
+Draw every database, cache, and broker first (Postgres, Redis, Kafka). Then draw each service and connect it to the stores it references via environment variables. The dependency arrows write the mental model document for you.
 </details>
 
 <details>
-<summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+<summary>💡 Hint 2: Environment variables reveal hidden connections</summary>
+Grep for `DATABASE_URL`, `REDIS_URL`, `KAFKA_BROKERS` across all services. Each unique connection string is an edge in your architecture diagram. If two services share the same database URL, that is a coupling worth highlighting in your mental model document.
 </details>
 
 
@@ -415,6 +419,10 @@ I could respond to a 2AM page │
 > What did the infrastructure and code reveal that you would not have learned from reading documentation alone? If you had to onboard a new engineer to TicketPulse tomorrow, what would you tell them to do first — and what would you tell them to skip?
 
 ---
+
+### 🤔 Reflection Prompt
+
+Compare the system map you drew from infrastructure code with what you expected the architecture to look like. Where did the actual system diverge from the documentation? What did "metrics and infra don't lie" teach you about trusting source code over wikis?
 
 ## Further Reading
 

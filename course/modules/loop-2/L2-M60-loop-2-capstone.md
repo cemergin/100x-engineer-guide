@@ -315,17 +315,17 @@ Your numbers will differ. The important thing is identifying the sequence and un
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Before drawing the architecture, try to list every service, database, message broker, and external dependency from memory. Then verify against your actual setup.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Use a load testing tool (wrk or k6) to find the breaking point. Gradually increase concurrency and watch Grafana for the metric that degrades first.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Rate every Loop 2 skill on the self-assessment rubric. Be honest about gaps -- Loop 3 will build on your strongest areas while strengthening the weakest.
 </details>
 
 
@@ -635,6 +635,8 @@ The difference between Loop 2 and Loop 3: in Loop 2, you followed patterns and i
 
 ---
 
+> **What did you notice?** Looking back at the full TicketPulse architecture, which decisions had the highest impact? Which would you make differently with what you know now? This self-awareness is the real output of Loop 2.
+
 ## Final Checkpoint
 
 Before closing Loop 2, verify:
@@ -678,4 +680,4 @@ See you in Loop 3.
 
 ## What's Next
 
-You've completed Loop 2. In **Loop 3**, you'll tackle Loop 3, where you'll scale TicketPulse to handle millions of users with advanced patterns like multi-region deployment, ML-powered recommendations, and platform engineering.
+You've completed Loop 2. In **Loop 3**, you'll scale TicketPulse to handle millions of users with advanced patterns like multi-region deployment, ML-powered recommendations, and platform engineering.

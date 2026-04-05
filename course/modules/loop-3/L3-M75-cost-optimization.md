@@ -354,12 +354,12 @@ This tells Kubernetes to prefer routing traffic to pods in the same availability
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Start with AWS Cost Explorer grouped by service tag. For right-sizing, the key formula is: target P99 peak CPU at 60% of instance capacity. Below that, you are over-provisioned.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+For the event-service (8% avg CPU, 30% peak), a t3.large at $170/mo handles burst workloads via CPU credits. Two instances with autoscaling (2-4) replaces four m5.large at $417/mo each. Do the math: $340 vs $1,668.
 </details>
 
 
@@ -405,12 +405,12 @@ This exercise illustrates why you should model the math before committing. The "
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Prioritize by savings-per-effort. Right-sizing the event-service saves $1,497/mo with low effort; reserved instances save $900+/mo with zero effort (just a purchase commitment). Attack the biggest line items first.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Use Spot instances only for stateless, fault-tolerant workloads (batch processing, the event-service read path). Never Spot for the payment-service -- an interrupted transaction mid-charge is worse than paying full price. For reserved instances, model the break-even before committing: 1-year no-upfront saves from day 1 with zero risk.
 </details>
 
 
@@ -480,12 +480,12 @@ Enforcement:
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Without tags, you cannot answer "how much does the order-service cost?" Enforce required tags (service, environment, team, cost-center) via an SCP or a Terraform CI check that fails the plan without them.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Use `aws ce get-cost-and-usage` with `--group-by Type=TAG,Key=service` to generate a per-service cost report. The tag compliance check in CI is a simple grep: for each Terraform resource, verify the required tag keys exist.
 </details>
 
 
@@ -583,12 +583,12 @@ FOR EACH OPTIMIZATION, ASK:
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+For each cut, assess blast radius (what breaks if this goes wrong?), reversibility (how fast can you undo it?), and probability of needing the capacity. Disabling RDS backups is "Never" -- the $150/mo savings is meaningless against a data loss event.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Spot instances for the event-service (stateless, read-heavy) = Safe. Spot for the payment-service (stateful transactions) = Never. Reducing Kafka from 3 to 2 brokers = Risky -- you lose fault tolerance for one broker failure. Single-AZ RDS = Never for production.
 </details>
 
 
@@ -610,12 +610,12 @@ For each of these potential optimizations, classify it as "Safe," "Risky," or "N
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+The most expensive mistake is the "temporary" resource that becomes permanent. Every incident adds resources; the monthly review is where you check which are still justified. Add infrastructure TTLs (calendar reminders) for every resource added during a spike.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Structure the 30-minute review: (1) bill vs last month, (2) utilization dashboards for services under 20% or over 70% CPU, (3) reserved instance coverage, (4) recent architecture changes, (5) action items. Use AWS Cost Explorer grouped by service tag to make this data-driven, not anecdotal.
 </details>
 
 

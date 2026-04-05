@@ -211,12 +211,12 @@ For active-passive, draw a single primary with DNS failover. For active-active, 
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Have you considered which data has natural geographic ownership? Ticket inventory is tied to a physical venue -- that locality should drive your write topology.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Active-active with regional data ownership lets each region own its venue inventory (strong consistency for writes) while replicating user profiles eventually. The cross-region purchase is the hard case -- route it to the inventory-owning region.
 </details>
 
 
@@ -287,12 +287,12 @@ Routing rules:
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Have you considered the difference between reads (route to nearest region with a replica) and writes (route to the region that owns the inventory)? The routing layer must distinguish these.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+A Paris user browsing Tokyo events reads from the EU-West replica (eventual consistency is fine for browsing). But a Paris user purchasing a NYC ticket must be proxied to US-East where the inventory lives -- that cross-region hop of ~80ms is physics, not a bug.
 </details>
 
 
@@ -370,12 +370,12 @@ Google Spanner achieved externally consistent (linearizable) reads and writes ac
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Have you considered that different data types need different replication topologies? User profiles can use a single global primary (or per-user-home-region primary), while ticket inventory should only be writable in the venue's region.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Use async CDC (Kafka or logical replication) for cross-region event/ticket read replicas. For the global user table, evaluate whether CockroachDB or Aurora Global Database simplifies multi-region writes versus managing conflict resolution yourself.
 </details>
 
 

@@ -22,6 +22,10 @@ This module is not about gaming a system. It is about ensuring that the real wor
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before starting the brag document, try to list your top 5 accomplishments from the last 6 months from memory. How many can you actually recall? That gap between what you did and what you remember is why the brag document exists.
+
 ## 1. Build: Your Brag Document
 
 ### What It Is
@@ -618,6 +622,11 @@ You have:
 | **Five-layer deepening** | A method for transforming vague brag document entries into specific, quantified, context-rich narratives. |
 | **Anchor** | In negotiation, the first specific number stated, which disproportionately shapes the final outcome. |
 | **Walk-away number** | Your minimum acceptable outcome in a negotiation, determined before the conversation begins. |
+
+### 🤔 Reflection Prompt
+
+After completing the gap analysis, which weakness surprised you most? Where is the gap between "I understand the concept" and "I could build it under pressure in production"?
+
 ---
 
 ## What's Next

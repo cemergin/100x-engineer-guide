@@ -135,17 +135,17 @@ Open http://localhost:5601 in your browser. Navigate to Dev Tools (the wrench ic
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Think about the field types in your Elasticsearch mapping: text (analyzed for search) vs keyword (exact match for filters). Which fields need which type?
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Use the Elasticsearch bulk API to index many documents at once. Configure edge n-gram tokenizers for autocomplete, multi_match with field boosting for relevance, and bool queries for combining search with filters.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+The search API uses a bool query: must for full-text (multi_match with fuzziness), filter for exact match/range (term, range). Sort by _score when searching, by date when browsing. Keep CDC sync via Kafka for reliable updates.
 </details>
 
 
@@ -245,17 +245,17 @@ A field can have **multi-fields** (the `fields` block): `name` is analyzed as `t
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Query Postgres to get events with venue info and ticket stats (JOIN events, venues, tickets with GROUP BY). Transform each row into the document shape matching your Elasticsearch mapping.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Use the Elasticsearch bulk API: build an array alternating between `{ index: { _index: 'ticketpulse-events', _id: event.id } }` metadata and the document body. Send it all in one `esClient.bulk({ body })` call.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+After bulk indexing, call `esClient.indices.refresh({ index: 'ticketpulse-events' })` to make documents searchable immediately (by default Elasticsearch refreshes every 1 second). Check `result.errors` -- bulk indexing returns per-document success/failure so you know exactly which documents failed.
 </details>
 
 
@@ -344,17 +344,17 @@ curl "http://localhost:9200/ticketpulse-events/_count"
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Use a `bool` query with two sections: `must` for full-text search (affects relevance scoring) and `filter` for exact match and ranges (does not affect scoring, just inclusion/exclusion).
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+For the search query, use `multi_match` across `['name^3', 'description', 'venue_name^2']` -- the `^3` boost means a match in the event name is weighted 3x higher than a match in the description. Add `fuzziness: 'AUTO'` to handle typos.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Filters use `term` for exact keyword match (city, category) and `range` for dates and prices. Sort by `_score` when the user is searching (relevance matters) but by `event_date` when browsing without a search query. Always add a filter: `{ range: { tickets_available: { gt: 0 } } }` to hide sold-out events.
 </details>
 
 
@@ -499,17 +499,17 @@ The `_explanation` field in the response breaks down exactly why each document s
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+The `autocomplete_analyzer` from the mapping uses edge n-grams: "Taylor" becomes tokens "ta", "tay", "tayl", "taylo", "taylor". When the user types "tay", it matches the "tay" token and returns "Taylor Swift" as a suggestion.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Query the `name.autocomplete` field with `match` and `operator: 'and'`. Combine with `match_phrase_prefix` on the raw `name` field (boosted x2) so exact prefix matches rank higher than n-gram matches.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Return only the fields the autocomplete dropdown needs: `_source: ['name', 'category', 'city', 'event_date']`. Limit to 5 results. Require at least 2 characters before triggering (`if (q.length < 2) return []`) to avoid overly broad queries.
 </details>
 
 

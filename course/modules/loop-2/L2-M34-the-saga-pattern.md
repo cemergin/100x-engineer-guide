@@ -96,12 +96,12 @@ Think about what happens at each step of the purchase flow. What data does each 
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Each saga step needs execute() and compensate() methods. The compensating action for a payment is a refund; for a reservation, it is a release. Process steps in order; compensate in reverse.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+The orchestrator loops through steps, tracks completedSteps, and on catch reverses through them calling compensate(). Store the saga context (IDs from each step) so compensations have the data they need.
 </details>
 
 
@@ -171,17 +171,17 @@ Notification failure should NOT trigger compensation — it is best-effort. If c
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Think about what happens at each step of the purchase flow. What data does each step need from previous steps? What needs to be undone if this step fails?
+Define a `SagaContext` that accumulates state across steps: `reservationId`, `paymentId`, `orderId`. Each step writes its result into the context so later steps (and compensations) can reference it. Also track `compensationErrors` as an array.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Define a `SagaStep` interface with `execute(ctx)` and `compensate(ctx)` methods. The compensation for the reservation step is `POST /api/reservations/:id/release`. The compensation for payment is `POST /api/payments/:id/refund`. Notification has a no-op compensate.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Use the saga ID as the payment's `orderId` for idempotency -- if the saga retries, the payment service returns the existing payment instead of charging twice. Each `compensate()` should check if there is anything to undo (`if (!ctx.paymentId) return`) before calling the reversal API.
 </details>
 
 
@@ -253,17 +253,17 @@ Use the saga ID as the payment's `orderId` for idempotency. The notification ste
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Think about what happens at each step of the purchase flow. What data does each step need from previous steps? What needs to be undone if this step fails?
+The orchestrator loops through the STEPS array in order. Maintain a `completedSteps` array that tracks which steps succeeded. On any step failure, reverse through `completedSteps` calling `compensate()`.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Use `[...completedSteps].reverse()` to compensate in reverse order. If CONFIRMING_ORDER fails, you compensate processPayment first (refund), then reserveTicket (release). Each compensation should be wrapped in its own try/catch so one failure does not skip the rest.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Set `ctx.status = 'COMPENSATING'` before starting compensation, then `'FAILED'` when done. Store the saga in a Map keyed by `sagaId` so the status API (`GET /api/sagas/:sagaId`) can return current progress. Log each compensation step so operators can trace what happened.
 </details>
 
 
@@ -582,17 +582,17 @@ app.get('/api/sagas/:sagaId', (req, res) => {
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Think about what happens at each step of the purchase flow. What data does each step need from previous steps? What needs to be undone if this step fails?
+Set `FAIL_AT_STEP=CONFIRMING_ORDER` in the monolith's environment. When you purchase a ticket, the saga should reserve a ticket (step 1), process payment (step 2), then fail at step 3.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Watch the logs for two compensating transactions firing in reverse order: first refund the payment (`POST /api/payments/:id/refund`), then release the reservation (`POST /api/reservations/:id/release`). The response should show `failedStep: "CONFIRMING_ORDER"`.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Verify consistency: `curl http://localhost:3001/api/payments/<paymentId>` should show `status: "refunded"`. The seat should be available again in the event service. No partial state remains -- the customer was not charged and no seat is held.
 </details>
 
 
@@ -690,17 +690,17 @@ The system is consistent. The customer was not charged. The seat is available. N
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Think about what happens at each step of the purchase flow. What data does each step need from previous steps? What needs to be undone if this step fails?
+Test with each value: RESERVING_TICKET (0 compensations), PROCESSING_PAYMENT (1: release reservation), CONFIRMING_ORDER (2: refund + release), SENDING_NOTIFICATION (0: notification failure should not trigger compensation).
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+For each failure point, verify the compensations match the table: RESERVING_TICKET failure means nothing was created so nothing to undo. PROCESSING_PAYMENT failure means only the reservation exists and must be released.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+The notification step is special: it should NOT trigger compensation even on failure because notifications are best-effort. Wrap the notification step's execute in a try/catch that logs but does not throw. The saga status should be COMPLETED even if the notification fails.
 </details>
 
 

@@ -81,6 +81,21 @@ docker compose exec app npx ts-node src/db/migrate.ts
 
 ## 3. Build: Signup Endpoint
 
+<details>
+<summary>💡 Hint 1: Hash With bcrypt, Never Store Plaintext</summary>
+Use `await bcrypt.hash(password, 12)` -- the 12 is the cost factor (rounds). It makes hashing take ~250ms intentionally, which makes brute-force attacks impractical. Store only the hash in the database. To verify on login, use `await bcrypt.compare(plaintext, hash)`.
+</details>
+
+<details>
+<summary>💡 Hint 2: JWT Structure -- Header.Payload.Signature</summary>
+Create tokens with `jwt.sign({ sub: user.id, email, role, type: 'access' }, SECRET, { expiresIn: '15m' })`. The payload is base64-encoded (NOT encrypted) -- anyone can decode it. Never put passwords or sensitive data in the payload. The signature proves the token was not tampered with.
+</details>
+
+<details>
+<summary>💡 Hint 3: Two Tokens -- Access and Refresh</summary>
+Issue a short-lived access token (15 min) for API requests and a long-lived refresh token (7 days) for getting new access tokens. Set `type: 'access'` or `type: 'refresh'` in the payload so your middleware can reject a refresh token used as an access token. On login failure, always say "Invalid email or password" -- never reveal which one was wrong.
+</details>
+
 ```typescript
 // src/routes/auth.ts
 
@@ -357,6 +372,21 @@ Notice the error says "Invalid email or password" -- not "wrong password." This 
 ---
 
 ## 5. Build: Auth Middleware
+
+<details>
+<summary>💡 Hint 1: Extract Token From the Authorization Header</summary>
+Check `req.headers.authorization` starts with `'Bearer '`, then split on space to get the token: `const token = authHeader.split(' ')[1]`. If the header is missing or malformed, throw `UnauthorizedError` with a helpful message telling the client the expected format.
+</details>
+
+<details>
+<summary>💡 Hint 2: Verify and Decode in One Step</summary>
+`jwt.verify(token, SECRET)` does both -- it checks the signature is valid AND the token has not expired. Catch `TokenExpiredError` (tell user to refresh) and `JsonWebTokenError` (token is invalid/tampered) separately so your error messages are actionable.
+</details>
+
+<details>
+<summary>💡 Hint 3: Role Checking Is a Second Middleware</summary>
+Create `requireRole(...roles: string[])` that returns a middleware function. It reads `req.user.role` (set by `requireAuth`) and checks if it is in the allowed list. Chain them: `router.post('/', requireAuth, requireRole('admin'), handler)`. Order matters -- auth first, then role check.
+</details>
 
 Now we need middleware that validates the JWT on protected routes:
 

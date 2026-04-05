@@ -356,17 +356,17 @@ This is a cascade from Problem 1. Slow event-service responses mean purchase-ser
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Start with the user-visible symptom, then use metrics to scope the problem (which service?), traces to pinpoint the operation, and logs for the error details. Work from broad to narrow.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Refer back to the patterns introduced earlier in this module.
+Check Grafana for error rate and latency spikes. Find a failing trace in Jaeger. Search logs for the trace ID. Apply the 5 Whys to get from symptom to root cause.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+Write an incident timeline as you debug. Mitigate first (rollback, restart, scale up), then investigate root cause. Document everything for the postmortem.
 </details>
 
 
@@ -642,6 +642,8 @@ Answer these questions in your engineering journal:
 5. **If you had to pick ONE observability tool for debugging, which would it be?** (Metrics, logs, or traces?) Why?
 
 ---
+
+> **What did you notice?** Production debugging requires a fundamentally different approach than local debugging — you cannot attach a debugger or add print statements. How did the observability tools from M45-M46 change your ability to diagnose issues?
 
 ## Checkpoint
 

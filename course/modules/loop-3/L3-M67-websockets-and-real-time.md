@@ -91,6 +91,16 @@ Before looking at the implementation, think through:
 2. When a ticket is purchased via the REST API, how does the WebSocket server find out?
 3. What happens when a client disconnects? How do you clean up?
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered that WebSocket connections are stateful? A `Map<eventId, Set<WebSocket>>` gives you O(1) room lookups. The harder question is how the REST purchase handler notifies the WebSocket server -- especially across multiple server instances.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+For single-server: broadcast directly from the purchase endpoint. For multi-server: publish to a Redis Pub/Sub channel per event (`ticket-updates:${eventId}`), and have each WebSocket server subscribe and broadcast to its local clients. Implement ping/pong heartbeats at 30s intervals to detect dead connections before the load balancer's 60s idle timeout kills them.
+</details>
+
 Write down your approach, then continue.
 
 ---
@@ -346,6 +356,16 @@ Redis Pub/Sub acts as a broadcast backbone. Every WebSocket server subscribes to
 ```
 
 ### Build: Add Redis Pub/Sub
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered that Redis requires separate connections for pub/sub? A connection in subscribe mode cannot issue other commands. You need one client for publishing and one for subscribing.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Use per-event channels (`ticket-updates:${eventId}`) rather than a single global channel. Subscribe when the first client connects to an event room; unsubscribe when the last client disconnects. This avoids every server receiving every event's updates.
+</details>
 
 ```javascript
 // redis-broadcast.js
