@@ -14,7 +14,7 @@
 
 A comprehensive, open-source mega-guide covering every paradigm, philosophy, and hard skill needed to become a lead/staff+ engineer — organized as a narrative that builds from theory to practice.
 
-**36 chapters** · **~49,000 lines** · **~3.2 MB** · **5 parts + appendices**
+**36 chapters** · **~59,000 lines** · **~3.5 MB** · **5 parts + appendices**
 
 ```
 100x-engineer-guide/
