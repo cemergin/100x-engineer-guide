@@ -148,18 +148,18 @@ ticketpulse/
 ### 🛠️ Exercise: Enforce Boundaries with a Lint Rule
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-Think about the overall approach before diving into implementation details.
+<summary>💡 Hint 1: Use eslint-plugin-import restriction zones</summary>
+The ESLint rule `import/no-restricted-paths` lets you define "zones" — pairs of (target, from) globs. If code in the target tries to import from the restricted `from` path, the linter fails. Each module's internals become off-limits to other modules.
 </details>
 
 <details>
-<summary>💡 Hint 2: Approach</summary>
-Break the problem into smaller steps. What needs to happen first?
+<summary>💡 Hint 2: Only allow imports from index.ts</summary>
+Each module exposes a public API via `index.ts`. The lint rule should block imports like `from '../events/events.repository'` but allow `from '../events'` (which resolves to `index.ts`). Use a glob like `!(index).ts` to match everything except the barrel file.
 </details>
 
 <details>
-<summary>💡 Hint 3: Almost There</summary>
-Review the concepts from this section. The solution follows the same patterns demonstrated above.
+<summary>💡 Hint 3: Block cross-module repository access</summary>
+Repositories contain direct SQL. No module should import another module's repository — that would bypass the public API and create hidden coupling. Add a zone that blocks any `*.repository.ts` import from outside its own module.
 </details>
 
 
@@ -371,18 +371,18 @@ Each team owns their services end-to-end: code, database, deployment, and on-cal
 ### 📐 Exercise
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-Think about the overall approach before diving into implementation details.
+<summary>💡 Hint 1: Identify the hottest path</summary>
+During a Taylor Swift on-sale, the ticket purchase endpoint gets 100x the traffic of everything else. The event listing page is read-heavy and can be cached aggressively (CDN + Redis, 30-second TTL). The purchase endpoint needs strong consistency — that is your bottleneck to design around.
 </details>
 
 <details>
-<summary>💡 Hint 2: Approach</summary>
-Break the problem into smaller steps. What needs to happen first?
+<summary>💡 Hint 2: Separate read and write scaling</summary>
+Add Postgres read replicas for browse traffic (90% of reads). Keep the primary for purchases only. Put a Redis cluster in front for event listings. This means most requests never touch the primary database at all.
 </details>
 
 <details>
-<summary>💡 Hint 3: Almost There</summary>
-Review the concepts from this section. The solution follows the same patterns demonstrated above.
+<summary>💡 Hint 3: Move non-critical work off the hot path</summary>
+Email confirmations, analytics, receipt generation, and PDF tickets should go through a message queue (RabbitMQ or Redis Streams). The purchase response only needs to confirm the reservation and payment — everything else is async. This is the pattern you built in M21-M22.
 </details>
 
 

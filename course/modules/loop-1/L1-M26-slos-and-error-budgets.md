@@ -135,18 +135,18 @@ If you have used 800 of your 1,000 error budget, you have 200 errors left for th
 ### 🛠️ Workshop: Error Budget Calculation
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-Think about the overall approach before diving into implementation details.
+<summary>💡 Hint 1: Error budget = total requests times (1 minus SLO)</summary>
+For a 99.9% SLO with 2.4 million requests: error budget = 2,400,000 x 0.001 = 2,400 allowed errors. If you have used 2,300, you have 100 remaining. That is 95.8% of your budget consumed — one bad deploy away from violating the SLO.
 </details>
 
 <details>
-<summary>💡 Hint 2: Approach</summary>
-Break the problem into smaller steps. What needs to happen first?
+<summary>💡 Hint 2: Percentile SLOs work differently from availability SLOs</summary>
+A p99 < 1s SLO means at most 1% of requests can exceed 1 second. With 10,000 requests, that is 100 allowed slow requests. If 1.5% exceeded 1s, that is 150 — you are 50 requests over budget. The SLO is violated even though 98.5% of requests were fine.
 </details>
 
 <details>
-<summary>💡 Hint 3: Almost There</summary>
-Review the concepts from this section. The solution follows the same patterns demonstrated above.
+<summary>💡 Hint 3: Purchase success SLO — exclude expected failures</summary>
+For the purchase success SLO (99.95%), only count failures due to system errors, not business logic (sold-out is expected). With 80,000 attempts and 85 payment timeouts: allowed = 80,000 x 0.0005 = 40. You are over by 45. This triggers a payment service investigation.
 </details>
 
 
@@ -562,18 +562,18 @@ Gradual burn (3d window): error rate > 1x normal → ticket for investigation
 ### 🛠️ Build: Burn Rate Alert Implementation
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-Think about the overall approach before diving into implementation details.
+<summary>💡 Hint 1: Burn rate = how fast you consume the monthly budget</summary>
+Monthly budget is 43.2 minutes. If you burn that in 1 hour, you are consuming at 720x normal rate. The alert threshold of 14.4x catches it before the budget is fully exhausted (14.4x gives a 5x safety margin). The `rate()` function over a 1-hour window measures the error rate in that window.
 </details>
 
 <details>
-<summary>💡 Hint 2: Approach</summary>
-Break the problem into smaller steps. What needs to happen first?
+<summary>💡 Hint 2: Use multi-window detection for different severity levels</summary>
+Fast burn (1h window at 14.4x) is a critical page — something is catastrophically wrong. Slow burn (6h window at 6x) is a warning — investigate during business hours. Gradual burn (3d window at 1x) creates a ticket for investigation. Each window catches a different failure mode.
 </details>
 
 <details>
-<summary>💡 Hint 3: Almost There</summary>
-Review the concepts from this section. The solution follows the same patterns demonstrated above.
+<summary>💡 Hint 3: The Prometheus expression divides error rate by total rate</summary>
+The expression `sum(rate(http_requests_total{status=~"5.."}[1h])) / sum(rate(http_requests_total[1h]))` gives you the error fraction in the last hour. Compare it against `0.001 * 14.4` (the 14.4x burn rate threshold for a 99.9% SLO). Use `for: 2m` to avoid alerting on single-second spikes.
 </details>
 
 

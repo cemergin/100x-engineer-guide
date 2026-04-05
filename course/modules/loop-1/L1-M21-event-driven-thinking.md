@@ -182,18 +182,18 @@ Purchase Flow                    Event Bus                    Listeners
 ### 🛠️ Build: The Event Emitter
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-Think about the overall approach before diving into implementation details.
+<summary>💡 Hint 1: Two registration methods — onSync and onAsync</summary>
+Use two separate Maps: `handlers` (sync) and `asyncHandlers` (async). Sync handlers are awaited one by one inside `emit()`. Async handlers are fired with `.catch()` error logging but are NOT awaited — the emit returns immediately after sync handlers finish.
 </details>
 
 <details>
-<summary>💡 Hint 2: Approach</summary>
-Break the problem into smaller steps. What needs to happen first?
+<summary>💡 Hint 2: Async handlers must never crash the caller</summary>
+Wrap each async handler call in `.catch(err => console.error(...))`. If the analytics listener throws, the purchase still succeeds. The key pattern: `handler(payload).catch(err => { /* log, do not rethrow */ })`.
 </details>
 
 <details>
-<summary>💡 Hint 3: Almost There</summary>
-Review the concepts from this section. The solution follows the same patterns demonstrated above.
+<summary>💡 Hint 3: Use a singleton EventBus instance</summary>
+Export a single `eventBus` instance from the module. Register listeners at startup (in a `listeners.ts` file). The purchase endpoint calls `await eventBus.emit('TicketPurchased', payload)` — sync handlers run, then the response is sent while async handlers continue in the background.
 </details>
 
 
@@ -466,18 +466,18 @@ real    0m0.250s
 ### 🐛 Debug: Simulate a Listener Failure
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-Think about the overall approach before diving into implementation details.
+<summary>💡 Hint 1: Add a listener that always throws</summary>
+Register an async handler for `TicketPurchased` that throws `new Error('Analytics service is down!')`. Then buy a ticket and watch what happens — the purchase should still succeed and return 201.
 </details>
 
 <details>
-<summary>💡 Hint 2: Approach</summary>
-Break the problem into smaller steps. What needs to happen first?
+<summary>💡 Hint 2: Check the server logs for the caught error</summary>
+Your EventBus `.catch()` handler should log `[event-bus] Async handler failed for TicketPurchased: Analytics service is down!`. If you see this in the logs AND the purchase response was 201, your error isolation is working correctly.
 </details>
 
 <details>
-<summary>💡 Hint 3: Almost There</summary>
-Review the concepts from this section. The solution follows the same patterns demonstrated above.
+<summary>💡 Hint 3: Understand the trade-off — the event is lost</summary>
+The failing listener's event was not retried or persisted. If the analytics service comes back in 5 minutes, it missed this purchase entirely. This is the limitation of in-process event emitters — events live in memory only. This is exactly why M22 introduces RabbitMQ.
 </details>
 
 

@@ -312,18 +312,18 @@ User reads (GET /my-tickets)
 ### 🛠️ Build: Database Router
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-Think about the overall approach before diving into implementation details.
+<summary>💡 Hint 1: Two pools, one router</summary>
+Create a `primaryPool` (port 5432) and a `replicaPool` (port 5433). Writes always go to `primaryPool`. For reads, you need a function like `getReadPool(userId?)` that decides which pool to use based on whether the user wrote recently.
 </details>
 
 <details>
-<summary>💡 Hint 2: Approach</summary>
-Break the problem into smaller steps. What needs to happen first?
+<summary>💡 Hint 2: Track recent writers with a Map</summary>
+Use a `Map<string, number>` that maps `userId` to the timestamp of their last write. After a purchase, call `recordWrite(userId)`. In `getReadPool()`, check if `Date.now() - lastWriteTime < 5000`. If yes, route to primary so they see their own data.
 </details>
 
 <details>
-<summary>💡 Hint 3: Almost There</summary>
-Review the concepts from this section. The solution follows the same patterns demonstrated above.
+<summary>💡 Hint 3: Clean up stale entries</summary>
+The Map will grow forever unless you prune it. When its size exceeds a threshold (e.g., 1000 entries), iterate and delete entries older than the read-your-writes window (5 seconds). This keeps memory bounded without affecting correctness.
 </details>
 
 

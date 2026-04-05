@@ -497,18 +497,18 @@ Two commands. Done. A new developer is shipping on day one instead of debugging 
 ### 📐 Exercise: Onboarding Time Trial
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-Think about the overall approach before diving into implementation details.
+<summary>💡 Hint 1: Time the full clone-to-running sequence</summary>
+Start a stopwatch from `git clone` and stop when `curl http://localhost:3000/api/health` returns `{"status":"ok"}`. Note every point where you had to stop and think or manually edit something — each pause is a gap in the Makefile automation.
 </details>
 
 <details>
-<summary>💡 Hint 2: Approach</summary>
-Break the problem into smaller steps. What needs to happen first?
+<summary>💡 Hint 2: The Makefile should check prerequisites</summary>
+Before running `npm ci`, the setup target should verify that `mise` and `docker` are installed. Use `@command -v mise >/dev/null 2>&1 || { echo "Please install mise"; exit 1; }`. Also check that `.env` exists; if not, copy from `.env.example`. Each missing prerequisite should produce a clear, actionable error.
 </details>
 
 <details>
-<summary>💡 Hint 3: Almost There</summary>
-Review the concepts from this section. The solution follows the same patterns demonstrated above.
+<summary>💡 Hint 3: Target time is under 5 minutes, zero manual steps</summary>
+The ideal flow: `git clone && cd ticketpulse && make setup` completes with no human intervention. `mise install` handles the Node version from `.nvmrc`. `npm ci` installs from the lockfile. `docker compose up -d` starts Postgres and Redis. `npm run db:migrate && npm run db:seed` initializes the database. If any step requires manual editing (other than `.env` secrets), automate it.
 </details>
 
 
