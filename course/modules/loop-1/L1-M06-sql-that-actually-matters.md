@@ -398,6 +398,21 @@ Now it's your turn. Write these 5 queries against the TicketPulse database. Each
 Show each event with its venue, headlining artist, tickets sold, total revenue, and rank by revenue (using ROW_NUMBER). Only include events with at least 1 sold ticket.
 
 <details>
+<summary>💡 Hint 1: Direction</summary>
+Break this into two CTEs: one for revenue per event (COUNT and SUM with FILTER (WHERE t.status = 'sold') grouped by event), and one for headliners (JOIN event_artists with artists WHERE ea.is_headliner = true). Then combine them in the final SELECT.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+For the revenue CTE, use HAVING COUNT(*) FILTER (WHERE t.status = 'sold') > 0 to exclude events with zero sales. JOIN events to venues inside this CTE so you have venue_name ready.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+In the final SELECT, add ROW_NUMBER() OVER (ORDER BY er.revenue DESC) AS rank. Use LEFT JOIN to attach headliners (not all events have one). ORDER BY rank to get a clean leaderboard.
+</details>
+
+<details>
 <summary>Solution</summary>
 
 ```sql
@@ -436,6 +451,21 @@ ORDER BY rank;
 For each customer, show their total spending, number of orders, average order value, and their rank among all customers by total spending. Use a window function for the rank.
 
 <details>
+<summary>💡 Hint 1: Direction</summary>
+Start with a CTE that JOINs orders to order_items (ON oi.order_id = o.id) and filters WHERE o.status = 'confirmed'. GROUP BY customer_name and customer_email.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Use COUNT(DISTINCT o.id) for number of orders (not COUNT(oi.id), which counts items). Use SUM(oi.price_at_purchase) for total spending and ROUND(AVG(oi.price_at_purchase), 2) for average item price.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+In the final SELECT, apply RANK() OVER (ORDER BY total_spent DESC) instead of ROW_NUMBER — RANK gives tied customers the same position. ORDER BY spending_rank to present the leaderboard.
+</details>
+
+<details>
 <summary>Solution</summary>
 
 ```sql
@@ -463,6 +493,21 @@ ORDER BY spending_rank;
 
 **Query 3: "Venue Utilization Report"**
 For each venue, show the number of events, total ticket capacity (tickets created), tickets sold, sell-through percentage, and total revenue. Rank venues by sell-through percentage.
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Use LEFT JOIN from venues to events to tickets so venues with no events still appear. Count events with COUNT(DISTINCT e.id) and tickets with COUNT(t.id).
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+For sell-through percentage: COUNT(t.id) FILTER (WHERE t.status = 'sold') * 100.0 / NULLIF(COUNT(t.id), 0). The NULLIF prevents division by zero for venues with no tickets. Wrap it in ROUND(..., 1) for a clean percentage.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+For the ranking, use DENSE_RANK() OVER (ORDER BY ... DESC NULLS LAST) on the sell-through expression. NULLS LAST pushes venues with no tickets to the bottom instead of the top.
+</details>
 
 <details>
 <summary>Solution</summary>
@@ -497,6 +542,21 @@ ORDER BY utilization_rank;
 Show all confirmed orders in chronological order, with a running total of revenue and the day-over-day change.
 
 <details>
+<summary>💡 Hint 1: Direction</summary>
+Build a CTE called order_revenue that JOINs orders to order_items, filters WHERE o.status = 'confirmed', and groups by order id and date. Use DATE(o.ordered_at) to extract the date and SUM(oi.price_at_purchase) for each order's total.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+For the running total, use SUM(order_total) OVER (ORDER BY order_date, order_id). Including order_id in the ORDER BY ensures a deterministic running sum when multiple orders fall on the same date.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+For day-over-day change, use order_total - LAG(order_total) OVER (ORDER BY order_date, order_id). LAG returns NULL for the first row, so the change column will be NULL for the earliest order — that is correct.
+</details>
+
+<details>
 <summary>Solution</summary>
 
 ```sql
@@ -523,6 +583,21 @@ ORDER BY order_date, order_id;
 
 **Query 5: "Artist Popularity Dashboard"**
 For each artist, show: number of events they play, how many are as headliner vs support, total tickets sold across all their events, and their percentage of all ticket sales platform-wide.
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Use two CTEs: one for artist event counts (JOIN artists to event_artists, then COUNT(*) FILTER (WHERE ea.is_headliner) for headliner count and COUNT(*) FILTER (WHERE NOT ea.is_headliner) for support count), and one for ticket sales per artist (JOIN event_artists to tickets).
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+In the ticket sales CTE, group by ea.artist_id. Use COUNT(*) FILTER (WHERE t.status = 'sold') for tickets sold and SUM(t.price) FILTER (WHERE t.status = 'sold') for revenue. Note: tickets for events with multiple artists get counted for each artist.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+For percentage of total revenue, use SUM(COALESCE(ats.revenue, 0)) OVER () in the denominator — the empty OVER () gives you the grand total across all artists. Wrap with ROUND(..., 1) and handle NULLs with COALESCE for artists with zero sales.
+</details>
 
 <details>
 <summary>Solution</summary>

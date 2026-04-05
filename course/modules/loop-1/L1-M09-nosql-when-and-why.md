@@ -305,17 +305,17 @@ Redis is amazing for caching, sessions, counters, and leaderboards. It is NOT a 
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Think about the overall approach before diving into implementation details.
+Use INCR event:{id}:pageviews for the basic counter — INCR is atomic and creates the key if it does not exist, starting from 0. For daily counters, encode the date in the key: INCR event:1:views:2026-03-24 and set EXPIRE event:1:views:2026-03-24 2592000 (30 days) so old counters clean themselves up.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Break the problem into smaller steps. What needs to happen first?
+For a leaderboard of most-viewed events, use a sorted set: ZINCRBY event_views_leaderboard 1 "event:1" on every page view. Then ZREVRANGE event_views_leaderboard 0 2 WITHSCORES gives you the top 3 events instantly — no scanning or sorting required.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-Review the concepts from this section. The solution follows the same patterns demonstrated above.
+To bundle multiple counters per event (pageviews, unique visitors, add-to-cart), use a hash: HINCRBY event:1:stats pageviews 1. Retrieve everything at once with HGETALL event:1:stats. This is more efficient than separate string keys because Redis stores small hashes in a compact ziplist encoding.
 </details>
 
 
@@ -494,17 +494,17 @@ Problems with this approach:
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Think about the overall approach before diving into implementation details.
+Ask two questions for each data type: (1) Does it need ACID transactions? Ticket purchases and orders absolutely do — keep those in PostgreSQL. (2) Is it ephemeral or high-frequency? Sessions (SET/GET with EX 3600) and page view counters (INCR) are perfect for Redis because they need sub-millisecond latency and no durability guarantees.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Break the problem into smaller steps. What needs to happen first?
+For search, check whether PostgreSQL's built-in tsvector full-text search is enough before reaching for Elasticsearch. For images and media, no database is the right answer — use object storage (S3). Binary blobs in Postgres bloat your WAL and backups.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-Review the concepts from this section. The solution follows the same patterns demonstrated above.
+The default answer is "Postgres + Redis covers 90% of use cases." Map each data type to one of: PostgreSQL (relational, transactional), Redis (sessions via SET/GET EX, counters via INCR, leaderboards via ZADD/ZREVRANGE), S3 (binary blobs), or a specialized store only when you have a measured need. Every additional database is another system to operate, back up, and monitor.
 </details>
 
 

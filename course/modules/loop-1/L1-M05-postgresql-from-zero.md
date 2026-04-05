@@ -137,17 +137,17 @@ Reading this:
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Think about the overall approach before diving into implementation details.
+Start with tables that have no foreign keys — venues and artists depend on nothing else. Then create events (which REFERENCES venues), then tickets (which REFERENCES events), and so on. If you try to create tickets before events exists, Postgres will error on the foreign key.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Break the problem into smaller steps. What needs to happen first?
+For the many-to-many between events and artists, you need a junction table (event_artists) with a composite primary key: PRIMARY KEY (event_id, artist_id). Use BIGINT NOT NULL REFERENCES events(id) and BIGINT NOT NULL REFERENCES artists(id) for the two columns. No separate BIGSERIAL id needed here.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-Review the concepts from this section. The solution follows the same patterns demonstrated above.
+For the money columns (ticket price, order total), use NUMERIC(10, 2) NOT NULL with a CHECK (price >= 0) constraint. For status columns, use a CHECK constraint with IN ('value1', 'value2', ...) to enforce valid values at the database level. Every table should end with created_at TIMESTAMPTZ NOT NULL DEFAULT NOW() and updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW().
 </details>
 
 
@@ -451,6 +451,21 @@ Write queries for these questions. Try each one before looking at the answer.
 **Q1: "Which artists are playing at events with more than 5 available tickets?"**
 
 <details>
+<summary>💡 Hint 1: Direction</summary>
+You need to walk the chain: artists -> event_artists -> events -> tickets. That means JOINing four tables. Start by writing the FROM clause with all the JOINs before thinking about filtering.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Filter tickets with WHERE t.status = 'available', then GROUP BY artist and event name. The "more than 5" part is a HAVING clause — HAVING COUNT(t.id) > 5 — because you are filtering on an aggregate, not on individual rows.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Use DISTINCT on the artist name if an artist could appear multiple times. The JOIN path is: artists a JOIN event_artists ea ON a.id = ea.artist_id JOIN events e ON ea.event_id = e.id JOIN tickets t ON t.event_id = e.id.
+</details>
+
+<details>
 <summary>Solution</summary>
 
 ```sql
@@ -467,6 +482,21 @@ HAVING COUNT(t.id) > 5;
 </details>
 
 **Q2: "List all orders with the customer name, number of tickets, and total paid"**
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+You only need two tables here: orders and order_items. JOIN them on oi.order_id = o.id. The customer name lives in the orders table.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Use COUNT(oi.id) for the number of tickets and SUM(oi.price_at_purchase) for the total paid. GROUP BY the order columns — o.id, o.customer_name, o.ordered_at, o.status.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Add ORDER BY o.ordered_at to show orders chronologically. Remember to include every non-aggregated column in your GROUP BY clause, or Postgres will complain.
+</details>
 
 <details>
 <summary>Solution</summary>
@@ -486,6 +516,21 @@ ORDER BY o.ordered_at;
 </details>
 
 **Q3: "For each venue, show the total number of events and the average ticket price"**
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Use LEFT JOIN (not INNER JOIN) from venues to events and then to tickets. A LEFT JOIN ensures venues with zero events still appear in the results instead of being silently dropped.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Count events with COUNT(DISTINCT e.id) — not COUNT(e.id) — because each event has many tickets, so e.id repeats. For average ticket price, use ROUND(AVG(t.price), 2) to get a clean two-decimal result.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+GROUP BY v.id, v.name, v.city and ORDER BY num_events DESC. Venues with no events will show 0 events and NULL for the average price — that is the correct behavior with LEFT JOIN.
+</details>
 
 <details>
 <summary>Solution</summary>

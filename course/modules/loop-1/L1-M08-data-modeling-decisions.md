@@ -292,17 +292,17 @@ ORDER BY es.revenue DESC;
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Think about the overall approach before diving into implementation details.
+You need two new tables: reviews and review_votes. The reviews table needs a foreign key to events(id), and the "one review per user per event" rule maps to a UNIQUE (event_id, customer_email) constraint. For the rating, use SMALLINT with CHECK (rating BETWEEN 1 AND 5).
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Break the problem into smaller steps. What needs to happen first?
+For soft delete, add an is_deleted BOOLEAN NOT NULL DEFAULT false column. Your indexes should filter on this: CREATE INDEX idx_reviews_event ON reviews (event_id, created_at DESC) WHERE is_deleted = false — this is a partial index that only includes active reviews, matching the access pattern of the event detail page.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-Review the concepts from this section. The solution follows the same patterns demonstrated above.
+For the denormalization question: the event detail page needs AVG(rating) and COUNT(*) on every load. With hundreds of reviews this is cheap, but you could add avg_rating NUMERIC(3,2) and review_count INTEGER to the events table and maintain them with a trigger (AFTER INSERT OR UPDATE ON reviews). The trigger runs UPDATE events SET review_count = (SELECT COUNT(*) ...), avg_rating = (SELECT ROUND(AVG(rating)::numeric, 2) ...) WHERE id = NEW.event_id.
 </details>
 
 

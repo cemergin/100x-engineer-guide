@@ -380,6 +380,21 @@ TicketPulse runs these 5 queries most frequently. Design the optimal set of inde
 5. **Venue listing**: `WHERE venue_id = ? ORDER BY event_date` (on events table)
 
 <details>
+<summary>💡 Hint 1: Direction</summary>
+For query 1, status = 'available' is a constant filter that applies to a subset of rows. That screams partial index: CREATE INDEX ... ON tickets (event_id, price) WHERE status = 'available'. The partial index is smaller and also covers the ORDER BY price since price is the last column.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Apply the composite index rule: equality columns first, range columns last. For query 3 (event_date BETWEEN ? AND ? AND status = ?), status is equality and event_date is range, so the index should be (status, event_date) — not (event_date, status). For query 2, customer_email is equality and ordered_at is range/sort, so (customer_email, ordered_at DESC).
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Check for redundancy. If you have idx_tickets_event_available ON tickets (event_id, price) WHERE status = 'available', you do NOT also need a separate (event_id) index on tickets for the revenue report — but you DO need a separate partial index for query 4: ON tickets (event_id) WHERE status = 'sold'. Two partial indexes serving two different status filters is not redundancy, it is precision.
+</details>
+
+<details>
 <summary>Solution</summary>
 
 ```sql
