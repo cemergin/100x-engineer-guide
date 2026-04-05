@@ -108,6 +108,8 @@ That number — 43.2 minutes — is not a punishment. It's a resource. It's the 
 
 This shifts the conversation between product and engineering from "are we too slow?" or "did we break production again?" to "how's our error budget?" It's quantitative, non-personal, and tied directly to user impact.
 
+In the TicketPulse course (L1-M26), you'll calculate TicketPulse's first real error budgets from scratch — define the SLOs, pull historical request counts from Prometheus, and wire the resulting budget to a deployment gate in GitHub Actions. When you see the gate actually block a merge because the monthly budget is 73% consumed and there are 8 days left, the abstraction becomes a physical reality you'll never forget.
+
 **What happens when you run out:**
 
 The policy consequences of an exhausted error budget are something your organization has to decide in advance, ideally before any specific incident. Common policies:
@@ -954,6 +956,8 @@ Netflix went further and built the Simian Army: Chaos Monkey (random instance te
 By 2012, Netflix had open-sourced Chaos Monkey, and the discipline had a name: chaos engineering.
 
 The insight: **weaknesses in your system don't care whether you're testing or not.** They exist in production right now. The question is whether you discover them on your terms (controlled experiment, during business hours, with your team at full attention) or on the system's terms (random 3am production incident with your on-call engineer half-asleep).
+
+This is exactly the learning you'll live through in L2-M48, where you'll break TicketPulse on purpose — killing the payment service mid-purchase, injecting 500ms of latency into the database connection, and severing the Kafka consumer. Some of those experiments will surface genuine bugs in the circuit breaker configuration. The "aha" moment is when you realize your staging system didn't catch them because staging never ran at production traffic volume.
 
 ### 5.2 The Five Principles of Chaos Engineering
 

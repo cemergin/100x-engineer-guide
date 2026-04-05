@@ -352,6 +352,8 @@ If all 8 pass, you are tooled up. If any fail, you now have a specific list of a
 
 You have access. You can build and run the code. Now you need to understand what you're looking at. The goal is not to understand every line of code — it's to build a **working mental model** good enough to reason about failures, trace requests, and know where to look when something breaks.
 
+In L3-M91 (Beast Mode — Access & System Mapping), you'll run through this exact process against TicketPulse under a simulated "day one" constraint — pretend you've never seen the codebase before and get operational from scratch. The constraint isn't artificial. It trains the habit of treating *your* codebase the same way, because the engineer who truly understands their own system's blast radius is the one who treats it like an adversary, not like a familiar friend.
+
 ### The Core Principle: Metrics and Infra Don't Lie
 
 Code can be deceptive. Multiple generations of engineers wrote it, in different periods of the company's life, under different constraints. Comments rot. READMEs drift. That function named `processOrder` might also send emails, update analytics, and trigger a webhook — because three different engineers extended it over two years.
@@ -1332,6 +1334,8 @@ You have two options. You can freeze, scroll aimlessly through dashboards you ba
 
 This section gives you that script. You might not be the one who writes the fix. But you won't make things worse, and you'll contribute in ways that experienced engineers genuinely appreciate.
 
+L3-M91b (Beast Mode — Incident Dry Run) is designed to be run immediately after you complete the access and system-mapping work from L3-M91. It throws a cascading failure at TicketPulse — starting with a Kafka consumer falling behind, triggering a payment timeout, triggering a circuit breaker opening, triggering cascading 503s — while deliberately degrading some of your usual debugging tools. The exercise is uncomfortable by design. That discomfort is the point: your real first incident will also be uncomfortable, and having already felt that specific pressure means you'll react with method instead of panic. L3-M91a (Observability Wiring) runs before the dry run to ensure your dashboards and log queries are all working before the pressure starts.
+
 ### 5.1 The First 5 Minutes Script
 
 When the pager fires and you're new, you need a literal step-by-step. Not "use good judgment" — a checklist. Good judgment comes later. Right now, you need a sequence.
@@ -1617,6 +1621,8 @@ This document compounds over time. After 3 months of on-call, your personal runb
 ## 6. TEAM & TRIBAL KNOWLEDGE — THE STUFF THAT ISN'T WRITTEN DOWN
 
 Every system has an oral history. Architecture decisions that never made it into an ADR. The unwritten rule that you don't deploy on Fridays. The reason the `UserService` has two implementations and nobody deletes the old one. The engineer who built the authentication system from scratch, left two years ago, and took all the context with them.
+
+L3-M91c (Beast Mode — Tribal Knowledge) is built specifically around this problem. You'll run the three conversations from section 6.1 against simulated TicketPulse "team members" (provided prompts and personas), surface the undocumented decisions baked into the system, and write them into a newcomer FAQ. The finished artifact from that module is something you'll reuse verbatim when you join any new team.
 
 This knowledge exists in the heads of your teammates, in the chat history of old Slack threads, in the commit messages of three-year-old PRs. It's the difference between the system as documented and the system as it actually is. And if you don't deliberately extract it, you'll discover it the hard way — usually during an incident.
 
@@ -2128,6 +2134,8 @@ Want to put this into practice? The [TicketPulse course](../course/) has hands-o
 - **[L3-M91c: Beast Mode — Tribal Knowledge & the Newcomer Superpower](../course/modules/loop-3/L3-M91c-beast-mode-tribal-knowledge.md)** — Document the undocumented: surface the institutional knowledge that lives only in people's heads and convert it into searchable, durable reference material
 
 ### Quick Exercises
+
+> **No codebase handy?** Try the self-contained version in [Appendix B: Exercise Sandbox](../appendices/appendix-exercise-sandbox.md) — the [incident simulation exercise](../appendices/appendix-exercise-sandbox.md#exercise-10-incident-simulation--break-it-triage-it-fix-it) gives you a Docker Compose app you can deliberately break and then triage using only logs and metrics.
 
 1. **Build your personal access matrix for your current team's systems** — list every system you might need to touch during an incident, verify you have working credentials for each, and note the escalation path for anything you cannot access directly.
 2. **Create a hotlinks bookmark folder with your top 5 dashboards** — open each one right now and verify it loads with current data. Fix any broken panel before an incident forces you to debug your observability tooling while the system is on fire.

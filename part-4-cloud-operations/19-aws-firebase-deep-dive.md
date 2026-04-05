@@ -1355,6 +1355,38 @@ Cost optimization on AWS isn't about being cheap. It's about being strategic —
 
 The playbook for mature AWS cost management: run your steady-state production workloads on Compute Savings Plans (commit to a dollar-per-hour amount, not a specific instance type), use spot instances for batch and CI/CD, and right-size everything with Compute Optimizer before committing. That combination routinely delivers 60-70% savings vs baseline on-demand pricing.
 
+### Cost Cheat Sheet: What AWS Actually Costs
+
+Before you architect anything on AWS, know what the bill looks like. These are ballpark monthly costs at two common stages: early startup (small traffic, MVP scale) and growth stage (meaningful user base, multiple services).
+
+> All figures are ballpark estimates as of 2025 — check current pricing before budgeting. Costs vary significantly by region, instance type, and data transfer.
+
+| Service | Startup Scale | Growth Scale | What Drives Cost |
+|---|---|---|---|
+| **EC2 t3.medium** (1 instance, on-demand) | ~$30/mo | Typically 5–20x at scale | Instance type, on-demand vs reserved |
+| **RDS Postgres** (db.t3.medium, Multi-AZ) | ~$150/mo | $400–2,000/mo | Instance size, storage, Multi-AZ, read replicas |
+| **Aurora Postgres** (1 writer, serverless v2) | ~$100–300/mo | $500–5,000/mo | ACUs consumed, storage, I/O |
+| **ElastiCache Redis** (cache.t3.medium, 1 node) | ~$50/mo | $200–800/mo | Node size, cluster mode, Multi-AZ |
+| **ECS Fargate** (1 vCPU, 2 GB, 730 hrs) | ~$60/mo | $300–2,000/mo | vCPU + memory allocation |
+| **EKS** (control plane + 3 t3.medium nodes) | ~$375/mo | $800–3,000+/mo | Control plane fee + node costs |
+| **S3** (100 GB storage + moderate requests) | ~$5–15/mo | $50–500/mo | Storage + GET requests + data transfer |
+| **CloudFront** (moderate traffic, 100 GB egress) | ~$10–20/mo | $100–1,000/mo | Data transfer out + requests |
+| **ALB** (1 load balancer, moderate traffic) | ~$20–30/mo | $50–200/mo | Per LCU + hourly fee |
+| **SQS** (<1M messages/mo) | ~$0 (free tier) | $1–200/mo | $0.40/million messages after free tier |
+| **Lambda** (moderate invocations, short duration) | ~$0–5/mo | $10–500/mo | Requests + GB-seconds |
+| **NAT Gateway** (moderate egress) | ~$35–100/mo | $100–1,000+/mo | Per-hour + $0.045/GB processed — the sneaky one |
+
+**The numbers that surprise most teams:**
+
+NAT Gateway data processing charges hit harder than almost anything else on an AWS bill. If your ECS tasks pull Docker images through a NAT Gateway, you pay $0.045/GB per image pull. Fix this with VPC endpoints for ECR and S3 — it's a one-time config change that can save hundreds per month.
+
+Data transfer out to the internet is the other surprise. S3 charges $0.09/GB egress. Put CloudFront in front of S3 and the per-GB charge drops to $0.0085/GB — 10x cheaper, and faster for users.
+
+**Quick monthly baseline for a production-ready MVP on AWS:**
+- ALB + ECS Fargate (1 service) + RDS Multi-AZ + ElastiCache + NAT Gateway + CloudFront + S3
+- Rough total: **$400–700/month** depending on traffic and instance sizes
+- At growth stage with multiple services and read replicas: **$2,000–8,000/month**
+
 ### 8.2 Cost Explorer and Budgets
 
 ```bash

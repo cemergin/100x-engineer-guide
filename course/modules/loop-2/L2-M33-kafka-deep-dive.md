@@ -12,6 +12,8 @@ In M22, you added RabbitMQ to TicketPulse. It works well for task queues — one
 
 Kafka is not a replacement for RabbitMQ — it is a different tool for a different problem. RabbitMQ is a message broker (route messages to consumers). Kafka is a distributed log (append events, let anyone read them at their own pace).
 
+**From the guide:** Chapter 13 explains why event-driven architecture is the backbone of modern distributed systems — not just for decoupling services, but because an immutable, replayable event log is a fundamentally more durable record of what happened than a synchronized state machine. The chapter's key insight is that events are facts: "a ticket was purchased" is something that happened and cannot be un-happened. Downstream systems can interpret that fact differently — the notification service sends an email, the analytics service increments a counter, the fraud service runs a risk score — without the purchase service needing to know any of them exist. Now you'll build exactly that. TicketPulse's ticket-purchases topic will become the single source of truth that multiple independent consumer groups read at their own pace. Kill one consumer, restart it, watch it replay from where it left off without missing a single event. That's the capability Chapter 13 described in theory.
+
 By the end of this module, TicketPulse will have Kafka as its event backbone. You will create topics, produce messages, run multiple consumer groups, kill consumers and watch them catch up, and observe everything through Kafka UI.
 
 **You will see your first Kafka message within five minutes.**

@@ -192,6 +192,8 @@ Here's a quick reference for matching business requirements to consistency model
 
 The cost of getting this wrong compounds over time. A system designed with linearizable consistency where eventual would have sufficed will have latency problems at scale. A system designed with eventual consistency where linearizable was required will have correctness bugs that surface in production under exactly the conditions you least want — high load, network problems, rapid concurrent access.
 
+Distributed locks are one of the sharpest edges here. TicketPulse's ticket purchase flow needs a distributed lock to prevent two users from buying the last seat simultaneously. If the lock implementation uses eventually consistent storage, you get double-sales. If it uses something CP like Redis with Redlock or etcd, you get correctness — but you need to understand the failure modes of your lock server itself. This is the exact scenario we dig into later in this chapter's system design walkthrough, and the TicketPulse course's Kafka and saga modules show what happens when you try to solve seat reservation without a well-designed consensus-backed lock.
+
 ### 1.4 Consensus Algorithms
 
 Here's a problem that sounds deceptively simple: you have a cluster of nodes, some of which might fail, and you want them all to agree on a single value. Say, "who is the leader right now?" Or "was this transaction committed or aborted?"
@@ -510,6 +512,8 @@ Cassandra uses 256 virtual nodes per server by default. With a 10-server cluster
 
 Virtual nodes also make failure recovery cleaner. When a server dies, its load doesn't concentrate on a single successor (which could overwhelm it). Instead, the failed server's 256 positions distribute their load across 256 different neighbors. The cluster as a whole absorbs the failure gradually rather than dumping everything on one node.
 
+In the TicketPulse course (L3-M65), you'll implement exactly this — a consistent hashing ring for TicketPulse's distributed cache layer. You'll add virtual nodes, simulate killing one cache node, and watch the key redistribution happen in real time on a Grafana dashboard. The moment you see only ~1/N of cache keys invalidate instead of the whole cache, the ring clicks into place in a way no diagram ever quite achieves.
+
 **A worked example with Cassandra.** You have a 6-node Cassandra cluster, replication factor 3. A write comes in for key `user:456789`. Cassandra hashes the key using Murmur3 (its default hash function), finds the position on the ring, identifies the three consecutive nodes clockwise from that position, and sends the write to all three in parallel. A quorum write (`W=2`) succeeds when any 2 of those 3 acknowledge. Later, a quorum read (`R=2`) fetches from 2 of those 3 nodes and takes the more recent value if they differ (using timestamps on writes). Since `W + R = 4 > N = 3`, at least one node always appears in both the write quorum and the read quorum, guaranteeing the read sees the latest write.
 
 **Range-Based Partitioning**
@@ -633,6 +637,27 @@ The cache hit rate you need: if your database can handle 2,000 RPS (baseline cap
 Assume each write requires ~10ms of database time (a ballpark for a simple indexed insert on Postgres). At 10ms/write, one Postgres instance can handle roughly 100 writes/second per core (1000ms / 10ms). For 8 cores, that's ~800 writes/second. If you need 5,000 writes/second, you need either: multiple Postgres instances (horizontal scaling or sharding), write batching (aggregate 10 writes into 1 batch operation), an async write queue (accept writes into Kafka, write to DB at controlled rate), or a write-optimized database (LSM tree like Cassandra that handles 10,000+ writes/sec on a single node).
 
 This kind of rough capacity modeling takes 5 minutes and prevents countless architecture mistakes. Do it before you pick your database, not after you're already in production.
+
+### What Distributed Systems Actually Cost
+
+You just learned how sharding, replication, and cross-region consistency work. Here's the part most architecture books skip: what does this infrastructure cost per month?
+
+> All figures are ballpark estimates as of 2025 — check current pricing before budgeting.
+
+| Component | Monthly Cost (Approximate) |
+|---|---|
+| Single Postgres (RDS db.t3.medium, single-AZ) | ~$50–80/mo |
+| Single Postgres (RDS db.t3.medium, Multi-AZ) | ~$100–160/mo |
+| Read replicas (2x, same region) | ~$100–320/mo additional |
+| Multi-region active-active (Aurora Global DB) | ~$2,000–5,000/mo |
+| Managed Kafka cluster (MSK, 3-broker, smallest) | ~$800–2,500/mo |
+| DynamoDB (on-demand, moderate traffic ~10M reads/mo) | ~$50–200/mo |
+| Redis cluster (ElastiCache, cache.t3.medium, 1 node) | ~$30–50/mo |
+| Redis cluster (ElastiCache, 3-node, production-grade) | ~$200–800/mo |
+
+The jump from "single Postgres" to "multi-region active-active" is 25–50x the cost. That's not a configuration change — that's an architectural commitment. The systems that need multi-region active-active are real (global fintech, latency-sensitive gaming, critical SaaS) but they're a small fraction of the systems that get architected for it.
+
+Most startups need: one RDS Multi-AZ ($160/mo) + one Redis node ($50/mo) + DynamoDB if you need it ($50–200/mo). That gets you high availability in one region, decent caching, and handles hundreds of thousands of users. Add read replicas when query load actually demands it, not as a default.
 
 ---
 
@@ -1346,6 +1371,8 @@ Want to put this into practice? The [TicketPulse course](../course/) has hands-o
 - **[L3-M76: System Design Interview Practice](../course/modules/loop-3/L3-M76-system-design-interview-practice.md)** — Apply the decision frameworks from this chapter to realistic whiteboard problems under time pressure
 
 ### Quick Exercises
+
+> **No codebase handy?** Try the self-contained versions in [Appendix B: Exercise Sandbox](../appendices/appendix-exercise-sandbox.md) — the [etcd consensus cluster](../appendices/appendix-exercise-sandbox.md#exercise-1-distributed-consensus--etcd-cluster) and [circuit breaker](../appendices/appendix-exercise-sandbox.md#exercise-7-circuit-breaker--30-lines-real-behavior) exercises run with just Docker and a terminal.
 
 1. **Draw your current system's architecture in boxes and arrows** — no tooling required, just pen and paper. Identify every external dependency, every database, and every async queue. If you can't draw it in 10 minutes, that's signal worth paying attention to.
 

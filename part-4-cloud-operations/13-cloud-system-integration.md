@@ -305,6 +305,28 @@ Consumer groups are the magic: each partition is consumed by exactly one consume
 
 Retention is time-based (7 days default) or size-based. Unlike traditional queues, messages aren't deleted after consumption — they expire. This enables replay. That `order.created` event from three days ago? You can re-consume it if you need to rebuild state. Replication: each partition has a leader broker and N-1 followers. ISR (in-sync replicas) ensures durability — a write is only acknowledged after it's on all in-sync replicas.
 
+### What Messaging Systems Cost
+
+You can choose the right queue for the wrong reason (it's what you know, it's what's cool) or the wrong queue for the right reason (it's cheap, it's enough). Know the price before you commit.
+
+> All figures are ballpark estimates as of 2025 — check current pricing before budgeting.
+
+| System | Approximate Monthly Cost | At 10M Messages/Month | What Tips the Decision |
+|---|---|---|---|
+| **SQS Standard** | $0 (first 1M free), then ~$0.40/million | ~$3.60/mo | Simple task queues, no replay needed |
+| **SQS FIFO** | ~$0.50/million messages | ~$4.50/mo | Ordering matters, lower throughput ok |
+| **SNS** | ~$0.50/million notifications | ~$4.50/mo | Fan-out to multiple subscribers |
+| **EventBridge** | ~$1.00/million events | ~$9/mo | Rule-based routing, AWS service events |
+| **MSK (managed Kafka)** | $800–2,500/mo minimum (3-broker cluster) | Same — cluster cost dominates | Replay needed, >50M msg/mo, multi-consumer |
+| **Self-managed Kafka** | ~$300–600/mo (3 EC2 instances) | Same — always paying for cluster | Cost savings vs MSK, if you have ops bandwidth |
+| **Redis Streams** | Included in ElastiCache cost | — | Lightweight streaming, already run Redis |
+
+**If your message volume is under 10M/month, SQS costs less than your morning coffee. Don't default to Kafka.**
+
+The urge to reach for Kafka is real — it's powerful, it scales to millions of messages per second, it has replay, it has consumer groups. But an MSK cluster costs $800–2,500/month whether you send 100 messages or 100 million. The math only works when your volume actually justifies it or when replay/multi-consumer semantics are a hard requirement. At startup scale, SQS handles almost every use case for under $10/month.
+
+A practical decision rule: start with SQS. When your SQS bill exceeds $300/month (you're above ~750M messages/month), or when you need event replay for rebuilding state, or when you have 5+ consumer groups with different retention needs — then look at MSK or self-managed Kafka.
+
 ### 2.3 When to Use Queues
 
 Understanding *why* you'd reach for a queue is as important as knowing how to configure one.
@@ -1561,6 +1583,8 @@ Want to put this into practice? The [TicketPulse course](../course/) has hands-o
 - **[L3-M82: Event Sourcing at Scale](../course/modules/loop-3/L3-M82-event-sourcing-at-scale.md)** — Replace mutable state with an immutable event log and build projections for TicketPulse's audit and analytics needs
 
 ### Quick Exercises
+
+> **No codebase handy?** Try the self-contained version in [Appendix B: Exercise Sandbox](../appendices/appendix-exercise-sandbox.md) — the [Kafka producer/consumer lag exercise](../appendices/appendix-exercise-sandbox.md#exercise-6-kafka--produce-consume-observe-lag) runs a real Kafka cluster in Docker and lets you watch consumer lag grow and shrink in real time.
 
 1. **Draw your system's data flow diagram** — map every service, every database, every queue, and every external dependency. Annotate each arrow with the protocol and whether it is synchronous or asynchronous.
 2. **Identify one synchronous call that should be async** — find a request path where the caller blocks waiting for a downstream service that does not need to respond immediately. Sketch what the async version would look like.

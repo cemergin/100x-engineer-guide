@@ -18,6 +18,8 @@ You will be on-call. You will get paged at the worst possible time. The differen
 
 TicketPulse is a global ticketing platform. When purchases fail, users lose access to events they care about. Every minute of downtime is real money and real trust. This module simulates that pressure so your first real incident is not your first time practicing the response.
 
+**From the guide:** Chapter 26 tells the story of the Cloudflare regex that took down 10% of the internet in 2019. A single WAF rule deployed to every edge server simultaneously — no canary, no CPU isolation, no rollback path that wasn't itself degraded. The whole incident lasted 27 minutes. What's striking in the postmortem isn't the technical failure; it's the response friction. Engineers were trying to diagnose a fire using tools that were being consumed by the same fire. The incident you're about to run has that same shape: your Kafka consumer lag is building, your purchase success rate is at 85%, and the Grafana dashboard you'd normally reach for is throwing 502s because the service backing it is overloaded. Remember the Cloudflare story as you work through this — the parallels are not accidental. And remember Knight Capital: a $440 million loss in 45 minutes because nobody had a kill switch and nobody had practiced using it. You'll have both today.
+
 > 💡 **Insight**: "Google's SRE teams run Disaster Recovery Testing (DiRT) exercises annually. They intentionally break production systems to practice their response. The chaos is planned; the learning is real."
 
 ---

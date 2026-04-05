@@ -617,6 +617,8 @@ The flame graph is arguably the most powerful performance debugging visualizatio
 
 The "plateau" pattern is the money shot. When you see a wide flat top on a flame graph, you have found exactly where your CPU is spending its time. That flat bar IS your performance problem. Everything below it is context telling you how execution got there.
 
+In L2-M58 (Debugging in Production), you'll use flame graphs as your primary diagnostic tool against a degraded TicketPulse — the purchase service is slow, you have no SSH access, and the only tools available are the ones in the observability stack. Generating a `py-spy` flame graph against the running process and spotting the plateau is the turning point of the module. Once you've found a real CPU hog that way, you'll reach for flame graphs instinctively in every future production investigation.
+
 > **War story.** We had a Python API that was inexplicably slow — 800ms per request for what should have been simple JSON transformation. A 30-second `py-spy` profile revealed a stunning plateau: `deepcopy`. Deep in a data transformation library, someone had called `copy.deepcopy()` on a 50MB data structure on every request. It was faster to construct the output directly than to copy the input. One-line fix, latency dropped to 45ms. The flame graph showed it instantly; we had been guessing for two weeks.
 
 **Generating Flame Graphs:**
@@ -1752,6 +1754,8 @@ The `tcpconnect` tool is the one I reach for when something mysterious is happen
 
 When something breaks in production, this is where everything in this chapter becomes real. Speed matters. Systematic thinking matters more. The engineers who resolve incidents fastest are the ones with the methodology so deeply internalized that they run the steps without thinking — while simultaneously communicating status, delegating investigation tasks, and keeping calm enough for everyone around them.
 
+This is precisely what L3-M73 (Incident Response Simulation) puts you through. It's Friday 4 PM, TicketPulse's purchase success rate has dropped to 85%, and the CEO is in the Slack channel. The module runs you through this exact playbook — detect, assess, investigate, mitigate, communicate — under time pressure, with incomplete information, and with the added constraint that some of your usual debugging tools are behaving strangely because the very infrastructure running them is degraded.
+
 See Ch 26 (Incident Management) for the full organizational playbook: escalation paths, communication templates, and post-incident review processes. This section covers the technical debugging steps.
 
 ### Step 1: Assess Impact
@@ -2022,6 +2026,8 @@ Want to put this into practice? The [TicketPulse course](../course/) has hands-o
 - **[L3-M73: Incident Response Simulation](../course/modules/loop-3/L3-M73-incident-response-simulation.md)** — Run a full incident from PagerDuty alert through mitigation and postmortem using TicketPulse as the patient
 
 ### Quick Exercises
+
+> **No codebase handy?** Try the self-contained version in [Appendix B: Exercise Sandbox](../appendices/appendix-exercise-sandbox.md) — the [Prometheus + Grafana observability exercise](../appendices/appendix-exercise-sandbox.md#exercise-5-observability--prometheus--grafana--instrumented-server) spins up a full golden-signals stack with Docker Compose in under 5 minutes.
 
 1. **Generate a flame graph for your slowest API endpoint** — use `py-spy`, `async-profiler`, `perf`, or your language's equivalent profiler. Run it against a staging environment under load and identify the top two CPU consumers in the call stack.
 2. **Add structured logging with correlation IDs to one request path** — pick one endpoint and ensure that every log line it emits (including logs from called services or database queries) includes the same `trace_id` field. Verify in your log aggregation tool that you can pull up all logs for a single request.

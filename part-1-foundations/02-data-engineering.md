@@ -1529,6 +1529,8 @@ Want to put this into practice? The [TicketPulse course](../course/) has hands-o
 
 ### Quick Exercises
 
+> **No codebase handy?** Try the self-contained versions in [Appendix B: Exercise Sandbox](../appendices/appendix-exercise-sandbox.md) — the [slow query + EXPLAIN ANALYZE](../appendices/appendix-exercise-sandbox.md#exercise-2-database--slow-query-explain-analyze-index) and [cache-aside with Redis](../appendices/appendix-exercise-sandbox.md#exercise-3-caching--cache-aside-pattern-with-redis) exercises spin up everything you need with Docker.
+
 1. **Run `EXPLAIN ANALYZE` on your slowest query** — copy the actual query from your application logs, run it in a staging environment, and read the output. Identify the most expensive node in the plan.
 2. **Add an index and measure the difference** — pick a column you filter on frequently that lacks an index, add one, re-run `EXPLAIN ANALYZE`, and compare the estimated vs. actual row counts and cost.
 3. **Identify one N+1 query in your codebase** — search for a loop that makes a database call inside it, or enable query logging and look for repeated identical queries with different parameter values. Refactor it to use a batch query or join.

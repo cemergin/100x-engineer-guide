@@ -1438,6 +1438,26 @@ Work through these questions in order. Stop when you have an answer.
 
 ---
 
+## Cost of Architecture
+
+Architecture has a price tag. The microservices dream costs $3K/month in infrastructure before you write a line of business logic — and that's the *minimum* production-grade setup. If you're a 3-person startup debating microservices vs monolith, "which one is cooler" is the wrong question. "Which one can we actually afford to run and operate?" is the right one.
+
+> All figures are ballpark estimates as of 2025 — check current pricing before budgeting.
+
+| Architecture | Minimum Monthly Cost | Team Size to Operate | When It Pays Off |
+|---|---|---|---|
+| Simple monolith (single server) | $20–100 | 1–3 | MVP, <100K users |
+| Modular monolith (managed container) | $100–500 | 2–5 | Growing startup |
+| Microservices (basic) | $500–3,000 | 5–15 | Multiple teams, independent deploys needed |
+| Microservices (production-grade with observability) | $3,000–15,000 | 10–30 | Scale demands it |
+| Event-driven (managed Kafka/SQS) | SQS: $20–200 / MSK: $800–3,000 | Varies | Async workloads |
+
+The minimum cost numbers above assume a single region, no multi-AZ for the monolith, and a bare-bones observability stack. Production-grade microservices at serious scale — distributed tracing, per-service alerting, managed service mesh, multiple environments — routinely run $10K–$30K/month before you've bought a single reserved instance.
+
+The architectural decision that saves you the most money early isn't picking the right framework — it's resisting the urge to build for 100M users when you have 1,000. A monolith running on a $50/month server that your team understands completely beats a $5,000/month Kubernetes cluster that only one engineer groks.
+
+---
+
 ### Architecture Decision Records (ADRs)
 
 One practice that pays disproportionate dividends: write down the architectural decisions you make. Not the "how" but the "why" — and especially the options you considered and rejected.

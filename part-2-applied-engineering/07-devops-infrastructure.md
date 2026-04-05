@@ -354,6 +354,21 @@ Kubernetes starts to make sense when multiple or more of these conditions are tr
 
 **The honest take:** Start without Kubernetes. Graduate to it when you have evidence that your current infrastructure is insufficient for your needs, and when you have the team bandwidth to operate it properly. The engineers who've operated Kubernetes in production for years are rightfully enthusiastic about it — it solves real problems at scale. But the problems it solves are problems you should confirm you have before paying the complexity tax.
 
+**Don't use Kubernetes unless your monthly compute bill justifies the operational overhead.** A good rule of thumb: if you're spending less than $1,000/month on compute, the $400+ baseline K8s overhead (and the engineering time to run it) is almost certainly not worth it. If you're at $3,000+/month in compute, the cluster overhead starts to become noise.
+
+> All figures are ballpark estimates as of 2025 — check current pricing before budgeting.
+
+| Option | Approximate Monthly Cost | Operational Overhead |
+|---|---|---|
+| EKS/GKE control plane fee | ~$75/mo | — (managed) |
+| Minimum viable K8s cluster (3 nodes, t3.medium) | ~$300–600/mo before workloads | High — networking, RBAC, upgrades, monitoring |
+| Production K8s (3 nodes + ingress + monitoring + GitOps) | ~$600–1,200/mo baseline | Very high |
+| ECS Fargate (equivalent stateless workload) | ~$150–400/mo | Low — no node management |
+| Google Cloud Run (equivalent HTTP workload) | ~$50–200/mo | Near-zero |
+| AWS App Runner (containerized HTTP service) | ~$25–150/mo | Near-zero |
+
+The Fargate and Cloud Run rows aren't inferior options — they're often the *right* option. Cloud Run can auto-scale to zero (great for low-traffic services), handles HTTPS automatically, and charges per request-millisecond. For stateless services getting less than a few million requests per day, Cloud Run or App Runner typically costs less *and* requires less engineering time than Kubernetes.
+
 If you're at a company that's already on Kubernetes, learn it deeply and use it well. If you're at an early-stage company choosing your stack, strongly consider starting with something simpler and revisiting the choice when you have real scaling requirements.
 
 **A concrete migration path that works:**

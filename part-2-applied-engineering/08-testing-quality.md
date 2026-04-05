@@ -89,6 +89,8 @@ TDD is particularly powerful for bug fixes. When you find a bug: write a test th
 
 The refactor phase is where TDD unlocks compound returns. Because you have a passing test, you can aggressively improve the code — rename, extract, reorganize — with complete confidence that you haven't introduced a regression. Refactoring without tests is archaeology. Refactoring with tests is sculpture.
 
+In L1-M16 (Testing Fundamentals), you'll apply exactly this cycle to TicketPulse — starting with zero tests, you'll TDD a ticket pricing feature from the very first red test. One thing the exercise makes viscerally clear: the act of writing the test before the code forces you to design a cleaner interface. The pricing logic you end up with after TDD is demonstrably simpler than what most engineers write when they go implementation-first. That's not coincidence — that's TDD working as a design tool.
+
 **TDD Worked Example: Building an Order Discount Calculator**
 
 Let's walk through a complete red-green-refactor cycle for a realistic piece of business logic: a discount calculator for an e-commerce system. The rules:
@@ -918,6 +920,8 @@ Here's a scenario that plays out painfully in microservices organizations: Team 
 
 Contract testing solves this without requiring you to deploy both services simultaneously to run tests.
 
+This is the exact failure mode you'll experience in the TicketPulse microservices modules (L2-M32 and L2-M35). When the Order service calls the Inventory service and the Inventory team renames a field in their response schema, your integration suddenly breaks in a way your unit tests couldn't catch. Once you've felt that pain, contract testing with Pact stops being an abstract best practice and becomes something you want on every service boundary you own.
+
 **Pact** is the industry-leading consumer-driven contract testing framework. Here's how it works:
 
 1. The **consumer** (Orders service) writes tests that describe what it expects from the provider (Inventory service). These tests run against a mock and produce a "pact" — a JSON file documenting the consumer's expectations.
@@ -1483,6 +1487,8 @@ Want to put this into practice? The [TicketPulse course](../course/) has hands-o
 - **[L2-M56: Advanced Authentication — OAuth2 / OpenID Connect](../course/modules/loop-2/L2-M56-advanced-authentication.md)** — Write contract tests for TicketPulse's OAuth integration and validate behavior across token refresh and revocation flows
 
 ### Quick Exercises
+
+> **No codebase handy?** Try the self-contained version in [Appendix B: Exercise Sandbox](../appendices/appendix-exercise-sandbox.md) — the [property-based testing exercise](../appendices/appendix-exercise-sandbox.md#exercise-4-testing--property-based-test-for-json-roundtrip) and [k6 load test](../appendices/appendix-exercise-sandbox.md#exercise-8-load-testing--k6-latency-histogram) need only Node and Docker.
 
 1. **Write one property-based test for a function in your codebase** — pick a pure function with defined invariants (e.g., a discount calculator, a date formatter, a slug generator) and write a property-based test using fast-check, Hypothesis, or QuickCheck that generates hundreds of random inputs and verifies the invariant holds.
 2. **Run mutation testing on your most critical module** — use Stryker, mutmut, or PITest on your most business-critical module. Look at the mutation score. For every surviving mutant, decide: is this a gap in your tests, or an untestable implementation detail?

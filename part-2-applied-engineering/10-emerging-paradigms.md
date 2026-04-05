@@ -87,6 +87,8 @@ Once you have more than one LLM-powered feature in production, you need a gatewa
 
 If you're running more than a toy AI feature, an AI gateway is not optional. It's load-bearing infrastructure.
 
+**AI gateway tools:** LiteLLM (open-source, runs locally or in your cluster, supports 100+ models with unified API), Portkey (managed, strong on routing and fallback), OpenRouter (managed, easiest for multi-provider routing, good for small teams). For enterprise: build a thin internal gateway on top of LiteLLM for full control over routing rules and audit logging.
+
 ### Vector Databases
 
 You've got several good options here and the choice matters less than people make it seem:
@@ -109,6 +111,41 @@ Track four things at minimum:
 4. **Drift detection** — your embedding distribution shifting, your retrieval recall changing, your output length drifting. These are early warnings before quality visibly degrades.
 
 The main tools in this space: **LangSmith** (deeply integrated if you're using LangChain), **Langfuse** (excellent open-source option with great UX), **Arize Phoenix** (strong on drift detection and ML observability workflows), **Helicone** (lightweight, developer-friendly, good for cost tracking).
+
+**The minimum AI observability setup (get this in before you ship):**
+
+```python
+# Every LLM call should emit a structured log with these fields
+def log_llm_call(
+    model: str,
+    prompt_tokens: int,
+    completion_tokens: int,
+    latency_ms: float,
+    feature: str,         # Which product feature triggered this call
+    user_id: str,         # For per-user cost analysis
+    session_id: str,      # For conversation-level tracking
+    response_quality: Optional[float] = None,  # If you have an automated scorer
+    error: Optional[str] = None,
+):
+    cost = calculate_cost(model, prompt_tokens, completion_tokens)
+    
+    logger.info({
+        "event": "llm_call",
+        "model": model,
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "total_cost_usd": cost,
+        "latency_ms": latency_ms,
+        "feature": feature,
+        "user_id": user_id,
+        "session_id": session_id,
+        "quality_score": response_quality,
+        "error": error,
+        "timestamp": datetime.utcnow().isoformat(),
+    })
+```
+
+This goes into your structured log pipeline. Your dashboard should show, per day: total cost by feature, p50/p99 latency by model, error rate by model, quality score trend over time. When any of these drifts >10% week-over-week, investigate before users notice.
 
 ### Evals: Your AI Test Suite
 
@@ -198,6 +235,38 @@ That retrieved documents line is where context engineering lives. How do you dec
 
 Build a **context assembly pipeline** — a function that takes a user query and returns the fully assembled prompt, respecting token limits. Test this pipeline independently from the model call. Your context assembly logic is complex enough to warrant its own unit tests.
 
+### When AI Is Genuinely Magical vs. Still Garbage
+
+Here's the honest assessment nobody gives you because it doesn't make for good conference talks: AI is breathtakingly good at some things and surprisingly bad at others — and the line between them is not intuitive.
+
+**Where AI is genuinely magical today:**
+
+*Semantic understanding at scale.* You have 50,000 customer support tickets. You want to know the top 20 complaint categories. Old way: hire analysts, read tickets, build a tagging taxonomy, train classifiers, iterate. New way: cluster the embeddings, ask an LLM to label each cluster, done in two hours. This is legitimately transformative.
+
+*Code generation in familiar territory.* Ask Claude or GPT-4o to write a SQL query, a React component, a unit test, a bash script, boilerplate CRUD code — for common patterns in popular frameworks, these models are accurate 80-90% of the time and save enormous time even at 70%. The magic is not that it's perfect; it's that the iteration loop is 10x faster.
+
+*Information synthesis.* "Read these 15 documents and give me a summary" — this is excellent. "Read these 15 research papers and tell me the key points of disagreement" — also excellent. The model can hold and synthesize a volume of text that would take a human analyst days.
+
+*Extracting structure from unstructured text.* JSON extraction, form parsing, entity recognition, classification — if you can describe what you want in natural language, LLMs are remarkably good at it. This is the hidden killer app: operational work that used to require regex soup or expensive supervised ML now takes a prompt.
+
+*Conversational UX where partial errors are acceptable.* A chat interface that sometimes gives a slightly wrong answer but is usually helpful is more valuable than no chat interface. The user can ask follow-up questions.
+
+**Where AI is still genuinely garbage:**
+
+*Anything requiring reliable precision.* Legal document analysis where one missed clause costs millions. Medical diagnosis where false negatives kill people. Financial calculations where a rounding error becomes a compliance violation. LLMs hallucinate with confidence. The better the model, the less frequent the hallucinations — but they never reach zero. Do not use them where the cost of a hallucination is catastrophic and undetectable.
+
+*Complex multi-step reasoning with long chains.* Ask a model to write a proof, solve a novel algorithmic puzzle, or reason through a deeply recursive problem — the failure rate climbs fast as chain length increases. Chain-of-thought prompting helps, but doesn't fully solve it. Models lose track of constraints, make arithmetic errors, and confabulate intermediate steps.
+
+*Real-time data without retrieval.* "What's the current stock price?" "What happened in the news today?" Models have training cutoffs and no awareness of what's happened since. This is obvious but engineers forget it constantly when demos impress.
+
+*Reproducibility and auditability requirements.* If you need to explain why you made a decision to a regulator, "the model said so" is not an explanation. If you need to reproduce an output exactly six months later for an audit, you cannot — temperature, model updates, and context window differences all change outputs.
+
+*Tasks where the failure mode is silent wrongness.* A model that says "I don't know" when it doesn't know is useful. Most models instead confidently produce plausible-sounding wrong answers. In contexts where you can't verify outputs, this is more dangerous than having no AI assistance at all.
+
+**The honest framing for your team:**
+
+Use AI where: errors are detectable (user sees the output and can correct it), errors are recoverable (wrong answer → user asks again), the throughput gain exceeds the accuracy loss, and a human reviews high-stakes outputs. Don't use AI where: errors are silent, irreversible, or where 99.9% accuracy isn't good enough. Build your eval suite (see above) before you ship, not after. Know your accuracy before you go to production.
+
 ### Advanced RAG Patterns
 
 Naïve RAG works for demos. Production RAG needs the full stack.
@@ -237,6 +306,52 @@ Vector search is good at recall (finding the documents that might be relevant) b
 The workflow: run vector search to get a candidate set of 20-50 documents (retrieval step, high recall). Pass those candidates to a cross-encoder re-ranker to get precision-ranked scores. Feed the top 3-5 re-ranked results to the model.
 
 **Cohere Rerank** is the managed API option — great default choice if you don't want to host your own. **ColBERT** does token-level interaction between query and document; faster than cross-encoders, can be self-hosted, strong general performance. **LLM re-ranking** (asking a language model to rank documents by relevance) is expensive but effective for small candidate sets or specialized domains where off-the-shelf re-rankers underperform.
+
+### Embedding Models: The Foundation of Your RAG System
+
+The embedding model is the engine that converts your text into vectors. Bad embedding model choice means bad retrieval quality, full stop. Here's the practical guide.
+
+**What makes a good embedding model:**
+
+An embedding model maps text to a fixed-dimensional vector (typically 768, 1024, or 1536 dimensions) such that semantically similar texts map to nearby vectors. The key properties you care about:
+- **Retrieval accuracy** (does it find the right documents?)
+- **Multilingual support** (if your corpus has multiple languages)
+- **Embedding dimension** (affects storage costs and search speed)
+- **Max token length** (what's the longest chunk it can embed?)
+- **Cost and latency** (hosted API vs. self-hosted model)
+
+**The embedding model landscape (2025-2026):**
+
+| Model | Provider | Dimensions | Max Tokens | Best For |
+|---|---|---|---|---|
+| text-embedding-3-small | OpenAI | 1536 (reducible) | 8192 | General purpose, low cost |
+| text-embedding-3-large | OpenAI | 3072 (reducible) | 8192 | Higher accuracy, higher cost |
+| embed-english-v3.0 | Cohere | 1024 | 512 | English text, strong on tasks |
+| embed-multilingual-v3.0 | Cohere | 1024 | 512 | Multi-language corpora |
+| nomic-embed-text | Nomic (open) | 768 | 8192 | Self-hosted, very competitive |
+| bge-m3 | BAAI (open) | 1024 | 8192 | Self-hosted multilingual, top OSS |
+| all-MiniLM-L6-v2 | Hugging Face | 384 | 256 | Lightweight, local, fast |
+
+**The practical decision:**
+
+For most production RAG systems: start with `text-embedding-3-small`. It's inexpensive ($0.02 per million tokens), supports dimension reduction (you can cut from 1536 to 256 and retain 90%+ of retrieval quality, saving 6x storage), handles 8K token context, and is fast. The jump to `text-embedding-3-large` is only worth it if you've measured retrieval quality and found the small model insufficient.
+
+For self-hosted: `nomic-embed-text` runs on CPU and performs comparably to OpenAI's small model on standard benchmarks. If you have a privacy requirement or want to avoid per-token API costs at scale, this is the go-to.
+
+**Embedding storage math:**
+
+Each float32 dimension takes 4 bytes. For 1 million documents at 1536 dimensions:
+- 1M × 1536 × 4 bytes = 6.1 GB of raw vector data
+- With HNSW index overhead: approximately 3-4x = 18-25 GB RAM for in-memory search
+- At text-embedding-3-small prices to generate: $0.02 per million tokens × avg 200 tokens per chunk = $0.004 per 1000 documents = $4 for 1M documents
+
+Cost to embed is a one-time expense. Cost to re-embed (when you change models) is why you should pick carefully upfront.
+
+**When to fine-tune your embedding model:**
+
+Off-the-shelf embedding models are trained on general internet text. They understand semantic similarity for common concepts. They may perform poorly on highly technical domain vocabulary (medical, legal, scientific jargon), internal company terminology and product names, or code semantics.
+
+Fine-tuning with domain-specific positive/negative pairs (e.g., "this query should retrieve this document, not that one") can lift retrieval accuracy by 10-30% in specialized domains. Use `sentence-transformers` library for fine-tuning open models. Cohere and Voyage offer fine-tuning APIs for their hosted models.
 
 **Measuring your RAG system:**
 
@@ -385,6 +500,47 @@ This is the problem edge computing solves. Instead of having one origin that ser
 
 The key insight that makes this tractable: most applications have a large fraction of requests that can be handled without touching the origin. Cached content, static assets, authentication checks, feature flag evaluations, A/B test assignments, bot detection — all of this can happen at the edge. And with edge compute platforms maturing rapidly, even dynamic business logic can be pushed out.
 
+### Real Latency Numbers: What Edge Actually Gets You
+
+Let's make this concrete with real network round-trip times. These numbers assume a single-region origin in us-east-1 (Northern Virginia):
+
+| User Location | RTT to us-east-1 | RTT to nearest edge node | Improvement |
+|---|---|---|---|
+| New York | ~20ms | ~2ms | 10x |
+| London | ~90ms | ~5ms | 18x |
+| São Paulo | ~140ms | ~8ms | 17x |
+| Singapore | ~220ms | ~4ms | 55x |
+| Sydney | ~250ms | ~6ms | 41x |
+| Cape Town | ~310ms | ~10ms | 31x |
+
+These are network-only round-trip times. Your actual API latency is RTT + server processing time. If your server processing is 30ms, a user in Singapore experiences:
+- Origin-only: 220ms RTT + 30ms processing = 250ms total
+- Edge (all logic at edge): 4ms RTT + 30ms processing = 34ms total
+- Edge (fast path at edge, slow path to origin): 4ms RTT + 4ms to origin + 30ms processing + 4ms back = ~42ms total for dynamic content
+
+A 250ms response feels noticeable. A 34ms response feels instant. This is not a marginal optimization — it's a qualitative UX difference that shows up directly in conversion rates and user retention metrics.
+
+### The Cloudflare Workers Story
+
+Cloudflare Workers launched in 2017 with a counterintuitive architecture choice: V8 isolates instead of containers. Each Worker runs in a V8 isolate — the same sandboxing technology that isolates browser tabs from each other. Startup time for a V8 isolate: under 1ms. Compare to cold-starting a container: 2-15 seconds. This difference makes per-request isolation economically viable at edge scale.
+
+The implications cascaded: if each request can have its own isolated environment in under 1ms, you can run thousands of different customer workloads on the same physical machine simultaneously. Cloudflare runs Workers at 300+ locations globally. Every Worker runs everywhere, automatically. You deploy once; your code runs within 50ms of 99% of the world's internet users.
+
+The adoption story is instructive. Early Workers use cases were simple: header manipulation, redirects, A/B testing. As the ecosystem matured (KV storage, Durable Objects, D1 database, R2 object storage, AI inference), the complexity ceiling rose. Teams began running entire API layers at the edge. The shift from "CDN trick" to "edge application platform" happened over 3-4 years.
+
+**What teams actually use Workers for in production today:**
+- JWT verification and auth middleware (pure CPU, no origin round-trip needed)
+- Rate limiting with distributed counters (Durable Objects make this elegant)
+- A/B test assignment with persistent experiment membership (KV + Durable Objects)
+- API response transformation and field filtering
+- Geographic routing decisions and compliance-based data routing (EU users → EU data centers)
+- Image optimization and resizing on-the-fly
+- Bot detection and request scoring before traffic hits origin
+
+**The Vercel Edge Functions angle:** Vercel brings edge computing to the Next.js developer experience. Middleware runs at the edge, before routing — so you can do authentication, redirects, and personalization without the request ever reaching your origin. Edge Functions run in Vercel's global network (built on Cloudflare). The DX is optimized for the use case: middleware.ts in Next.js, deploy to Vercel, done.
+
+The practical result: a Next.js app where the middleware does auth (JWT verify, cookie check) runs that check in 2-4ms at the nearest edge node. The same auth check against a database would be 50-200ms depending on geography. Multiply by millions of requests per day. This is why edge middleware for auth became the default pattern in the Next.js ecosystem almost immediately after the feature launched.
+
 ### Architecture Tiers
 
 Think of your architecture as four concentric rings, from user to origin:
@@ -417,6 +573,8 @@ The hardest part of edge computing isn't the compute — it's the data. If your 
 
 The honest trade-off with edge computing: you're distributing complexity. Debugging an issue in a request that hits an edge node is different from debugging your monolith. You need distributed tracing that spans from edge to origin. Edge runtimes have quirks — no `fs`, limited npm package compatibility, different performance characteristics for CPU-bound vs I/O-bound work. These are engineering problems worth solving if the latency improvement matters for your users. If your users are all in one region, edge compute adds complexity for marginal gain.
 
+**Edge observability requirements:** When you add edge compute, you need distributed tracing that spans the full request path: edge → (optional origin call) → response. Without this, you have a debugging gap. Cloudflare's Tail Workers can stream edge function logs to your observability pipeline. Vercel's Edge Runtime logs ship to your configured log drain. Instrument edge functions with the same discipline you'd apply to origin code — structured logs, request IDs, latency measurements at each step.
+
 ---
 
 ## 3. REAL-TIME SYSTEMS
@@ -446,6 +604,49 @@ OT works and has proven itself at massive scale. But it requires a central serve
 **CRDTs (Conflict-free Replicated Data Types)** are a newer approach that solves the same problem with different math. CRDTs are data structures designed so that any two replicas can always be merged to produce the same result, regardless of the order operations were applied. No central coordination required. You can write offline, sync later, merge with any other replica — it just works, guaranteed by the math.
 
 This is genuinely remarkable. Consider: with CRDTs, you can have a collaborative document editor where the client stores the full document locally, the user edits while offline, and when they reconnect, their changes merge automatically with changes made by other users while they were offline. No conflicts, no "conflict resolution dialog," just a converged document.
+
+### The Google Docs and Figma Story
+
+The history of collaborative editing is a story of hard-won lessons. Google Docs launched in 2006 using Operational Transformation (OT) — the only viable approach at the time. Building the OT system for Google Docs required years of engineering effort from a dedicated team. The algorithm itself is subtle enough that it took the academic community years to prove correctness. Google Docs works beautifully, but the OT engine underneath it is one of the most complex pieces of distributed systems code ever shipped to consumers.
+
+Figma launched in 2016 and faced the same problem: how do you let multiple designers edit the same file simultaneously? Their engineering team, led by Evan Wallace, chose a different path. Rather than OT, they built a custom CRDT-inspired system where every object in the design document is identified by a unique ID, and operations are defined so that concurrent operations on different objects can always be merged without conflict. More importantly, even concurrent operations on the same object (like two people changing the color of the same shape) are resolved by a simple last-write-wins rule at the property level — which turns out to be exactly the right semantics for design tools, where seeing the last human's intention is usually correct.
+
+The result: Figma achieved Google Docs-level collaboration with a fraction of the engineering complexity. Their collaboration stack was built by a small team in months. The key insight was choosing a conflict resolution strategy that matched the semantics of the domain (design tools), not trying to achieve general-purpose conflict-free text editing.
+
+This is the lesson that transfers to your systems: CRDTs aren't magic — they're a family of data structures with different trade-offs. The art is matching the CRDT type to the semantics your domain actually needs.
+
+### CRDT Types You Actually Need to Know
+
+The vocabulary is intimidating but the concepts are intuitive:
+
+**G-Counter (Grow-only Counter)** is the hello world of CRDTs. Say you have a distributed system tracking page view counts, and three nodes can increment independently without talking to each other. Each node keeps its own sub-counter. Node A: counter[A] = 5. Node B: counter[B] = 3. Node C: counter[C] = 7. The true total is always max(counter[A]) + max(counter[B]) + max(counter[C]) = 15. When nodes sync, they take the max of each sub-counter. Additions from Node A and Node B never conflict because they're in separate slots. The math guarantees this converges.
+
+Real-world use: distributed like counts, vote tallies, event counters in a global edge network where you can't do a synchronous write to a central database on every user action.
+
+**LWW-Register (Last-Write-Wins Register)** stores a single value with a timestamp. When two writes conflict, the higher timestamp wins. Simple, obviously correct for cases where "whoever wrote last is right" makes semantic sense.
+
+Real-world use: user profile fields (last update wins), configuration settings, Figma's property values. Be careful: LWW requires synchronized clocks or logical clocks (Lamport timestamps) to avoid incorrect orderings when physical clock skew is significant.
+
+**OR-Set (Observed-Remove Set)** lets you add and remove items from a set with concurrent operations. The tricky bit: if one user adds an item and another removes it concurrently, what's the right answer? OR-Set's semantics: adds win over concurrent removes. Every add operation gets a unique tag; a remove operation only removes the specific tagged item. If you add `{tag1: "coffee"}` and someone else concurrently removes `"coffee"` (which they saw without tag1), their remove doesn't affect your add.
+
+Real-world use: collaborative to-do lists, shopping carts in distributed systems, presence in multi-region deployments.
+
+**YATA (Yet Another Transformation Approach) / Sequence CRDTs** are how Yjs and Automerge implement collaborative text editing. The challenge: inserting characters at positions. If Alice inserts "hello" at position 5 and Bob simultaneously inserts "world" at position 5, which comes first? YATA assigns each character a unique identifier encoding its logical position relative to neighbors, rather than an absolute index. Characters carry their history with them, so two concurrent inserts can always be deterministically ordered without central coordination.
+
+### When to Actually Use CRDTs
+
+**Use CRDTs at a startup when:**
+- You're building a collaborative feature (docs, design tools, code editors, whiteboards)
+- You're building an offline-first mobile app where users edit data on the device and sync later
+- You're building a multiplayer game where clients need to update shared state without round-tripping to the server on every action
+- You need distributed counters or sets that span edge locations
+
+**Don't reach for CRDTs when:**
+- You need strict consistency (financial transactions, inventory systems where overselling is catastrophic)
+- Your conflict resolution semantics are complex business rules, not simple mathematical merges
+- You're building a single-user app — the complexity is all downside
+
+**Enterprise vs. startup calculus:** Startups building collaborative or offline-first products should use Yjs or Automerge rather than rolling their own. The libraries are production-ready and save months of work. Enterprises migrating existing centralized systems to CRDTs need to be more careful — the semantic shift from "server is truth" to "all replicas merge" is an architectural migration, not just a library swap. Plan for a multi-month migration if you're bringing CRDTs into an existing complex system.
 
 The main libraries: **Yjs** is the most production-ready — it's used by dozens of collaborative tools, has adapters for ProseMirror, Quill, Monaco (VS Code's editor), and strong performance. **Automerge** is more academic in origin but increasingly practical, with good Rust performance via automerge-rs. Both support awareness features (presence, cursor positions) through additional protocols.
 
@@ -493,7 +694,92 @@ If the server restarts after `send_welcome_email` completes but before `provisio
 
 **The critical constraint:** Workflow code must be deterministic. Given the same event history, a workflow must execute the same sequence of steps every time (this is how it can resume after a crash — it replays the history to reconstruct state). All side effects — API calls, database writes, random numbers, current timestamps — must happen inside activities, not the workflow function itself.
 
-Use durable execution for: any multi-step process that must complete reliably, patterns like "send email after 7 days if user hasn't done X," saga orchestration in distributed transactions, human approval workflows where you need to wait hours or days for a response.
+### The "Server Crashes Mid-Checkout" Story
+
+Let's make this concrete with the scenario that makes durable execution click for everyone: an e-commerce checkout.
+
+Without durable execution, your checkout handler probably looks like this:
+
+```python
+@app.post("/checkout")
+async def checkout(cart: Cart, user: User):
+    # Step 1: Reserve inventory
+    await reserve_inventory(cart.items)
+    
+    # Step 2: Charge the card
+    charge = await stripe.charge(user.payment_method, cart.total)
+    
+    # Step 3: Create the order
+    order = await create_order(user, cart, charge.id)
+    
+    # Step 4: Send confirmation email
+    await send_confirmation_email(user.email, order)
+    
+    # Step 5: Update inventory (commit the reservation)
+    await commit_inventory(cart.items)
+    
+    return {"order_id": order.id}
+```
+
+Now imagine the server crashes between Step 2 and Step 3. The card has been charged. The order doesn't exist yet. The customer sees a 500 error. What happens?
+
+Best case: the customer tries again, gets double-charged, and angrily emails support. Worst case: they assume the purchase worked, don't re-order, and their item never ships. Either way, your support team is manually untangling the mess.
+
+The traditional fix is a `jobs` table: save the state of the checkout process at every step, have a background worker pick up where things left off. It works! But it requires you to write a custom state machine for every long-running process, mix durability plumbing into your business logic, handle idempotency keys manually, and build retry logic from scratch.
+
+With durable execution, the same checkout becomes:
+
+```python
+@workflow.defn
+class CheckoutWorkflow:
+    @workflow.run
+    async def run(self, checkout_input: CheckoutInput):
+        # Step 1: Reserve inventory (retries automatically on failure)
+        await workflow.execute_activity(
+            reserve_inventory,
+            checkout_input.items,
+            start_to_close_timeout=timedelta(seconds=10),
+            retry_policy=RetryPolicy(max_attempts=3)
+        )
+        
+        # Step 2: Charge the card
+        # This activity is idempotent - Temporal passes idempotency key automatically
+        charge_id = await workflow.execute_activity(
+            charge_card,
+            checkout_input,
+            schedule_to_close_timeout=timedelta(seconds=30),
+        )
+        
+        # Step 3: Create the order
+        order_id = await workflow.execute_activity(
+            create_order,
+            checkout_input,
+            charge_id
+        )
+        
+        # Step 4: Send confirmation email
+        # If this fails, Temporal retries. The email might send twice - 
+        # make it idempotent with a dedup key.
+        await workflow.execute_activity(
+            send_confirmation_email,
+            order_id
+        )
+        
+        # Step 5: Commit inventory
+        await workflow.execute_activity(commit_inventory, checkout_input.items)
+        
+        return order_id
+```
+
+When the server crashes between Step 2 and Step 3: Temporal has already durably recorded that Step 2 completed and what it returned. When the workflow worker restarts, it replays from the beginning — but the replay is instant because Temporal skips activities whose results it already recorded. Execution resumes at Step 3. The customer's card is charged exactly once. The order is created. Life is good.
+
+**What happens when Stripe is down during Step 2?** The activity fails, Temporal retries with exponential backoff (starting at 1 second, doubling, up to your configured max). The workflow sleeps between retries — no thread held, no connection consumed. When Stripe comes back up (3 minutes later, or 3 hours later), the activity executes. The workflow continues.
+
+**What happens when the checkout needs manual fraud review?** That's a `wait_for_signal` — the workflow literally pauses until a human submits the review result. The pause can last minutes, hours, days. No thread is held. When the signal arrives, the workflow wakes up and continues from exactly where it left off.
+
+**The math on why this beats a jobs table:** A custom jobs table requires you to write roughly 3x as much code as the happy path (state tracking, worker polling, retry logic, dead letter queues). Temporal requires you to write roughly 1.2x (mostly idempotency considerations). For every new multi-step process you build, that 2.8x difference compounds. Teams that adopt durable execution report dramatically faster development cycles for anything involving retries, scheduling, or long-running processes.
+
+Use durable execution for: any multi-step process that must complete reliably, patterns like "send email after 7 days if user hasn't done X," saga orchestration in distributed transactions, human approval workflows where you need to wait hours or days for a response, and any checkout/payment flow where partial execution is dangerous.
 
 ### Cell-Based Architecture
 
@@ -532,6 +818,23 @@ On top of Kafka, you have two main stream processing frameworks:
 **Kafka Streams** is embedded directly in your Java application — no separate cluster to manage, processes events by reading from and writing to Kafka topics. Great for simpler use cases: filtering, aggregating, joining streams. Low operational overhead.
 
 **Apache Flink** is a dedicated stream processing cluster. Much more powerful — stateful operators, exactly-once semantics, complex event processing, windowed aggregations, SQL-based stream queries. For complex pipelines with heavy state management, Flink is the tool. The tradeoff is operational complexity — you're running and managing a Flink cluster.
+
+**The "do you actually need Kafka?" decision:**
+
+This deserves its own honest assessment because teams reach for Kafka when SQS or even an outbox table would have been the right answer. Kafka is justified when:
+
+- You need multiple independent consumers reading the same event stream (e.g., analytics team AND notification team AND audit log all consume the same order_placed events)
+- You need to replay events from hours or days ago (Kafka retains messages for configurable periods; SQS doesn't)
+- You have genuinely high throughput (>50,000 messages/second where SQS costs would start to compound)
+- You need stream processing with stateful operators (windowed aggregations, joins across streams)
+
+SQS or a simple outbox pattern is better when:
+- You have one consumer per queue
+- Message replay isn't a requirement
+- Your volume is moderate (SQS is $0.40 per million requests vs $800+/mo for MSK)
+- Your team doesn't have Kafka operational expertise
+
+A recurring pattern: a startup adopts Kafka early because "we'll need it eventually," spends 6 months fighting operational complexity, and then realizes the same use case would have worked perfectly with SQS and a transactional outbox. Use the boring solution until you genuinely outgrow it.
 
 ### Time-Series Optimization
 
@@ -603,6 +906,60 @@ The most impactful practices:
 
 **Kill zombie resources** — this is unsexy but important. Unused load balancers, unattached EBS volumes, idle RDS instances, long-forgotten test environments — these quietly accumulate over time and represent 10-20% of most companies' cloud bills. Run a zombie audit quarterly.
 
+### The Cost Comparison Tables Engineers Actually Need
+
+The context that's missing from most FinOps discussions: how much do these choices actually cost at specific workloads? Here are concrete comparisons for common infrastructure decisions, using approximate 2025 pricing. Use these as directional guides; run the numbers for your specific workload.
+
+**Managed Kafka vs. SQS for the same message throughput:**
+
+Scenario: 10 million messages/day, ~1KB each, 7-day retention.
+
+| Option | Monthly Cost | Notes |
+|---|---|---|
+| **AWS MSK (managed Kafka)** | ~$800/mo | 3x broker cluster, m5.large, minimum viable HA |
+| **Confluent Cloud** | ~$400-800/mo | Usage-based but has minimum commitment |
+| **Amazon SQS** | ~$4/mo | $0.40/million requests, 25M free/month |
+| **Google Pub/Sub** | ~$6/mo | $0.04/GB delivered |
+| **Self-hosted Kafka on EC2** | ~$200-400/mo | 3x t3.medium + EBS, no managed overhead |
+
+The surprise: SQS handles tens of millions of messages per day for under $10/month. Managed Kafka is 80-100x more expensive for the same message volume. Kafka earns its cost when you need: multiple independent consumers, message replay, stream processing, long retention, or throughput above ~100K messages/second. If you're using Kafka primarily as a queue with one consumer per queue, you're probably paying 80x too much.
+
+**Postgres hosting options at 100 GB database:**
+
+| Option | Monthly Cost | Notes |
+|---|---|---|
+| **AWS RDS Postgres (db.t3.medium)** | ~$65/mo | Basic HA, no read replicas |
+| **AWS RDS (db.r5.large)** | ~$185/mo | Better performance, still no replicas |
+| **AWS Aurora Postgres Serverless v2** | ~$40-200/mo | Scales to zero; min ACU cost is $0.12/hr |
+| **Neon (serverless Postgres)** | ~$19-69/mo | Scales to zero, branching, great for dev |
+| **PlanetScale (MySQL-compatible)** | ~$29-299/mo | Vitess-based, better sharding story |
+| **Supabase (hosted Postgres)** | ~$25-599/mo | Full stack with auth, storage, edge functions |
+| **Self-hosted on EC2 (t3.medium)** | ~$30/mo + ops | You're paying with engineering time |
+
+**LLM inference cost at 10M tokens/day:**
+
+This is the number teams get blindsided by when AI features take off.
+
+| Model | Input cost (per 1M tokens) | Output cost (per 1M tokens) | ~Monthly at 10M tokens/day |
+|---|---|---|---|
+| **GPT-4o** | $2.50 | $10.00 | ~$225-$3,000/mo* |
+| **Claude Sonnet** | $3.00 | $15.00 | ~$270-$4,500/mo* |
+| **GPT-4o-mini** | $0.15 | $0.60 | ~$14-$180/mo* |
+| **Claude Haiku** | $0.25 | $1.25 | ~$23-$375/mo* |
+| **Llama 3.1 70B (self-hosted)** | GPU time only | GPU time only | ~$500-$1,500/mo** |
+
+*Range reflects input-heavy vs. output-heavy workloads. **Self-hosted includes GPU instance costs.
+
+The takeaway: GPT-4o and Claude Sonnet can cost 15-25x more than their smaller counterparts. For tasks where GPT-4o-mini or Claude Haiku are accurate enough (classification, extraction, simple Q&A), switching to the smaller model is the most impactful cost optimization available. Build your eval suite, measure accuracy, and make the model decision with data.
+
+**The FinOps workflow that actually works:**
+
+1. Tag every resource with team, service, and environment from day one. Cost attribution is impossible without tags.
+2. Set up weekly cost reports by tag at the engineering team level (not just finance). Engineers who see their own service's cost make better decisions.
+3. Set budget alerts at 80% and 100% of monthly targets, alerting the owning team directly.
+4. Run right-sizing recommendations monthly and treat them as a bug backlog item.
+5. Before adding a new managed service, spend 10 minutes building the cost model at 10x current scale. The service that costs $20/mo now might cost $2,000/mo when you actually have users.
+
 ### Resource Efficiency Metrics
 
 The vanity metrics (CPU utilization, memory usage) tell you how hard your instances are working, but not whether they're the right instances for the job. Track business-level efficiency metrics instead:
@@ -620,6 +977,18 @@ Set alerts on these metrics, not just on instance utilization. A service that's 
 WebAssembly (Wasm) started as a compile target for running C/C++ code in browsers at near-native speed. That was interesting but narrow. What's happening now is more significant: Wasm is becoming a universal portable runtime that runs nearly anywhere — browsers, servers, edge nodes, embedded systems — with strong security isolation and excellent performance.
 
 The pitch: write a module once, run it everywhere. Not in the "Java write once run anywhere" sense (that was a lie) but genuinely — a Wasm binary compiled from Rust runs in a browser, in a Cloudflare Worker, on a Linux server, inside Envoy as a plugin, in Shopify's app platform. The same binary. The security model (capability-based isolation, sandboxed by default) is a real improvement over native binaries.
+
+### The Figma and Photoshop Story
+
+Figma launched in 2016 as a browser-based design tool at a time when the conventional wisdom was that serious creative tools couldn't live in a browser. Illustrator, Photoshop, After Effects — all native apps with decades of optimization and C++ rendering engines. How was a startup going to compete with that in a browser tab?
+
+The answer was WebAssembly (though Wasm wasn't called that yet — Figma shipped in the asm.js era and migrated as the ecosystem matured). Figma compiled their rendering engine — the code that draws vector shapes, applies blend modes, handles text layout — from C++ to Wasm. The result: browser-native performance for operations that browsers had no business doing at that speed. Bezier curve rendering, GPU-accelerated compositing, complex layout calculations — all running at near-native speed in the browser's sandbox.
+
+The business impact was decisive. Figma's browser-first model meant zero installation friction. Design tools had always suffered from the "install and setup" barrier — getting Sketch or Photoshop working correctly on a new machine can take hours. Figma worked the first time, on any computer, with a link. Combined with real-time collaboration (no file-syncing nightmares), Figma disrupted Sketch within a few years and achieved a $20 billion acquisition offer from Adobe in 2022.
+
+Adobe's response to Figma's success is instructive. In 2023, Adobe released Photoshop on the web — a version of the actual Photoshop application running in a browser. The same C++ codebase that runs native Photoshop, compiled to WebAssembly, running in Chrome. Features like Content-Aware Fill, neural filters, and the full layer system — in a browser tab. Adobe engineers blogged about the technical journey: 27MB Wasm binary, complex threading with SharedArrayBuffer, memory management challenges with a codebase that assumed it owned the machine. Hard engineering problems — but solvable ones.
+
+The Figma and Photoshop stories share a lesson: **Wasm is the tool for when you have existing high-performance C/C++ (or Rust) code and need it to run somewhere it couldn't before.** If you have that constraint, Wasm is transformative. If you're writing new code from scratch, the calculus is different — consider whether you need the portability and isolation benefits Wasm provides.
 
 ### Wasm on the Server
 
@@ -650,6 +1019,21 @@ Per-component sandboxing means each component in a composed system has its own c
 **Polyglot microservices:** Run the best tool for each job in the same process space without the overhead of separate services. Early days, but this is a compelling direction.
 
 **The honest trade-off:** The Wasm ecosystem is maturing fast but isn't fully there yet. Package ecosystem support is uneven (Rust is excellent, Python is workable, Java/C# are improving). Heavy threading and GPU access are limited. Debugging tools lag behind native development. If you need the isolation, portability, or edge-execution benefits, Wasm is a great choice today. If you don't specifically need those things, the additional complexity may not be worth it yet.
+
+### Practical Wasm Use Cases Beyond the Hype
+
+**The "ported performance-critical library" pattern** is where Wasm shines most reliably today. Your backend does video transcoding using FFmpeg. FFmpeg is C, the browser needs the same operation, you don't want to round-trip to the server for every 5MB clip a user uploads. Compile FFmpeg to Wasm, run it in the browser. Real examples: ffmpeg.wasm powers video processing in dozens of web apps. SQLite.wasm runs SQLite in the browser for offline-first applications. DuckDB.wasm runs analytical queries locally without a backend.
+
+**The "secure sandboxed execution" pattern** is the one growing fastest. Any platform that runs user-provided code needs sandboxing. Options: Docker containers (fast but complex), VMs (isolated but slow), Wasm (fast + isolated + portable). Shopify's Checkout Extensibility uses Wasm — merchant JavaScript runs in a Wasm sandbox with a strictly defined API surface. Merchants can customize checkout behavior; they cannot access other merchants' data or call arbitrary network endpoints. The sandbox is enforced mathematically, not by permission rules that can be misconfigured.
+
+**The "plugins that can't crash the host" pattern:** Your application supports third-party plugins. Native plugins can segfault and take down the whole app. Wasm plugins that crash simply terminate their isolate; the host application continues. Envoy uses this for traffic management plugins — a misbehaving WASM plugin doesn't crash Envoy, it just fails that request. This is a big deal for reliability: you can offer a plugin SDK without accepting liability for plugin quality.
+
+**The performance numbers that matter:**
+
+Wasm typically runs at 70-90% of native speed for CPU-bound workloads (when compiled from optimized C/Rust and using a good JIT runtime like V8 or Wasmtime). For comparison, Python is typically 10-50x slower than native C for the same computation. This means:
+- Compute-intensive tasks that were impossible in browser JavaScript (video encode, image processing, cryptography, simulation) become viable in Wasm
+- Server-side Wasm is competitive with native for CPU-bound microservices
+- The overhead is startup time (milliseconds for simple modules, potentially seconds for large complex ones) and memory management crossing the Wasm/host boundary
 
 ---
 
@@ -790,6 +1174,123 @@ Training a model once in a notebook is a research workflow. Training models repr
 
 ---
 
+## 10. PUTTING IT TOGETHER: TECHNOLOGY SELECTION GUIDES
+
+Decision frameworks for the choices engineers most commonly get wrong.
+
+### Choosing Your AI Architecture
+
+The most expensive mistake teams make is over-building. Here's a decision tree:
+
+```
+Do you need an AI feature?
+│
+├── Is the task knowledge retrieval over your own data?
+│   ├── YES → Build RAG first
+│   │   ├── < 10M documents → pgvector (use what you have)
+│   │   └── > 10M documents or complex filtering → Dedicated vector DB
+│   │
+│   └── NO → Is it formatting/behavior style?
+│       ├── YES → Consider fine-tuning (only if 1000+ examples)
+│       └── NO → Prompt engineering is almost certainly sufficient
+│
+├── Do you need the AI to take actions (not just answer questions)?
+│   ├── YES → Agent pattern needed
+│   │   ├── Single task, sequential steps → ReAct with tools
+│   │   ├── Complex multi-domain task → Plan-and-execute
+│   │   └── High throughput, parallel subtasks → Multi-agent (justify cost)
+│   └── NO → Single LLM call with good context engineering
+│
+└── What's your evals story?
+    ├── Have a golden dataset → Ship with confidence
+    ├── Don't have one yet → Build 50 examples before shipping to prod
+    └── "We'll just eyeball it" → Spend one sprint on evals, ship the next
+```
+
+### Choosing Your Real-Time Architecture
+
+```
+What's your real-time requirement?
+│
+├── Server pushes data to client only (notifications, live feeds, LLM streaming)
+│   └── Use SSE (Server-Sent Events) — simpler than WebSockets, works through proxies
+│
+├── Bidirectional, high-frequency messages (chat, live cursors, game state)
+│   └── Use WebSockets with a shared pub/sub backend (Redis, Ably, Pusher)
+│
+├── Sub-100ms audio/video or real-time game state
+│   └── Use WebRTC
+│
+└── Collaborative document editing with offline support
+    └── Use CRDTs (Yjs/Automerge) + WebSockets for sync
+```
+
+### Choosing Your Durable Execution Approach
+
+```
+Do you have multi-step processes that need to complete reliably?
+│
+├── Simple: 1-3 steps, same database, retry on failure
+│   └── Transactional outbox pattern (write to outbox table, background worker)
+│
+├── Medium: 3-10 steps, mix of internal and external calls, retry + backoff
+│   └── Inngest or Trigger.dev (managed, developer-friendly, lower ops burden)
+│
+├── Complex: 10+ steps, long-running (days/weeks), human approvals, saga patterns
+│   └── Temporal (self-hosted or Temporal Cloud) — maximum capability, more ops
+│
+└── Serverless: event-driven, burst patterns, AWS-native
+    └── AWS Step Functions (good AWS integration, JSON-based state machine definition)
+```
+
+### The "When to Edge Compute?" Decision
+
+```
+Does your feature have performance-sensitive global users?
+│
+├── No (users all in one region, or latency doesn't matter)
+│   └── Don't add edge complexity — origin is simpler and debuggable
+│
+├── Yes → What does the logic require?
+│   │
+│   ├── Pure CPU (JWT verify, redirect, A/B test, bot detection, geo routing)
+│   │   └── Cloudflare Workers or Vercel Edge Middleware — excellent fit
+│   │
+│   ├── Needs database read (user preferences, feature flags)
+│   │   └── Edge + edge KV store (Cloudflare KV, Vercel Edge Config) — fine for small data
+│   │       Or edge + read replica (Turso, Neon) — for larger datasets
+│   │
+│   └── Needs complex business logic or database writes
+│       └── Regional compute (Fly.io regional instances) — more capable, still distributed
+│           Or accept the origin latency and optimize there
+│
+└── Cost consideration: Edge functions are cheap for most workloads
+    but add debugging complexity. Only pay that complexity tax when
+    latency improvement is measurable and matters for your users.
+```
+
+### The Technology Maturity Cheat Sheet
+
+Not everything in this chapter is ready for prime time. Here's an honest readiness assessment:
+
+| Technology | Readiness | Bet On It Now? | Watch Period |
+|---|---|---|---|
+| RAG with pgvector | Production-ready | Yes | — |
+| ReAct agents | Production-ready (with care) | Yes, with eval suite | — |
+| Multi-agent systems | Early production | With caution | 12 months |
+| Yjs/Automerge CRDTs | Production-ready | Yes for collab tools | — |
+| Temporal durable execution | Production-ready | Yes | — |
+| Inngest/Trigger.dev | Production-ready | Yes for serverless | — |
+| Cloudflare Workers | Production-ready | Yes | — |
+| Vercel Edge Middleware | Production-ready | Yes for Next.js | — |
+| Edge databases (Turso, Neon) | Early production | With caution | 12 months |
+| Wasm in browsers (for ported C++) | Production-ready | Yes when needed | — |
+| Wasm Component Model (polyglot) | Early adoption | Watch only | 18-24 months |
+| WebLLM (browser inference) | Early adoption | Very specific use cases | 18 months |
+| Vector databases at scale | Production-ready | Yes | — |
+
+---
+
 ## Cross-Cutting Themes
 
 Step back from each individual paradigm and you see patterns that run through all of them. These are the meta-principles that separate engineers who navigate the frontier well from engineers who thrash.
@@ -825,6 +1326,58 @@ The final theme, and maybe the most important one: you don't have to use all of 
 Before reaching for the new paradigm, ask: what's the boring solution? The boring solution ships faster, is easier to debug, has more StackOverflow answers, and is often good enough. Reach for the emerging paradigm when you have a specific problem that the boring solution genuinely can't solve — not because the new thing is exciting (though it is).
 
 The engineers who consistently ship great systems have a high bar for novelty: they're excited about the frontier, they understand it deeply, and they reach for it deliberately when it's the right tool. That's the engineer this chapter is trying to help you become.
+
+---
+
+## Your First Week With Each Paradigm
+
+Reading about these paradigms is one thing. Here's where to actually start for each one — the minimum viable experiment that gives you real signal within a week.
+
+**AI-Native / RAG — First week:**
+1. Pick one internal document collection (your team's Notion, your product docs, your codebase README collection)
+2. Use `langchain` or `llama_index` to chunk, embed with `text-embedding-3-small`, and store in pgvector
+3. Build a simple query interface: embed a natural language question → retrieve top-5 chunks → stuff into a GPT-4o-mini prompt → get an answer
+4. Show it to 3 colleagues. Ask them to break it. Note every failure.
+5. Add 20 failure examples to your golden dataset. You now have the beginning of an eval suite.
+
+Time: 1-2 days. Investment: ~$0.10 in API costs. Signal: real evidence about whether RAG helps for your use case.
+
+**CRDTs — First week:**
+1. Install Yjs (`npm install yjs`)
+2. Build a shared counter or text editor demo with two browser tabs
+3. Kill the network connection in one tab. Make changes. Reconnect. Watch changes merge.
+4. Read the Yjs docs on awareness (presence/cursors). Add a cursor indicator.
+5. Evaluate: does this solve a conflict you currently handle with "last write wins" logic?
+
+Time: 1 day. Investment: zero. Signal: direct intuition for how CRDTs feel to build with.
+
+**Durable Execution — First week:**
+1. Pick a multi-step process you own that currently has a `jobs` table or retry cron
+2. Spin up Inngest (free tier, managed) or Temporal (Docker Compose locally)
+3. Re-implement one step of the workflow as a durable function
+4. Deliberately crash the worker mid-execution. Watch it resume.
+5. Decide: does this pattern simplify the code you're maintaining?
+
+Time: 2 days. Investment: zero (both have free tiers). Signal: clear before/after code comparison.
+
+**Edge Computing — First week:**
+1. Create a Cloudflare Workers account (free)
+2. Deploy a simple Worker that does JWT verification on incoming requests
+3. Measure the p50/p95 latency from multiple regions using a tool like `wrk` or a simple cURL loop
+4. Compare to your origin API latency for the same operation
+5. If the improvement is >50ms for your target user geography, it's worth integrating
+
+Time: 1 day. Investment: zero (Cloudflare Workers has a generous free tier). Signal: actual latency numbers for your users.
+
+**WebAssembly — First week:**
+1. Pick a compute-heavy function you have in your codebase (image processing, data parsing, cryptographic operation)
+2. Use `wasm-pack` (if Rust) or `Emscripten` (if C++) to compile it to Wasm
+3. Load it in a browser and measure execution time vs. the JavaScript equivalent
+4. If you're getting >2x speedup for something users wait for, the complexity is justified
+
+Time: 2-3 days. Investment: zero. Signal: real performance data for your specific workload.
+
+The pattern across all five: don't read about it, build the smallest possible demo with your actual data and actual constraints. Your real use case will teach you more in 2 days than this chapter teaches you in 2 hours.
 
 ---
 
