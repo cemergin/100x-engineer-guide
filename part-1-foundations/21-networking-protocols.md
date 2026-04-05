@@ -1807,3 +1807,19 @@ When debugging, work from the bottom up. Use `curl -w` to identify which layer i
 The engineers who get paged at 3 AM and actually fix things — rather than rebooting servers and hoping — are the ones who understand these layers. They know that `CLOSE_WAIT` means their code has a bug, that a `502` points upstream, that `TIME_WAIT` is a symptom of missing connection pooling, and that TLS handshake time is the fingerprint of OCSP lookups and certificate chain length.
 
 Now you know it too.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L1-M04: How the Internet Actually Works](../course/modules/loop-1/L1-M04-how-the-internet-actually-works.md)** — Trace a request through DNS, TCP, TLS, and HTTP as TicketPulse serves its first page
+- **[L2-M32: Service Communication — REST vs gRPC vs Events](../course/modules/loop-2/L2-M32-service-communication-rest-vs-grpc-vs-events.md)** — Choose the right protocol for each TicketPulse service boundary and implement it
+- **[L3-M67: WebSockets & Real-Time](../course/modules/loop-3/L3-M67-websockets-and-real-time.md)** — Build live seat-availability updates using WebSockets on top of the networking fundamentals from this chapter
+
+### Quick Exercises
+
+1. **Run `curl -v https://yourapi.example.com/health` and trace the TLS handshake — identify the cipher suite, certificate chain, and time-to-first-byte.**
+2. **Use `dig +trace yourdomain.com` to watch DNS resolution from root servers down, then check propagation with `dig @8.8.8.8` versus your local resolver.**
+3. **Measure your API's TCP connection reuse with `curl --tcp-nodelay -w "%{time_connect} %{time_starttransfer}\n" -o /dev/null -s` across ten sequential requests — compare the first request to the rest.**

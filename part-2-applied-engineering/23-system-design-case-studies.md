@@ -2452,3 +2452,19 @@ Now go build something.
 ---
 
 *Next: [Chapter 24 — Production Readiness and Incident Response](24-production-readiness.md)*
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L3-M76: System Design Interview Practice](../course/modules/loop-3/L3-M76-system-design-interview-practice.md)** — Work through full system design problems with the same structure as this chapter: requirements, capacity, components, trade-offs
+- **[L3-M88: The TicketPulse Architecture Review](../course/modules/loop-3/L3-M88-architecture-review.md)** — Review the complete TicketPulse architecture you've built across all three loops and identify what you'd change now
+- **[L3-M61: Multi-Region Design](../course/modules/loop-3/L3-M61-multi-region-design.md)** — Take one of the single-region designs from this chapter and extend it to survive a full region failure
+
+### Quick Exercises
+
+1. **Pick one case study from this chapter and redesign it for 100x the traffic: write down which components break first, what you'd change, and what new failure modes you'd introduce.**
+2. **Draw a C4 Level 2 (Container) diagram of your current system — identify every process boundary, data store, and external dependency, then count how many you couldn't draw from memory.**
+3. **Practice explaining your system's architecture in 5 minutes to someone who hasn't seen it — record yourself, then identify the moment where you started hand-waving instead of being precise.**

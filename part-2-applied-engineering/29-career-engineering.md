@@ -1504,3 +1504,18 @@ Your career is a system. Optimize it like one.
 > - Influence without authority is the core Staff+ skill. Earn it through demonstrated competence, not declared intent.
 > - Negotiate every offer — always. The worst outcome is "no," and you are no worse off than before you asked.
 > - Your manager relationship is your most important career lever. Invest in it deliberately; do not leave it to chance.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L3-M89: Your Career Engineering Plan](../course/modules/loop-3/L3-M89-career-engineering-plan.md)** — Build a concrete 12-month career plan with measurable milestones, targeted skill gaps, and a promotion evidence portfolio
+- **[L3-M78: DORA Metrics & Team Performance](../course/modules/loop-3/L3-M78-dora-metrics-team-performance.md)** — Instrument TicketPulse's delivery pipeline with DORA metrics and use the data to make an evidence-based case for process changes
+
+### Quick Exercises
+
+1. **Start your brag document today — write 5 entries from the past 3 months** — for each entry, capture the situation, the action you took, and the measurable outcome. If you cannot remember five things worth documenting, that is signal about visibility, not output.
+2. **Identify your staff+ archetype** — re-read the archetypes in this chapter (Tech Lead, Architect, Solver, Right Hand) and decide which one aligns with your strengths and your organization's needs. Write one paragraph on what you would need to demonstrate to be seen that way.
+3. **Schedule a career conversation with your manager this week** — not a status update, a career conversation. Bring your current level's expectations, your self-assessment against them, and one specific ask about what "next level" looks like for you on this team.

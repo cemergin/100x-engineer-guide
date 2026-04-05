@@ -1891,3 +1891,19 @@ The inverse is also true: senior engineers who consistently skip cleanup, commen
 7. **Architecture fitness functions make boundaries permanent.** Architectural decisions degrade without automated enforcement. dependency-cruiser in CI turns "we agreed not to import from the database layer in UI components" from a verbal agreement into a build failure.
 
 8. **The Boy Scout Rule is the only sustainable strategy** for long-term codebase health. Big rewrite projects fail — they are too long, too risky, and always interrupted by product demands. Incremental improvement, applied consistently by every engineer every day, works. The codebase either improves or degrades. There is no stable equilibrium.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L1-M15: CI/CD Pipeline](../course/modules/loop-1/L1-M15-ci-cd-pipeline.md)** — Build TicketPulse's first CI pipeline and make it a gate that prevents architectural violations from merging
+- **[L2-M55a: GitHub Actions Mastery](../course/modules/loop-2/L2-M55a-github-actions-mastery.md)** — Evolve TicketPulse's CI into a multi-stage pipeline with caching, parallelism, and environment promotion
+- **[L3-M80: Building Your Platform](../course/modules/loop-3/L3-M80-building-your-platform.md)** — Build the internal developer platform on top of the codebase organization principles from this chapter
+
+### Quick Exercises
+
+1. **Run a dependency graph analysis on your project using `madge`, `dependency-cruiser`, or your language's equivalent — find every import cycle and write down why each one exists.**
+2. **Add one architecture fitness function to your CI pipeline: a script that fails the build if any module in `ui/` imports directly from `db/`, or if any file exceeds 400 lines — pick the rule your team has discussed but never enforced.**
+3. **Measure your build time end-to-end and identify the slowest step: run your CI pipeline with timing output, find the step that takes more than 30% of total time, and research one concrete change that would cut it in half.**

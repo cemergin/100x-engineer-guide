@@ -273,6 +273,93 @@ Make the work legible. If you built something complex, write about it. If you so
 
 ---
 
+## 4b. Brag Document Writing Workshop
+
+Most engineers write brag documents that are too vague to be useful. "Improved system performance" is not a brag document entry. "Reduced 99th percentile API latency from 1.2s to 340ms by adding a read replica routing layer, eliminating 60% of queries from the primary" is a brag document entry.
+
+This workshop takes you through the transformation from vague to specific for the entries you wrote in Section 1.
+
+### The Five-Layer Deepening Method
+
+For each brag document entry, apply these five questions in order. Each question adds a layer of specificity that makes the entry more credible and more useful in reviews, interviews, and negotiations.
+
+**Layer 1: The What (you already have this)**
+```
+"Improved API performance"
+```
+
+**Layer 2: The How**
+```
+"Added Redis caching layer for event listing queries"
+```
+
+**Layer 3: The Numbers**
+```
+"Reduced average response time from 450ms to 38ms (88% improvement)
+ for the top 3 most-trafficked endpoints"
+```
+
+**Layer 4: The Business Context**
+```
+"Event listing is the entry point for 73% of ticket purchases.
+ The speed improvement increased mobile session completion rates by 12%."
+```
+
+**Layer 5: The Difficulty**
+```
+"The challenge was cache invalidation: events update frequently (seat
+ availability changes every minute). Designed a targeted invalidation
+ strategy using Redis pub/sub to notify caching nodes when specific
+ events change, achieving freshness within 2 seconds without wholesale
+ cache busts."
+```
+
+Layer 5 is where your entry becomes a promotion packet exhibit, not just a resume bullet. The difficulty is what demonstrates Staff-level thinking: you understood the problem deeply enough to navigate a non-obvious trade-off.
+
+### Workshop Exercise (20 minutes)
+
+Take your three weakest brag document entries — the ones that are most vague — and apply all five layers. Start at your current layer and add the next one.
+
+Use this template for each entry:
+
+```
+ENTRY: [your current entry text]
+
+Layer 1 (What): ___________________________________
+Layer 2 (How):  ___________________________________
+Layer 3 (Numbers): ________________________________
+Layer 4 (Business context): _______________________
+Layer 5 (Difficulty / insight): ___________________
+
+REVISED ENTRY:
+[rewrite the entry incorporating all five layers in 3-5 sentences]
+```
+
+### Quantifying Qualitative Work
+
+Some of your most important contributions are qualitative — mentoring, process improvements, technical design reviews. These can be quantified too:
+
+```
+VAGUE: "Mentored junior engineers"
+QUANTIFIED: "Mentored 2 engineers from L3 to L4 in 12 months.
+             Both now independently own features with zero incidents
+             in the past 6 months. One presented at the company all-hands."
+
+VAGUE: "Improved the code review process"
+QUANTIFIED: "Reduced average PR review turnaround from 3.5 days to 18 hours
+             by introducing async review guidelines and a tiered review depth
+             checklist. Measured via linear PR age metrics over 90 days."
+
+VAGUE: "Wrote technical documentation"
+QUANTIFIED: "Authored the runbook that reduced P1 incident MTTR from 42 minutes
+             to 11 minutes across 4 incidents. The runbook has been used in
+             every production incident for the past 6 months."
+```
+
+The pattern: count things, name names, cite time periods, reference outcomes.
+
+---
+
 ## 5. Negotiation Preparation
 
 ### Research Market Rates

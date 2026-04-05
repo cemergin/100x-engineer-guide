@@ -2728,3 +2728,20 @@ firebase hosting:rollback                       # Rollback last deploy
 firebase firestore:delete --all-collections     # Delete all data (careful!)
 firebase firestore:indexes                      # List indexes
 ```
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L1-M14: Your First Deployment](../course/modules/loop-1/L1-M14-first-deployment.md)** — Deploy TicketPulse to AWS for the first time, covering ECS, RDS, and the IAM roles that tie them together
+- **[L2-M44: Terraform & Infrastructure as Code](../course/modules/loop-2/L2-M44-terraform-and-iac.md)** — Replace click-ops with Terraform modules for TicketPulse's AWS and Firebase infrastructure
+- **[L3-M62: Cloud Provider Deep Dive](../course/modules/loop-3/L3-M62-cloud-provider-deep-dive.md)** — Go beyond the basics: ALB routing rules, CloudFront distributions, Firestore security rules at production scale
+- **[L3-M75: Cost Optimization](../course/modules/loop-3/L3-M75-cost-optimization.md)** — Right-size TicketPulse's infrastructure and implement the cost controls that keep a growing system within budget
+
+### Quick Exercises
+
+1. **Run AWS Cost Explorer and find your top 3 spend categories** — filter by the last 30 days, group by service, and identify the largest line items. For each, ask whether the spend is proportional to the value delivered.
+2. **Check your IAM policies for overly broad permissions** — find any policy with `"Action": "*"` or `"Resource": "*"` and scope it down to the specific actions and resources that service actually needs.
+3. **Set up a billing alarm at 80% of your budget** — create a CloudWatch billing alarm that alerts before you hit your monthly limit, not after.

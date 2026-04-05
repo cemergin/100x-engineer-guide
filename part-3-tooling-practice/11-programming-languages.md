@@ -1628,3 +1628,19 @@ Here's what to carry with you:
 The most dangerous engineering culture is one that treats language choice as identity rather than tool selection. Go developers who sneer at Python, Rust evangelists who won't acknowledge the learning curve cost, Java developers who dismiss Go as "not enterprise enough." These are positions, not analyses.
 
 You're a 100x engineer. You understand the trade-offs deeply enough to make the right call — and to change your mind when the context changes.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L1-M05: PostgreSQL From Zero](../course/modules/loop-1/L1-M05-postgresql-from-zero.md)** — Write SQL from your language of choice to model TicketPulse's schema, and see how each language's database driver shapes your query patterns
+- **[L2-M33: Kafka Deep Dive](../course/modules/loop-2/L2-M33-kafka-deep-dive.md)** — Implement a Kafka producer and consumer in your primary language, then compare the client library's design to what you'd expect from the language's idioms
+- **[L3-M67: WebSockets & Real-Time](../course/modules/loop-3/L3-M67-websockets-and-real-time.md)** — Build a WebSocket server for TicketPulse's live seat map in your chosen language and measure how concurrency model affects connection overhead
+
+### Quick Exercises
+
+1. **Write the same minimal HTTP server (one route, one JSON response) in two different languages from this chapter — compare the total lines of code, error handling verbosity, and how each handles a panic or unhandled exception.**
+2. **Compare error handling patterns between Go (explicit multi-return errors) and Rust (Result/Option types) for the same problem — fetch a URL, parse the JSON, and extract one field — and write down which forced you to handle more failure cases explicitly.**
+3. **Benchmark a hot code path in your primary language: use the language's built-in profiler or benchmarking tool, run it under realistic input sizes, and identify whether the bottleneck is CPU, memory allocation, or I/O.**

@@ -2115,3 +2115,20 @@ Your first week isn't a grace period. It's a launchpad.
 > **"The best engineers I've worked with weren't the ones who knew the most on day one. They were the ones who knew *how to become dangerous* the fastest. They didn't wait for permission or orientation or a buddy system. They built their own scaffolding, asked the hard questions early, and were ready when the system needed them. That's not experience. That's a decision."**
 >
 > — The Beast Mode philosophy
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L3-M91: Beast Mode — Access & System Mapping](../course/modules/loop-3/L3-M91-beast-mode-access-and-system-mapping.md)** — Build your personal access matrix for TicketPulse: every system, every credential, every runbook, verified to actually work before you need it
+- **[L3-M91a: Beast Mode — Observability & Dashboard Wiring](../course/modules/loop-3/L3-M91a-beast-mode-observability-wiring.md)** — Wire up the dashboards, traces, and log queries you will reach for during an incident and validate them against a simulated failure
+- **[L3-M91b: Beast Mode — Incident Response Dry Run](../course/modules/loop-3/L3-M91b-beast-mode-incident-dry-run.md)** — Run a full incident simulation on TicketPulse: detection, triage, communication, mitigation, and postmortem under realistic time pressure
+- **[L3-M91c: Beast Mode — Tribal Knowledge & the Newcomer Superpower](../course/modules/loop-3/L3-M91c-beast-mode-tribal-knowledge.md)** — Document the undocumented: surface the institutional knowledge that lives only in people's heads and convert it into searchable, durable reference material
+
+### Quick Exercises
+
+1. **Build your personal access matrix for your current team's systems** — list every system you might need to touch during an incident, verify you have working credentials for each, and note the escalation path for anything you cannot access directly.
+2. **Create a hotlinks bookmark folder with your top 5 dashboards** — open each one right now and verify it loads with current data. Fix any broken panel before an incident forces you to debug your observability tooling while the system is on fire.
+3. **Shadow the next on-call shift and take notes** — you do not need to be the primary responder. Sit with whoever is on call, watch how they work, and write down every tool, every shortcut, and every piece of tribal knowledge you observe.

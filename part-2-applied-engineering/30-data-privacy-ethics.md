@@ -1467,3 +1467,18 @@ The opportunity for you: privacy done well is increasingly a product feature, no
 ---
 
 > **Next Steps:** With privacy infrastructure in place, Chapter 5 covers the broader security engineering foundations that underpin these controls — the encryption primitives, key management, authentication systems, and security architecture that make everything in this chapter actually work. For database-level implementation of retention policies, deletion cascades, and the event sourcing patterns behind crypto-shredding, see Chapter 24.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L3-M79: Data Privacy & GDPR](../course/modules/loop-3/L3-M79-data-privacy-gdpr.md)** — Implement GDPR-compliant deletion, consent management, and data subject access requests in TicketPulse
+- **[L2-M52: Data Pipelines](../course/modules/loop-2/L2-M52-data-pipelines.md)** — Build data pipelines that enforce privacy controls at the ingestion layer, not as an afterthought
+
+### Quick Exercises
+
+1. **Map every place your system stores PII: search your codebase for email, name, address, phone, and IP address — then check whether each storage location has a documented retention period and deletion path.**
+2. **Check if your team has a data retention policy: find the oldest user record in your database and ask whether you have a legitimate reason to still hold it under your privacy policy.**
+3. **Implement one crypto-shredding key for a user record: generate a per-user encryption key, encrypt the PII fields with it, store the key separately, and verify that deleting the key makes the data unrecoverable.**

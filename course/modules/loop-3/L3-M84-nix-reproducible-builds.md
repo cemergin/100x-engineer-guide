@@ -360,7 +360,261 @@ Nix is not fringe. Shopify uses it across thousands of developers. Replit built 
 
 ---
 
-## 6. Reflect: Reproducibility Spectrum
+## 7. Lockfile Deep Dive: Reading and Auditing flake.lock
+
+The `flake.lock` file is the single most important artifact Nix produces. Understanding how to read and audit it is a critical skill for maintaining reproducible builds over time.
+
+### Anatomy of a Real flake.lock
+
+```json
+{
+  "nodes": {
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1710432000,
+        "narHash": "sha256-abc123XYZ456...",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "a1b2c3d4e5f67890abcdef1234567890abcdef12",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "flake-utils": {
+      "locked": {
+        "lastModified": 1709126400,
+        "narHash": "sha256-def456ABC789...",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "b1b2b3b4b5b67890abcdef1234567890abcdef12",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    }
+  },
+  "root": {
+    "inputs": {
+      "nixpkgs": "nixpkgs",
+      "flake-utils": "flake-utils"
+    }
+  },
+  "version": 7
+}
+```
+
+**What each field means:**
+
+- `rev`: The exact git commit hash of the nixpkgs snapshot. This is what guarantees reproducibility — not a branch name, not a version tag, a specific commit.
+- `narHash`: The cryptographic hash of the NAR (Nix Archive) of this input. If the content changes, the hash changes, and the build fails. This is the content-addressable guarantee.
+- `lastModified`: Unix timestamp of when this commit was made. Useful for auditing how old your dependencies are.
+- `original`: What you specified in `flake.nix`. In this case, `nixos-unstable` is a branch. The lockfile resolves that to a specific commit.
+
+### Lockfile Audit Exercise (15 minutes)
+
+After you have a working `flake.nix`, audit the lockfile by answering these questions:
+
+```bash
+# 1. How old is your nixpkgs snapshot?
+python3 -c "import datetime; print(datetime.datetime.fromtimestamp(1710432000))"
+# → 2024-03-14 (or whatever the timestamp resolves to)
+
+# 2. What exact node version does this pin?
+nix eval --raw .#devShells.x86_64-linux.default --apply 'x: x.buildInputs' 2>/dev/null | head -20
+# OR: enter the shell and check
+nix develop --command node --version
+
+# 3. Are there any inputs that are more than 6 months old?
+# Check lastModified timestamps in flake.lock against today's date
+# If yes: nix flake update and run the full test suite
+
+# 4. Do the narHashes match what you expect?
+# Run: nix flake check
+# This re-downloads and verifies all inputs against the hashes in flake.lock
+nix flake check
+```
+
+**Signs your lockfile needs attention:**
+- `lastModified` is more than 90 days in the past: security patches may be missing
+- After `nix flake update`, your tests break: a dependency changed behavior and you need to pin more carefully
+- The `narHash` in CI does not match your local lock: someone updated the lockfile without committing it
+
+### Selective Pinning for Stability
+
+Sometimes you want nixpkgs-unstable for most packages but need to pin a specific package to an older version:
+
+```nix
+{
+  description = "TicketPulse — selectively pinned";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    # Pin a stable channel for production-critical tools
+    nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-23.11";
+  };
+
+  outputs = { self, nixpkgs, nixpkgs-stable }:
+    let
+      system = "x86_64-linux";
+      pkgs = nixpkgs.legacyPackages.${system};
+      pkgs-stable = nixpkgs-stable.legacyPackages.${system};
+    in {
+      devShells.${system}.default = pkgs.mkShell {
+        buildInputs = [
+          # Use unstable for most packages (latest features)
+          pkgs.nodejs_20
+          pkgs.nodePackages.pnpm
+
+          # Use stable for production-critical infrastructure tooling
+          pkgs-stable.postgresql_16  # Known-good version
+          pkgs-stable.terraform      # Pinned to avoid breaking changes
+        ];
+      };
+    };
+}
+```
+
+This gives you the freshness of unstable for development tools and the stability of the LTS channel for infrastructure tooling.
+
+---
+
+## 8. Customizing Your Nix Shell
+
+A bare `nix develop` shell is functional but generic. The real productivity gain comes from customizing the shell environment with project-specific tools, aliases, and configuration.
+
+### Shell Customization Exercise
+
+Extend your `flake.nix` shellHook with a complete developer experience:
+
+```nix
+shellHook = ''
+  # ─── Project branding ─────────────────────────────────────────────
+  echo ""
+  echo "  TicketPulse development environment"
+  echo "  ─────────────────────────────────────────"
+  echo "  Node.js:    $(node --version)"
+  echo "  pnpm:       $(pnpm --version)"
+  echo "  PostgreSQL: $(psql --version | head -1)"
+  echo "  Redis CLI:  $(redis-cli --version)"
+  echo "  Terraform:  $(terraform --version | head -1)"
+  echo "  k6:         $(k6 version)"
+  echo "  ─────────────────────────────────────────"
+  echo "  Aliases: tp-start, tp-test, tp-migrate, tp-reset-db"
+  echo ""
+
+  # ─── Environment variables ────────────────────────────────────────
+  export DATABASE_URL="postgresql://ticketpulse:ticketpulse@localhost:5432/ticketpulse_dev"
+  export REDIS_URL="redis://localhost:6379"
+  export KAFKA_BROKERS="localhost:9092"
+  export NODE_ENV="development"
+  export LOG_LEVEL="debug"
+
+  # Prisma: use the exact query engine from Nix (no binary downloads)
+  export PRISMA_QUERY_ENGINE_LIBRARY="${pkgs.prisma-engines}/lib/libquery_engine.node"
+  export PRISMA_SCHEMA_ENGINE_BINARY="${pkgs.prisma-engines}/bin/schema-engine"
+
+  # ─── Helpful aliases ──────────────────────────────────────────────
+  alias tp-start='docker compose up -d && pnpm dev'
+  alias tp-test='docker compose up -d postgres redis && pnpm test'
+  alias tp-migrate='pnpm prisma migrate dev'
+  alias tp-reset-db='pnpm prisma migrate reset --force'
+  alias tp-logs='docker compose logs -f'
+
+  # ─── Git hooks ────────────────────────────────────────────────────
+  # Install pre-commit hooks if not already installed
+  if [ ! -f .git/hooks/pre-commit ]; then
+    echo "Installing git hooks..."
+    cp scripts/pre-commit.sh .git/hooks/pre-commit
+    chmod +x .git/hooks/pre-commit
+  fi
+
+  # ─── Check required services ──────────────────────────────────────
+  if ! docker compose ps postgres 2>/dev/null | grep -q "running"; then
+    echo "⚠  PostgreSQL is not running. Run: docker compose up -d postgres"
+  fi
+'';
+```
+
+### Per-User Overrides with .envrc.local
+
+Some engineers need local overrides (different database names, debug ports, feature flags). Use direnv's local override mechanism:
+
+```bash
+# .envrc (committed to git)
+use flake
+source_env_if_present .envrc.local
+```
+
+```bash
+# .envrc.local (in .gitignore — per-engineer customization)
+export DATABASE_URL="postgresql://ticketpulse:ticketpulse@localhost:5433/ticketpulse_alice"
+export LOG_LEVEL="trace"
+export FEATURE_FLAG_EXPERIMENTAL_SEARCH="true"
+```
+
+Every engineer runs the same Nix environment but can layer personal customizations on top without polluting the shared configuration.
+
+### Exercise: Add a Custom Tool Not in nixpkgs
+
+Occasionally you need a tool that is not in nixpkgs. Nix can build it from source:
+
+```nix
+{
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+  outputs = { self, nixpkgs }:
+    let
+      pkgs = nixpkgs.legacyPackages.x86_64-linux;
+
+      # Build a custom version of a tool not in nixpkgs
+      # (or a version newer than what nixpkgs has)
+      customTool = pkgs.buildGoModule {
+        pname = "my-custom-cli";
+        version = "1.2.3";
+        src = pkgs.fetchFromGitHub {
+          owner = "example";
+          repo = "my-custom-cli";
+          rev = "v1.2.3";
+          hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+        };
+        vendorHash = "sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=";
+      };
+    in {
+      devShells.x86_64-linux.default = pkgs.mkShell {
+        buildInputs = [
+          pkgs.nodejs_20
+          customTool  # your custom tool is available in the shell
+        ];
+      };
+    };
+}
+```
+
+To find the correct hashes, use:
+
+```bash
+# Step 1: Use a placeholder hash to let Nix compute the real one
+# (The build will fail, but show you the correct hash)
+hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+
+# Run nix develop — it will error with the real hash
+nix develop 2>&1 | grep "got:"
+# got:    sha256-abc123RealHashHere...
+
+# Step 2: Replace the placeholder with the real hash and try again
+```
+
+---
+
+## 9. Reflect: Reproducibility Spectrum
 
 ### Stop and Think (5 minutes)
 
@@ -383,6 +637,16 @@ There is no universally right answer. The right tool is the simplest one that el
 
 ---
 
+---
+
+## Cross-References
+
+- **Chapter 20** (Everything as Code): The philosophy behind treating environments, configurations, and infrastructure as versioned, auditable code. Nix is the purest expression of this principle.
+- **L3-M83** (Observability and GitOps): Nix flakes complement GitOps workflows — your environment definition lives in git alongside your application code.
+- **L2-M42** (Kubernetes Fundamentals): Nix Docker image builds integrate with Kubernetes deployment pipelines.
+
+---
+
 ## Checkpoint: What You Built
 
 You have:
@@ -390,6 +654,9 @@ You have:
 - [x] Written a `flake.nix` defining TicketPulse's complete development environment
 - [x] Set up direnv for automatic environment activation
 - [x] Configured GitHub Actions to use the same Nix flake as local development
+- [x] Audited a `flake.lock` file: reading timestamps, hashes, and pinned commits
+- [x] Customized the shell environment with aliases, environment variables, and git hooks
+- [x] Set up per-user `.envrc.local` overrides that do not pollute shared configuration
 - [x] Understood when Nix is worth the investment and when simpler tools suffice
 
 **Key insight**: Nix makes "works on my machine" impossible by making the machine irrelevant. The environment is defined in code, pinned by a lockfile, and identical everywhere. The trade-off is a real learning curve and an unusual language -- but for projects with cross-language dependencies and reproducibility requirements, it pays for itself quickly.
@@ -408,3 +675,6 @@ You have:
 | **direnv** | A shell extension that automatically loads environment variables and Nix shells when entering a project directory. |
 | **Reproducible** | The property that a build produces bit-for-bit identical output regardless of when or where it is executed. |
 | **Content-addressed** | A storage model where artifacts are identified by the hash of their content rather than by name or version. |
+| **narHash** | The cryptographic hash of a Nix Archive (NAR), used to verify that a downloaded input has not changed since the lockfile was created. |
+| **shellHook** | A Nix attribute that runs shell commands when entering a `nix develop` shell, used to set environment variables and aliases. |
+| **Selective pinning** | The practice of using different nixpkgs channels for different packages to balance freshness and stability. |

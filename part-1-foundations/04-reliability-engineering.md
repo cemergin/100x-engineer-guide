@@ -117,6 +117,38 @@ The policy consequences of an exhausted error budget are something your organiza
 
 The policy needs teeth. If the error budget runs out and nothing changes, it's just a number on a dashboard.
 
+**How error budgets change the product-engineering conversation:**
+
+Before error budgets, the conversation went like this: the product manager wants to ship a new feature. The engineer says "we need to stabilize first." The product manager says "but we committed to this feature." Everyone is arguing from opinion and political leverage, not data.
+
+After error budgets, the conversation sounds different. "Our error budget is at 72% consumed with 18 days left in the month. At this burn rate, we'll exhaust it in 11 days. What's the plan?" Now both sides are looking at the same number. Shipping a new feature that carries risk means burning more budget. Whether to do that is a business decision — but it's a data-driven one. The engineer isn't being obstructionist; they're flagging that the budget is the constraint. The product manager isn't being reckless; they're making an explicit trade-off.
+
+This change in conversation quality is underrated. Teams that adopt error budgets report that reliability stops being an emotional topic at sprint planning and becomes an operational input, like capacity or headcount.
+
+**Worked example: Calculating SLOs and error budgets**
+
+Let's say you're running an e-commerce checkout service with an availability SLO of 99.9% over a 30-day rolling window.
+
+Step 1 — Compute the total request budget. Over 30 days your service handles roughly 4 million requests (based on historical data). Your SLO allows 0.1% to fail:
+
+```
+Error budget (requests) = 4,000,000 * 0.001 = 4,000 failed requests
+```
+
+Step 2 — Translate to time. If your average request rate is 1,543 req/s and you experience a complete outage, you burn:
+
+```
+Time budget = 4,000 / 1,543 req/s ≈ 2.6 seconds of complete outage per 4,000 failed requests
+```
+
+More usefully in minutes: 30 days = 43,200 minutes. 0.1% of that is 43.2 minutes.
+
+Step 3 — Track what you've spent. Suppose this month you've had:
+- Deploy on the 8th with 3-minute degraded state (about 277,000 requests in that window, 5% error rate): consumed ≈ 13,850 failed requests
+- Wait — that alone exceeds the budget of 4,000 failed requests.
+
+That's the point. A single messy deploy can consume the entire monthly budget in minutes. When you make this visible, teams immediately see why careful release practices matter. It's not abstract "quality" talk — it's a finite resource they can actually see depleting.
+
 **Multi-burn-rate alerting:**
 
 One nuance that the original Google SRE workbook introduced: you need to alert when you're *burning* error budget too fast, not just when you've exhausted it. If you're burning your monthly error budget in a single day, that's a crisis — you should be paged immediately. If you're burning it slowly over several days, that's still bad but less urgent.
@@ -125,6 +157,53 @@ This leads to multi-window, multi-burn-rate alerting (covered more in Section 2)
 - Fast burn (e.g., 14x normal rate): page the on-call immediately
 - Slow burn (e.g., 5x normal rate): create a ticket, investigate within a day
 - Near-exhaustion: longer-horizon warning to prompt conversation
+
+**Worked example: Multi-window burn rate calculations**
+
+Continuing the checkout example (99.9% SLO, 30-day window):
+
+```
+Monthly error budget = 0.1% of all requests
+Normal hourly burn rate = 0.1% / (30 * 24) = 0.000139% per hour
+
+Fast-burn threshold (14x): 14 * 0.000139% = 0.00194% per hour
+  → "Alert if hourly error rate exceeds 0.00194%"
+  → At this rate, budget exhausts in: 30 days / 14 = ~2.1 days
+
+Slow-burn threshold (5x): 5 * 0.000139% = 0.000694% per hour
+  → "Ticket if hourly error rate exceeds 0.000694%"
+  → At this rate, budget exhausts in: 30 days / 5 = 6 days
+```
+
+In Prometheus/Alertmanager, this looks like:
+
+```yaml
+# Fast burn — page immediately
+- alert: ErrorBudgetBurnRateFast
+  expr: |
+    (
+      rate(http_requests_errors_total[1h]) / rate(http_requests_total[1h])
+    ) > (14 * 0.001)
+  for: 2m
+  labels:
+    severity: page
+  annotations:
+    summary: "Error budget burning at 14x rate — exhaustion in ~2 days"
+
+# Slow burn — create ticket
+- alert: ErrorBudgetBurnRateSlow
+  expr: |
+    (
+      rate(http_requests_errors_total[6h]) / rate(http_requests_total[6h])
+    ) > (5 * 0.001)
+  for: 30m
+  labels:
+    severity: ticket
+  annotations:
+    summary: "Error budget burning at 5x rate — exhaustion in ~6 days"
+```
+
+The two-window approach (1h and 6h) prevents false positives: a single spike triggers the 1h window, but a sustained slow degradation triggers the 6h window. Together they give you both speed and signal quality.
 
 ### 1.5 Toil — The Other Resource Drain
 
@@ -306,6 +385,105 @@ The circuit breaker wraps calls to an external dependency and tracks the failure
 
 **Half-Open (probing):** After a configurable timeout (say, 30 seconds), the circuit breaker allows a small number of probe requests through to the dependency. If those succeed, the circuit resets to Closed. If they fail, it goes back to Open and resets the timeout.
 
+**State machine diagram:**
+
+```
+                    failure rate > threshold
+    ┌─────────────────────────────────────────┐
+    │                                         ▼
+┌───┴────┐    probe success              ┌─────────┐
+│ CLOSED │◄──────────────────────────────┤  OPEN   │
+└───┬────┘                               └────┬────┘
+    │                                         │
+    │ pass-through calls                      │ all calls fail fast
+    │                                    after timeout
+    │                                         │
+    │                                    ┌────▼──────┐
+    │              probe failure         │ HALF-OPEN │
+    └────────────────────────────────────┤           │
+                                        │ allow N   │
+                                        │ probe reqs │
+                                        └───────────┘
+```
+
+**Code example (Python, using the `circuitbreaker` library pattern):**
+
+```python
+import time
+from enum import Enum
+from threading import Lock
+from dataclasses import dataclass, field
+from typing import Callable, Any
+
+class CircuitState(Enum):
+    CLOSED = "closed"
+    OPEN = "open"
+    HALF_OPEN = "half_open"
+
+@dataclass
+class CircuitBreaker:
+    failure_threshold: int = 5      # failures before opening
+    recovery_timeout: float = 30.0  # seconds before entering HALF_OPEN
+    probe_count: int = 3            # requests allowed in HALF_OPEN
+
+    _state: CircuitState = field(default=CircuitState.CLOSED, init=False)
+    _failure_count: int = field(default=0, init=False)
+    _last_failure_time: float = field(default=0.0, init=False)
+    _probe_successes: int = field(default=0, init=False)
+    _lock: Lock = field(default_factory=Lock, init=False)
+
+    def call(self, fn: Callable, *args, **kwargs) -> Any:
+        with self._lock:
+            state = self._get_state()
+
+        if state == CircuitState.OPEN:
+            raise Exception("Circuit is OPEN — failing fast")
+
+        try:
+            result = fn(*args, **kwargs)
+            with self._lock:
+                self._on_success()
+            return result
+        except Exception as e:
+            with self._lock:
+                self._on_failure()
+            raise
+
+    def _get_state(self) -> CircuitState:
+        if self._state == CircuitState.OPEN:
+            if time.time() - self._last_failure_time > self.recovery_timeout:
+                self._state = CircuitState.HALF_OPEN
+                self._probe_successes = 0
+        return self._state
+
+    def _on_success(self):
+        if self._state == CircuitState.HALF_OPEN:
+            self._probe_successes += 1
+            if self._probe_successes >= self.probe_count:
+                self._state = CircuitState.CLOSED
+                self._failure_count = 0
+        elif self._state == CircuitState.CLOSED:
+            self._failure_count = 0
+
+    def _on_failure(self):
+        self._failure_count += 1
+        self._last_failure_time = time.time()
+        if self._failure_count >= self.failure_threshold:
+            self._state = CircuitState.OPEN
+
+# Usage
+payment_circuit = CircuitBreaker(failure_threshold=5, recovery_timeout=30)
+
+def process_payment(order_id: str, amount: float):
+    try:
+        return payment_circuit.call(payment_service.charge, order_id, amount)
+    except Exception:
+        # Return degraded response instead of propagating failure
+        return {"status": "pending", "message": "Payment queued for retry"}
+```
+
+In production, prefer a battle-tested library: `resilience4j` (Java/Kotlin), `polly` (.NET), `pybreaker` (Python), or build on top of service mesh circuit breaking (Istio, Linkerd) for language-agnostic protection.
+
 **The practical benefit:** When your payment service is struggling, the circuit breaker in your checkout service doesn't let checkout requests accumulate in a queue waiting for payment service responses. They fail fast. The checkout service stays healthy. Users get an error message rather than a timeout. The payment service isn't overwhelmed by a backlog of requests it can't serve. When the payment service recovers, the circuit resets and traffic flows normally.
 
 **Configuration matters a lot.** Too-sensitive circuit breakers trip during normal traffic spikes and make transient errors into prolonged outages. Too-insensitive ones let cascades happen anyway. Tune the error rate threshold, the minimum number of requests before the circuit can trip (so a single failed request at startup doesn't open the circuit), and the probe timeout to fit your specific dependency's behavior.
@@ -410,19 +588,109 @@ The goal of incident management is not just to resolve the current incident as f
 
 ### 4.2 The Incident Lifecycle
 
+Let's walk through a realistic incident to make these stages concrete. Imagine it's 2:17am and your checkout service's error rate just spiked to 23%.
+
 **Detection:** The system tells you something is wrong, or a user tells you. Ideally the system tells you before users do — if users are filing support tickets before your alerts fire, your monitoring has a gap. Detection latency (time from problem start to alert fire) is a key metric for your monitoring system's health.
+
+In our scenario, the fast-burn SLO alert fires at 2:17am. The on-call engineer, Sarah, is paged. She's the first to know. The alert includes: service name, current error rate, SLO budget consumed, a link to the runbook, and a link to the service dashboard. She has context before she's even opened her laptop.
+
+*Detection best practice:* Measure your Mean Time to Detect (MTTD). If users are consistently reporting problems before your monitoring catches them, MTTD is too high. The goal is MTTD under 5 minutes for SEV1-level problems.
 
 **Triage:** You've been paged. Is this real? How bad is it? What's the scope? Triage is the fast assessment that determines how to mobilize. The goal is a severity determination within minutes of detection.
 
+Sarah looks at the service dashboard. 23% error rate, all errors are HTTP 500s, pattern started 12 minutes ago. She checks the traffic volume — requests are at normal levels, so it's not a load spike. She checks recent deployments — there was a deploy at 1:58am, 31 minutes ago. She declares SEV2 (major feature degraded, significant user impact) and opens an incident channel in Slack.
+
+*Triage best practice:* Timebox triage to 5 minutes. If you can't determine severity in 5 minutes, declare the highest plausible severity, mobilize accordingly, and adjust down if warranted.
+
 **Mobilization:** Based on severity, pull in the right people. For a SEV1, you might need the on-call, a service expert, and a communications lead. For a SEV3, maybe just the on-call is enough. Mobilization without a structure wastes time — you want clear roles defined before any specific incident.
+
+For this SEV2, Sarah pings the deployment engineer who did the 1:58am push and the checkout service lead. Three roles are now filled: on-call (Sarah, incident commander), subject matter expert (deployment engineer), and escalation path (checkout lead). Sarah posts the first status update in the incident channel with a timeline template:
+
+```
+INCIDENT: SEV2 — Checkout 23% error rate
+Start time: ~02:05 UTC (error start) / 02:17 UTC (detected)
+IC: Sarah
+Current status: Investigating
+Current hypothesis: Deploy at 01:58 UTC is suspect
+Next update: 02:45 UTC
+Affected users: All checkout users (~18% of active users)
+```
+
+*Mobilization best practice:* Separate the incident commander (IC) role from the person doing technical investigation. The IC manages communication, tracks time, and ensures the team has what they need. The investigators investigate. When the same person tries to do both, communication gaps happen.
 
 **Investigation:** What's causing this? The ideal investigation is methodical even under pressure: form a hypothesis, test it, confirm or reject, repeat. The temptation is to jump straight to a fix the moment you have a theory. Resist it — you need to confirm the cause before applying a fix, or you risk applying a fix that does nothing (or makes things worse) and losing time.
 
+The deployment engineer pulls up the diff for the 1:58am deploy. It's a change to the payment processing integration — specifically, a new retry configuration. They look at the error logs: `NullPointerException in PaymentProcessor.charge()` — a field that the new code expects is null in existing objects. The error started 7 minutes after the deploy, which matches the timing of the first requests that would have touched the new code path for users with existing cart sessions (they had old session objects in cache that don't have the new field).
+
+Hypothesis formed: the deploy introduced a null pointer exception for users with cached cart sessions from before the deploy.
+
+They test it: spin up a staging environment, load a pre-deploy cart session, run through checkout. Confirmed crash.
+
+*Investigation best practice:* Write every hypothesis, test, and result in the incident channel as you go, timestamped. During postmortem reconstruction, this log is invaluable. It also helps other responders avoid duplicating your work.
+
 **Mitigation:** Stop the bleeding. This is often different from the root cause fix. If a bad deploy caused a memory leak, the mitigation might be "roll back the deploy." The root cause fix might be "fix the memory leak in the code." Mitigation is the fastest path to restoring service; root cause fix comes later.
+
+Options discussed:
+1. Roll back the deploy (estimated 4 minutes, low risk, solves immediately)
+2. Push a hotfix (estimated 20 minutes, higher risk, new code)
+3. Flush affected cache entries (estimated 8 minutes, medium risk)
+
+They choose rollback — it's fastest and safest. At 2:41am, the rollback completes. Error rate drops from 23% to 0.1% within 90 seconds.
+
+*Mitigation best practice:* Prefer rollback over hotfix when possible. Rollbacks are reversions to a known good state; hotfixes are new code under pressure. Hotfixes fail frequently. A successful rollback followed by a careful hotfix the next morning beats a rushed 3am hotfix that causes a second incident.
 
 **Resolution:** The service is restored, users are no longer affected, all responders are stood down. Write the timeline while it's fresh.
 
+At 2:45am, Sarah confirms: error rate stable at 0.1%, SLO burn rate back to normal. She updates the incident channel:
+
+```
+INCIDENT RESOLVED — 02:45 UTC
+Duration: ~40 minutes
+Mitigation: Rolled back deploy at 01:58 UTC
+Root cause: (preliminary) Null pointer exception in PaymentProcessor.charge()
+  for users with cached cart sessions from before deploy
+Error budget consumed: ~0.12% of monthly budget
+Postmortem: scheduled Friday 10am, owner: Sarah
+Action items pending: Fix before re-deploy
+```
+
+She pages down the deployment engineer and checkout lead. Everyone goes back to sleep.
+
 **Postmortem:** The learning phase. Detailed timeline reconstruction, root cause analysis, contributing factors, action items with owners and due dates.
+
+The postmortem (held Friday, not at 3am) produces: a timeline, five contributing factors (insufficient staging coverage of cache compatibility, no canary deploy, insufficient pre-deploy null-safety checks, missing alert for NullPointerException spikes, 7-minute detection lag), and action items for each. The fix is shipped the following Monday with a canary deploy to 5% of traffic first.
+
+*Postmortem best practice:* Schedule the postmortem within 48 hours while memory is fresh, but not in the immediate aftermath when people are tired and emotional. 24-48 hours after resolution is the sweet spot.
+
+### 4.2a Incident Roles and Communication Templates
+
+Clear role definitions prevent the two most common failure modes in incidents: too many cooks (everyone is talking, no one is deciding) and not enough visibility (people are working in silos, information isn't flowing).
+
+**Core incident roles:**
+
+| Role | Responsibility | Who fills it |
+|------|---------------|-------------|
+| Incident Commander (IC) | Overall coordination, communication cadence, declares severity | On-call or senior engineer |
+| Technical Lead | Drives investigation and mitigation | Subject matter expert |
+| Communications Lead | External and internal status updates | Product manager or senior IC |
+| Scribe | Real-time timeline in incident channel | Anyone |
+
+For SEV3, the on-call often fills all roles. For SEV1, each role needs its own person.
+
+**Status update template (every 30 minutes during active incident):**
+
+```
+[HH:MM UTC] STATUS UPDATE
+Current status: [Investigating / Mitigating / Monitoring / Resolved]
+Error rate: X% (was Y% last update)
+Affected users: estimated Z% of active users
+Current hypothesis: [what you think is causing it]
+Actions in progress: [what you're currently doing]
+Next update: [time]
+Help needed: [yes/no, what kind]
+```
+
+The regularity of updates matters as much as the content. During a major incident, stakeholders outside the technical responders (leadership, support team, customer success) need to know something is happening and there are people working on it. Regular updates — even if the update is "still investigating, no change" — reduce the pressure on the technical team from a stream of "what's the status?" pings.
 
 ### 4.3 Severity Levels
 
@@ -461,7 +729,21 @@ On-call is a cultural and operational investment, not just a staffing exercise. 
 
 Traditional testing verifies that your system does what you think it does under conditions you specify. Chaos engineering is different: it tests whether your system *behaves correctly under adversity* — conditions that are harder to anticipate in advance.
 
-The founding story is Netflix. As they moved to AWS in the early 2010s, their team realized that the best way to become confident in their ability to handle AWS instance failures was to randomly terminate instances themselves — in production, during business hours, where they could immediately observe and respond. This became the Chaos Monkey, and eventually the Simian Army, and eventually the discipline of chaos engineering.
+**The Netflix origin story:**
+
+In 2008, Netflix suffered a major database corruption incident that took down their DVD shipping service for three days and affected millions of customers. It was a watershed moment. The engineering team made a decision: they would move entirely to AWS and build a cloud-native architecture that could tolerate infrastructure failures by design.
+
+The problem was that designing for failure and actually tolerating failure are different things. You can architect for high availability on paper, add redundancy, write runbooks — and still discover on a random Tuesday night that a single Availability Zone failure takes down your entire service because of an assumption someone made two years ago in a config file no one remembers.
+
+In 2010, Netflix engineer Cory Bennett and Ariel Tseitlin created Chaos Monkey: a tool that randomly terminated EC2 instances in their production environment, during business hours. The name was deliberately provocative — the monkey wanders through your data center randomly breaking things. The theory: if your engineers know that any instance might die at any moment during the workday, they'll build the system to handle it. You can't opt out. You adapt or you get paged.
+
+The results were instructive. Chaos Monkey exposed dozens of single points of failure that no one had identified through architecture reviews. Services that were supposed to fail over automatically didn't. Services that were supposed to degrade gracefully crashed entirely. Assumptions baked into config files turned out to be wrong.
+
+But here's the crucial piece: they ran it during business hours intentionally. When the monkey terminated an instance and something broke, the team was awake, alert, and in the office. They could respond, fix, learn. Contrast this with the alternative: the same failure happening at 2am, discovered by an exhausted on-call engineer, with no root cause context.
+
+Netflix went further and built the Simian Army: Chaos Monkey (random instance termination), Chaos Gorilla (simulates loss of an entire Availability Zone), Latency Monkey (introduces artificial network latency), Conformity Monkey (checks for instances that don't follow best practices), Doctor Monkey (checks for unhealthy instances), Janitor Monkey (removes unused cloud resources). Each one targeted a different failure mode.
+
+By 2012, Netflix had open-sourced Chaos Monkey, and the discipline had a name: chaos engineering.
 
 The insight: **weaknesses in your system don't care whether you're testing or not.** They exist in production right now. The question is whether you discover them on your terms (controlled experiment, during business hours, with your team at full attention) or on the system's terms (random 3am production incident with your on-call engineer half-asleep).
 
@@ -486,7 +768,157 @@ The principles, articulated at Principlesofchaos.org:
 
 **5. Minimize blast radius.** Start with experiments that have limited potential impact. Run in a single availability zone before all availability zones. Start with low traffic periods. Have automated stop conditions — if your error rate exceeds a threshold, automatically halt the experiment. Build confidence incrementally.
 
-### 5.3 Game Days
+### 5.3 How to Start: Practical Chaos Engineering
+
+The biggest barrier to starting chaos engineering is fear. "We can't inject failures into production — what if something breaks?" This is exactly backwards. If injecting a small, controlled failure breaks production in an unexpected way, you've just learned something invaluable *on your terms*, not at 3am.
+
+But you should start small. Here's a practical progression:
+
+**Stage 1: Verify your existing safety mechanisms (weeks 1-2)**
+
+Before injecting failures, audit what safety you already have. Run these experiments in staging first:
+
+```bash
+# Experiment 1: Kill a single replica and watch failover
+kubectl delete pod my-service-7d9f8b-xyz
+
+# Watch: Does traffic reroute automatically?
+# Watch: Do you get alerts?
+# Watch: Does the service recover without manual intervention?
+# Expected time to recovery: < 30 seconds
+
+# Experiment 2: Simulate a slow dependency
+# Using tc (traffic control) to add 2s latency to a single pod's egress
+kubectl exec -it my-service-pod -- tc qdisc add dev eth0 root netem delay 2000ms
+
+# Watch: Does the circuit breaker open?
+# Watch: Does latency spike cascade to callers?
+# Watch: Does load shedding kick in?
+```
+
+If any of these experiments reveals an unexpected failure mode, you've found a bug. Fix it before you run the experiment in production.
+
+**Stage 2: Automate chaos in staging (weeks 3-6)**
+
+Tools for this stage:
+- **Chaos Monkey for Kubernetes (kube-monkey):** Randomly deletes pods on a schedule
+- **Litmus Chaos:** Rich experiment library for Kubernetes (network faults, disk pressure, CPU hog, pod kill)
+- **Gremlin:** Commercial SaaS platform for chaos experiments with good blast radius controls
+- **AWS Fault Injection Simulator (FIS):** Native AWS chaos for EC2, ECS, EKS, RDS
+
+A minimal Litmus experiment that kills a random pod every business day:
+
+```yaml
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: checkout-pod-kill
+  namespace: production
+spec:
+  appinfo:
+    appns: "production"
+    applabel: "app=checkout-service"
+    appkind: "deployment"
+  chaosServiceAccount: litmus-admin
+  experiments:
+  - name: pod-delete
+    spec:
+      components:
+        env:
+        - name: TOTAL_CHAOS_DURATION
+          value: "60"          # Run for 60 seconds
+        - name: CHAOS_INTERVAL
+          value: "10"          # Kill a pod every 10 seconds
+        - name: FORCE
+          value: "false"       # Graceful termination
+      probe:
+      - name: "check-availability"
+        type: "httpProbe"
+        httpProbe/inputs:
+          url: "http://checkout-service/health"
+          responseTimeout: 2000
+          method:
+            get:
+              criteria: "==" 
+              responseCode: "200"
+        runProperties:
+          probeTimeout: 5
+          interval: 5
+          attempt: 5
+        mode: "Continuous"     # Run throughout chaos duration
+```
+
+The `probe` section is key: it continuously checks your service's health endpoint during the experiment. If availability drops, the experiment auto-halts and marks itself as failed — your automatic stop condition.
+
+**Stage 3: Introduce to production (cautiously)**
+
+When staging experiments consistently pass without unexpected failures, graduate to production:
+
+1. **Start with low-traffic hours** (not 3am, but 2pm on a Tuesday rather than 9am on a Monday)
+2. **Start with stateless services** — you can always restart them; state-bearing services have harder failure modes
+3. **Have an escape hatch** — a single command that halts all chaos experiments and restores normal state
+4. **Run with someone watching** — not automated-and-forget. A team member should be observing metrics in real time
+
+**Automating your stop conditions:**
+
+```python
+# Simple chaos experiment runner with automatic halt
+import time
+import requests
+
+class ChaosExperiment:
+    def __init__(self, target_service_url: str, error_rate_threshold: float = 0.05):
+        self.target_url = target_service_url
+        self.threshold = error_rate_threshold
+        self.running = False
+
+    def run(self, inject_failure, duration_seconds: int):
+        """Run chaos experiment with automatic stop on error rate threshold."""
+        self.running = True
+        inject_failure()  # Start the failure injection
+
+        start_time = time.time()
+        while time.time() - start_time < duration_seconds and self.running:
+            error_rate = self._measure_error_rate()
+            if error_rate > self.threshold:
+                print(f"HALT: Error rate {error_rate:.1%} exceeded threshold {self.threshold:.1%}")
+                self._halt_chaos()
+                return False
+            time.sleep(5)
+
+        self._halt_chaos()
+        return True
+
+    def _measure_error_rate(self) -> float:
+        # Query Prometheus for error rate
+        query = 'rate(http_requests_errors_total[1m]) / rate(http_requests_total[1m])'
+        response = requests.get(
+            'http://prometheus:9090/api/v1/query',
+            params={'query': query}
+        )
+        result = response.json()['data']['result']
+        return float(result[0]['value'][1]) if result else 0.0
+
+    def _halt_chaos(self):
+        self.running = False
+        # Signal chaos tool to stop (tool-specific)
+        print("Chaos experiment halted.")
+```
+
+**Stage 4: Build a chaos calendar**
+
+Once you have reliable experiments, run them on a schedule rather than ad-hoc. A monthly chaos calendar might look like:
+
+| Week | Experiment | Target | Expected behavior |
+|------|-----------|--------|-------------------|
+| Week 1 | Pod kill (random) | All services | Failover in < 30s, no user impact |
+| Week 2 | Network latency injection (500ms) | Payment service dependency | Circuit breaker opens, graceful degradation |
+| Week 3 | Database failover | Primary RDS | Read traffic shifts to replica, < 60s degraded state |
+| Week 4 | AZ failure simulation | Entire AZ | Cross-AZ traffic redistribution |
+
+The calendar approach normalizes chaos as part of engineering routine rather than a special scary event.
+
+### 5.4 Game Days
 
 A game day is a scheduled chaos exercise — a planned event where you run specific experiments and treat the response like a real incident. The purposes:
 

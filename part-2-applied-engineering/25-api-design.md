@@ -2628,3 +2628,20 @@ Not every API should be GraphQL, and not every API should be REST. Use this fram
 **Key Takeaway**: The best APIs are not the ones with the most features — they are the ones that make developers productive immediately and keep working reliably for years. That means investing in the things that are easy to skip: error messages, pagination, idempotency, SDK quality, documentation. These are what developers interact with every day. They determine whether developers build on your platform or someone else's, whether they recommend your API or complain about it, whether they come back for your next product or look elsewhere.
 
 Design every API like it will outlive you. Because it will.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L1-M11: REST API Design](../course/modules/loop-1/L1-M11-rest-api-design.md)** — Design and implement TicketPulse's core REST API with proper resource modeling, versioning, and pagination
+- **[L1-M12: Error Handling That Doesn't Suck](../course/modules/loop-1/L1-M12-error-handling.md)** — Build an error response format for TicketPulse that gives clients enough context to recover without exposing internals
+- **[L2-M36: API Gateway & BFF](../course/modules/loop-2/L2-M36-api-gateway-and-bff.md)** — Add an API gateway in front of TicketPulse's services and build a Backend-for-Frontend tailored to the mobile client
+- **[L3-M72: GraphQL API](../course/modules/loop-3/L3-M72-graphql-api.md)** — Expose TicketPulse's event and ticket data through a GraphQL API and learn where GraphQL's trade-offs hurt you in production
+
+### Quick Exercises
+
+1. **Audit one of your existing API endpoints against the Richardson Maturity Model: does it use nouns for resources, HTTP verbs correctly, and hypermedia links? Write down which level it's at and what it would take to reach Level 3.**
+2. **Add idempotency keys to one write endpoint: generate a key on the client, store it server-side with the result, and verify that replaying the same request returns the cached response instead of creating a duplicate.**
+3. **Review your error responses — pick three recent 4xx or 5xx errors from your logs and ask: would a developer who has never seen this API know what went wrong and how to fix it? Rewrite the ones that fail this test.**

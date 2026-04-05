@@ -2644,3 +2644,19 @@ If your pipeline is hitting these targets, merging to main is boring. And boring
 ---
 
 *Next: Chapter 34 explores spec-driven development — writing the specification before the code, from RFCs and OpenAPI contracts to AI-native specs that serve as the interface between human intent and machine execution.*
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L1-M15: CI/CD Pipeline](../course/modules/loop-1/L1-M15-ci-cd-pipeline.md)** — Build TicketPulse's first working CI pipeline from zero, including test, lint, and deploy steps
+- **[L2-M55a: GitHub Actions Mastery](../course/modules/loop-2/L2-M55a-github-actions-mastery.md)** — Refactor a flat workflow into reusable components, add matrix builds, and implement proper secret management
+- **[L3-M80a: GitHub Actions at Scale](../course/modules/loop-3/L3-M80a-github-actions-at-scale.md)** — Harden a production CI system with OIDC federation, self-hosted runners, and cost controls
+
+### Quick Exercises
+
+1. **Convert one copy-pasted workflow into a reusable workflow** — identify a `steps` block that appears in more than one workflow file and extract it into a shared workflow callable via `workflow_call`. Measure the diff in total line count.
+2. **Add OIDC federation to replace one stored secret** — remove a long-lived AWS or GCP credential from your repository secrets and replace it with a short-lived token via OIDC. Verify the old secret can be deleted.
+3. **Measure your CI time and add one parallelization optimization** — find your slowest job, split its steps into parallel jobs where possible, and compare before/after wall-clock time.

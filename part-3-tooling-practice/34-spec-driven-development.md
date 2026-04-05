@@ -2785,3 +2785,19 @@ The total spec investment is 7-20 hours for a feature that takes 2-6 weeks to bu
 ---
 
 **Key Takeaway:** In the AI era, the spec is the product and code is the build artifact. Engineers who master specification writing — who can precisely capture intent, constraints, and acceptance criteria in a format that humans can review and machines can execute — are the most valuable engineers on any team. This is not a soft skill. It is the core technical skill of the next decade. Write the spec first. Write it precisely. Let the implementation — human or AI — follow from it. The spec is where you do the hard thinking, before the code makes it expensive to change your mind.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L2-M59a: Spec-Driven Development](../course/modules/loop-2/L2-M59a-spec-driven-development.md)** — Write a full OpenAPI contract for a TicketPulse endpoint before touching implementation code, then validate against it with Spectral
+- **[L3-M86a: AI-Native Spec-Driven Development](../course/modules/loop-3/L3-M86a-ai-native-spec-driven-development.md)** — Use specs as the interface between human intent and AI implementation, closing the loop with automated acceptance tests
+- **[L3-M77: Architecture Decision Records](../course/modules/loop-3/L3-M77-architecture-decision-records.md)** — Document the non-obvious decisions in TicketPulse's architecture in a format that survives team turnover
+
+### Quick Exercises
+
+1. **Write an OpenAPI spec for one of your existing endpoints and validate it with Spectral** — describe the request, response, and error cases. Run it through Spectral with the default ruleset and fix every warning before touching the implementation.
+2. **Write a Gherkin scenario for your most critical user flow** — describe it in Given/When/Then without writing any test code. Review it with a non-engineer and see if they can understand and verify the behaviour.
+3. **Draft an RFC for your next feature before writing any code** — spend two hours on the problem statement, constraints, alternatives considered, and your proposed approach. Share it for review before you open your editor.

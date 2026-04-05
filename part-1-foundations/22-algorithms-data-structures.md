@@ -2495,3 +2495,19 @@ Analyze them weekly and fix the top offenders (add synonyms, fix analysis, add c
 | Typo-tolerant instant search | Meilisearch / Typesense | Simple ops, sub-50ms, great defaults |
 
 The structures in this chapter are not interview trivia. They are the building blocks of every database, cache, load balancer, and distributed system you work with every day. The B+ tree in Postgres's indexes, the skip list in Redis sorted sets, the Bloom filter in Cassandra's LSM read path, the consistent hashing ring in DynamoDB's partition layer, the HyperLogLog behind `PFCOUNT` — you interact with these data structures constantly, whether you know it or not. Understanding them means you can read a Postgres `EXPLAIN` plan and know what is happening, choose the right database for your workload, debug performance problems from first principles, and design systems that scale. That is what separates engineers who understand their tools from engineers who cargo-cult configurations.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L1-M07: Indexing & Query Performance](../course/modules/loop-1/L1-M07-indexing-and-query-performance.md)** — Apply B-tree and hash index knowledge to make TicketPulse's ticket queries 10x faster
+- **[L2-M40: Search Engineering](../course/modules/loop-2/L2-M40-search-engineering.md)** — Build full-text search for TicketPulse events using inverted indexes and relevance scoring
+- **[L3-M65: Consistent Hashing & Distributed Cache](../course/modules/loop-3/L3-M65-consistent-hashing-and-distributed-cache.md)** — Implement consistent hashing to distribute TicketPulse's cache layer across nodes without thundering-herd on reshards
+
+### Quick Exercises
+
+1. **Implement an LRU cache in your language of choice using only a hash map and a doubly-linked list — no library calls — and verify it evicts the correct entry.**
+2. **Profile a slow function in your codebase: add timing instrumentation, measure it under realistic load, then write down its Big-O complexity for both time and space.**
+3. **Find where your codebase uses a bloom filter, B-tree, or hash map — hint: your database uses all three internally. Check `EXPLAIN` output, your cache client docs, and any "exists" check in your application layer.**

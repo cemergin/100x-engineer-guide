@@ -187,6 +187,125 @@ The case for multi-model: fewer operational dependencies. One database to back u
 
 ---
 
+### 1.5 SQL vs NoSQL — A Decision Framework with a Worked Example
+
+The SQL-vs-NoSQL decision is one of the most relitigated in engineering because it's framed wrong. The real question isn't "which database technology is better?" — it's "which data model best fits my access patterns, consistency requirements, and team capabilities?"
+
+Here's a decision framework that actually works in practice. Walk through these questions in order:
+
+**Step 1: What are your top 5 most frequent read queries?**
+
+Write them out explicitly. If they look like `SELECT user.*, profile.* FROM users JOIN profiles ON ...` with joins across 3+ tables, you have relational access patterns and should strongly prefer a relational database. If they look like `GET /users/123/full-profile` where you need the entire user object in one shot and the object has variable structure, a document database becomes more attractive.
+
+**Step 2: What are your write patterns?**
+
+High write volume with simple access patterns? Cassandra or DynamoDB. Complex writes with transactional integrity across multiple entities? PostgreSQL. Time-series data with consistent timestamp ordering? TimescaleDB or InfluxDB.
+
+**Step 3: How important is consistency vs availability during failures?**
+
+If you can tolerate serving slightly stale data during a network partition (a product catalog, a user's follower count), you have more flexibility toward AP-favoring NoSQL systems. If stale data means money problems (bank balances, inventory counts), you need CP systems with strong consistency, and that usually means a relational database or a NewSQL system.
+
+**Step 4: How experienced is your team with the technology?**
+
+This is the question people skip. A team that knows PostgreSQL deeply will outperform a team that's learning DynamoDB for the first time, even if DynamoDB has better theoretical fit. Operational expertise compounds. Default to what your team knows unless the technical requirements are clearly unsatisfied.
+
+**Step 5: What scale are you actually at vs. what scale do you expect?**
+
+The "we need NoSQL for scale" reasoning has destroyed more startups than it's helped. PostgreSQL on a managed cloud service (RDS, Cloud SQL) can comfortably handle millions of users, thousands of requests per second, and terabytes of data. You almost certainly don't need to sacrifice the relational model for scale until you're well past that.
+
+**Worked Example: Building a Social Booking Platform**
+
+Let's say you're building a platform where users book experiences hosted by other users. You need to handle:
+- User profiles and settings
+- Host listings with variable attributes (a cooking class has different fields than a guided hike)
+- Bookings with payment records
+- Reviews and ratings
+- Availability calendars
+- Real-time messaging between hosts and guests
+- Search across listings by location, category, date, and price
+
+How should you model this?
+
+**Start with PostgreSQL for everything transactional:**
+```sql
+-- Core relational structure
+users (id, email, name, created_at)
+hosts (id, user_id, bio, verification_status, payout_account)
+listings (id, host_id, title, category, base_price, location GEOGRAPHY)
+bookings (id, listing_id, guest_id, start_date, end_date, status, amount)
+reviews (id, booking_id, author_id, rating, body, created_at)
+```
+
+The relational model handles bookings perfectly because a booking has transactional integrity requirements: reserving availability, charging payment, creating the record, and notifying parties all need to succeed or fail together.
+
+**Use JSONB in PostgreSQL for listing attributes:**
+```sql
+-- Instead of a separate database or complex EAV schema:
+ALTER TABLE listings ADD COLUMN attributes JSONB;
+
+-- A cooking class:
+{ "max_participants": 8, "dietary_options": ["vegan", "gluten-free"], "equipment_provided": true }
+
+-- A guided hike:
+{ "difficulty": "moderate", "distance_km": 12, "elevation_gain_m": 400, "gear_required": ["boots", "poles"] }
+```
+
+No MongoDB needed. PostgreSQL's JSONB with GIN indexes handles heterogeneous schemas, and you keep the ability to JOIN with relational tables.
+
+**Add Redis for real-time availability and sessions:**
+```
+availability:{listing_id}:{date} → SET of booked time slots
+session:{token} → user session data (TTL: 30 days)
+rate_limit:{user_id}:{endpoint} → sliding window counter
+```
+
+**Add Elasticsearch for listing search:**
+The combination of location, free-text, date availability, and price filtering is where a relational database genuinely struggles. Elasticsearch's geospatial queries and full-text search handle this well:
+```json
+GET /listings/_search
+{
+  "query": {
+    "bool": {
+      "must": [{ "match": { "title": "cooking class" }}],
+      "filter": [
+        { "geo_distance": { "distance": "10km", "location": { "lat": 37.7, "lon": -122.4 }}},
+        { "range": { "base_price": { "lte": 100 }}}
+      ]
+    }
+  }
+}
+```
+
+The total stack: PostgreSQL (core), JSONB in PostgreSQL (variable attributes), Redis (availability, sessions, rate limiting), Elasticsearch (search). Not four different databases selected based on hype — four databases selected because each one is genuinely the best tool for that specific access pattern.
+
+When you'd reach for a graph database: if this platform grows into a social network where recommendations are "users who booked experiences similar to yours also liked..." — that multi-hop traversal is where Neo4j would outperform PostgreSQL's self-joins. Cross that bridge when you have the traffic to justify it.
+
+**The Decision Tree:**
+
+```
+Start here: Do you need ACID transactions across multiple entities?
+├── YES → Start with PostgreSQL
+│   ├── Do you need schema flexibility for some entities?
+│   │   └── YES → Use JSONB columns for those entities
+│   ├── Do you need full-text search?
+│   │   └── YES → Add Elasticsearch or use pg_vector + tsvector
+│   ├── Do you need sub-millisecond key lookups?
+│   │   └── YES → Add Redis
+│   └── Do you need time-series? 
+│       └── YES → Add TimescaleDB extension or dedicated TSDB
+│
+└── NO → What is your primary access pattern?
+    ├── Mostly key-value lookups → DynamoDB or Redis
+    ├── Massive write volume, known query patterns → Cassandra
+    ├── Complex graph traversal → Neo4j
+    └── Document-shaped data, flexible schema → MongoDB
+        └── (But check: could JSONB in PostgreSQL solve this?)
+```
+
+The meta-lesson: PostgreSQL should be your default unless you have a clear, demonstrated reason to move away from it. The ecosystem, operational tooling, and your team's SQL knowledge are all massive advantages that a better-fit NoSQL database needs to overcome.
+
+---
+
 ## 2. DATA MODELING
 
 Here's what separates senior engineers from junior engineers when it comes to databases: seniors think about data modeling before writing a single line of application code. The schema is the contract between your data and your application. Change it carelessly and you break things. Design it well and it becomes a force multiplier for every feature you ship.
@@ -508,33 +627,225 @@ The shift happened because warehouse compute became cheap. Why run expensive tra
 
 **dbt** deserves a special mention. It's transformed how data teams work. You write SQL SELECT statements, and dbt compiles them into warehouse-appropriate DDL and DML. You get version control, tests, documentation, lineage graphs, and modular transformation logic — all in SQL that your entire team can understand. The `ref()` function lets you define dependencies between models, and dbt builds them in the right order.
 
+**A dbt pipeline in practice — the full pattern:**
+
+dbt organizes transformations into layers. This layered approach is what separates a professional ELT implementation from a pile of ad-hoc SQL scripts:
+
+```
+raw data (source)
+    ↓
+staging models (1:1 with sources, clean names, cast types)
+    ↓
+intermediate models (business logic, joins)
+    ↓
+mart models (presentation-ready, analytics-facing)
+```
+
+Here's what a real pipeline looks like for an e-commerce order flow:
+
 ```sql
 -- models/staging/stg_orders.sql
-SELECT
-  order_id,
-  customer_id,
-  created_at,
-  status,
-  total_amount
-FROM {{ source('raw', 'orders') }}
-WHERE created_at >= '2020-01-01'  -- exclude legacy data
+-- Purpose: clean and standardize raw orders from the source system
+-- One row per order, named consistently, types cast correctly
 
--- models/mart/mart_customer_lifetime_value.sql
+SELECT
+  order_id::varchar         AS order_id,
+  customer_id::varchar      AS customer_id,
+  created_at::timestamp     AS ordered_at,
+  updated_at::timestamp     AS last_updated_at,
+  status::varchar           AS order_status,
+  total_amount::numeric     AS total_amount_usd,
+  CASE 
+    WHEN discount_code IS NOT NULL AND discount_code != '' 
+    THEN discount_code 
+    ELSE NULL 
+  END                       AS discount_code,
+  shipping_country::varchar AS shipping_country
+FROM {{ source('ecommerce', 'orders') }}
+WHERE created_at >= '2020-01-01'  -- exclude pre-migration legacy data
+  AND total_amount > 0            -- exclude test orders
+```
+
+```sql
+-- models/staging/stg_customers.sql
+SELECT
+  customer_id::varchar                    AS customer_id,
+  email::varchar                          AS email,
+  COALESCE(first_name, 'Unknown')::varchar AS first_name,
+  last_name::varchar                      AS last_name,
+  created_at::timestamp                   AS signed_up_at,
+  subscription_tier::varchar              AS subscription_tier
+FROM {{ source('ecommerce', 'customers') }}
+```
+
+```sql
+-- models/intermediate/int_orders_enriched.sql
+-- Purpose: join orders with customer data and compute derived fields
+
 WITH orders AS (
   SELECT * FROM {{ ref('stg_orders') }}
 ),
 customers AS (
   SELECT * FROM {{ ref('stg_customers') }}
+),
+order_items AS (
+  SELECT * FROM {{ ref('stg_order_items') }}
 )
+
 SELECT
+  o.order_id,
+  o.ordered_at,
+  o.order_status,
+  o.total_amount_usd,
+  o.shipping_country,
   c.customer_id,
   c.email,
-  SUM(o.total_amount) as lifetime_value,
-  COUNT(*) as total_orders
-FROM customers c
-LEFT JOIN orders o USING (customer_id)
-GROUP BY 1, 2
+  c.subscription_tier,
+  c.signed_up_at,
+  -- Derived: is this a repeat customer?
+  CASE 
+    WHEN c.signed_up_at < o.ordered_at - INTERVAL '30 days' THEN true
+    ELSE false
+  END AS is_repeat_customer,
+  -- Derived: item count
+  COUNT(oi.item_id) AS item_count,
+  -- Derived: has a discount
+  o.discount_code IS NOT NULL AS has_discount
+FROM orders o
+LEFT JOIN customers c USING (customer_id)
+LEFT JOIN order_items oi USING (order_id)
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
 ```
+
+```sql
+-- models/mart/mart_customer_lifetime_value.sql  
+-- Purpose: analytics-facing table, ready for BI tool consumption
+
+WITH enriched_orders AS (
+  SELECT * FROM {{ ref('int_orders_enriched') }}
+  WHERE order_status = 'completed'
+)
+
+SELECT
+  customer_id,
+  email,
+  subscription_tier,
+  signed_up_at,
+  COUNT(DISTINCT order_id)              AS total_orders,
+  SUM(total_amount_usd)                 AS lifetime_value_usd,
+  AVG(total_amount_usd)                 AS avg_order_value_usd,
+  MIN(ordered_at)                       AS first_order_at,
+  MAX(ordered_at)                       AS last_order_at,
+  -- Days between first and last order (engagement span)
+  DATEDIFF('day', MIN(ordered_at), MAX(ordered_at)) AS customer_lifespan_days,
+  -- Revenue per day of lifespan (revenue density)
+  CASE 
+    WHEN DATEDIFF('day', MIN(ordered_at), MAX(ordered_at)) > 0
+    THEN SUM(total_amount_usd) / DATEDIFF('day', MIN(ordered_at), MAX(ordered_at))
+    ELSE SUM(total_amount_usd)
+  END                                   AS revenue_per_day_usd
+FROM enriched_orders
+GROUP BY 1, 2, 3, 4
+```
+
+**dbt tests** are as important as dbt models. You define tests in YAML alongside your models:
+
+```yaml
+# models/staging/schema.yml
+version: 2
+
+models:
+  - name: stg_orders
+    description: "Cleaned and standardized orders from the ecommerce source system"
+    columns:
+      - name: order_id
+        description: "Primary key for orders"
+        tests:
+          - unique
+          - not_null
+      - name: order_status
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['pending', 'processing', 'completed', 'cancelled', 'refunded']
+      - name: total_amount_usd
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: customer_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_id
+```
+
+When `dbt test` runs, it executes these checks against your data and fails the pipeline if invariants are violated. Referential integrity, uniqueness, allowed values — all enforced automatically, documented as code.
+
+**The Airflow side of batch pipelines:**
+
+dbt handles the transformation logic, but something needs to orchestrate when transformations run and in what order. Apache Airflow is the standard tool for this:
+
+```python
+# dags/ecommerce_pipeline.py
+from airflow import DAG
+from airflow.providers.dbt.cloud.operators.dbt import DbtCloudRunJobOperator
+from airflow.providers.amazon.aws.transfers.s3_to_redshift import S3ToRedshiftOperator
+from datetime import datetime, timedelta
+
+default_args = {
+    "owner": "data-team",
+    "retries": 2,
+    "retry_delay": timedelta(minutes=5),
+    "email_on_failure": True,
+    "email": ["data-oncall@company.com"],
+}
+
+with DAG(
+    dag_id="ecommerce_daily_pipeline",
+    default_args=default_args,
+    description="Daily ELT pipeline: extract from Postgres → load to Redshift → dbt transform",
+    schedule_interval="0 4 * * *",  # 4 AM UTC daily
+    start_date=datetime(2025, 1, 1),
+    catchup=False,
+    tags=["ecommerce", "daily"],
+) as dag:
+
+    # Step 1: Extract raw data from production Postgres to S3
+    extract_orders = PythonOperator(
+        task_id="extract_orders_to_s3",
+        python_callable=extract_incremental_orders,  # your Python function
+        op_kwargs={
+            "lookback_hours": 25,  # 25h window catches any replication lag
+            "s3_bucket": "company-data-lake",
+            "s3_prefix": "raw/ecommerce/orders/{{ ds }}/",
+        },
+    )
+
+    # Step 2: Load from S3 to Redshift raw schema
+    load_orders = S3ToRedshiftOperator(
+        task_id="load_orders_to_redshift",
+        schema="raw",
+        table="orders",
+        s3_bucket="company-data-lake",
+        s3_key="raw/ecommerce/orders/{{ ds }}/",
+        copy_options=["FORMAT AS JSON 'auto'", "TIMEFORMAT 'auto'"],
+    )
+
+    # Step 3: Run dbt (staging + intermediate + mart layers)
+    run_dbt = DbtCloudRunJobOperator(
+        task_id="run_dbt_transformations",
+        dbt_cloud_conn_id="dbt_cloud",
+        job_id=12345,  # your dbt Cloud job ID
+        wait_for_termination=True,
+    )
+
+    # Dependencies: extract → load → transform
+    extract_orders >> load_orders >> run_dbt
+```
+
+Airflow's UI shows you a visual representation of this DAG, the status of each run, the logs from each task, and the ability to manually trigger or rerun specific tasks. When the extract step fails at 4 AM, the on-call engineer can see exactly which step failed, read its logs, fix the underlying issue, and rerun from the failed step without re-running everything upstream.
 
 **When to use ETL:** Sensitive data that must be transformed before landing anywhere (PII masking, encryption), source systems with unreliable data quality that needs validation gates, limited warehouse compute budgets.
 
@@ -613,21 +924,122 @@ For organizations building streaming infrastructure from scratch, Kappa is the c
 
 Here's something genuinely exciting: your relational database is already producing a stream of events. Every INSERT, UPDATE, and DELETE is recorded in the WAL (Write-Ahead Log) that we discussed in Section 1.1. Change Data Capture is the technique of reading that WAL and turning database changes into events other systems can consume.
 
-**Debezium** is the leading open-source CDC tool. It connects to your database's replication protocol, reads the change stream, and publishes each change as an event to Kafka. A row updated in PostgreSQL becomes a Kafka message. Every downstream consumer sees the change and can react to it.
+**The Debezium Story**
 
-The killer use cases for CDC:
+Debezium started as an open-source project at Red Hat, led by Gunnar Morling, in 2015. The problem it solved: every team building event-driven microservices was independently building fragile, error-prone "event publisher" code. Application code would write to a database and then try to publish an event to a message broker — the dual writes problem covered in Section 6. These implementations were almost universally incorrect in subtle ways: they'd publish before committing (broadcasting changes that got rolled back), publish after committing but crash before publishing (losing events), or produce incorrect events when transactions touched multiple tables.
 
-**Microservice synchronization:** Service A owns the `orders` table. Service B needs to know when orders change. Instead of Service A calling Service B's API (tight coupling) or Service B polling the orders table (inefficient), CDC publishes order changes to a topic and Service B consumes it. Loose coupling, high reliability.
+Debezium's insight: the correct change stream already exists inside the database. PostgreSQL, MySQL, MongoDB, SQL Server — every major database records all changes to a Write-Ahead Log for replication purposes. Debezium reads from that WAL using the database's native replication protocol, which is what read replicas use. This means:
 
-**Feeding the data warehouse:** Instead of nightly batch extracts, stream changes from your OLTP database to your warehouse in near-real-time. Your analytics lag drops from hours to minutes.
+1. **Correctness by construction**: Events are produced only for committed transactions, in commit order, with no possibility of publishing rolled-back changes
+2. **Zero application code changes**: The database is the single source of truth; no application needs modification
+3. **Complete data**: The WAL contains the full before-and-after state of every row change, not just "something changed"
+4. **At-least-once delivery with deduplication support**: Debezium uses a consistent offset in the WAL as a message key, enabling consumers to detect duplicates
 
-**Search index updates:** When a product record changes in PostgreSQL, CDC publishes the change and a consumer updates the Elasticsearch index. Your search index stays synchronized without complex application-level logic.
+**Setting up Debezium with PostgreSQL — the practical guide:**
 
-**Cache invalidation:** When data changes in the database, CDC can trigger cache invalidation automatically, without the application code needing to know about the cache.
+First, configure your PostgreSQL instance to enable logical replication:
 
-The beauty of CDC is that it captures changes at the database level — application code doesn't need to be modified. A legacy application that wasn't built for event-driven architecture suddenly has an event stream.
+```sql
+-- postgresql.conf settings (requires restart):
+-- wal_level = logical        (must be 'logical', not 'replica')
+-- max_replication_slots = 4  (one per Debezium connector)
+-- max_wal_senders = 4        (one per replication consumer)
 
-**AWS DMS (Database Migration Service)** provides managed CDC on AWS, useful for migrations and cross-region replication.
+-- Create a dedicated replication user
+CREATE ROLE debezium WITH REPLICATION LOGIN PASSWORD 'secure-password';
+
+-- Grant read access to the tables you want to capture
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO debezium;
+
+-- Create a replication slot (Debezium will do this automatically, but here's what it looks like)
+SELECT pg_create_logical_replication_slot('debezium_slot', 'pgoutput');
+```
+
+Deploy Debezium as a Kafka Connect connector. The configuration tells it how to connect to PostgreSQL and what to capture:
+
+```json
+{
+  "name": "ecommerce-postgres-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.hostname": "prod-postgres.internal",
+    "database.port": "5432",
+    "database.user": "debezium",
+    "database.password": "${file:/opt/secrets/debezium.properties:database.password}",
+    "database.dbname": "ecommerce",
+    "topic.prefix": "ecommerce",
+    "table.include.list": "public.orders,public.users,public.products",
+    "plugin.name": "pgoutput",
+    "slot.name": "debezium_slot",
+    
+    "transforms": "route",
+    "transforms.route.type": "org.apache.kafka.connect.transforms.ReplaceField$Value",
+    
+    "publication.name": "debezium_pub",
+    "heartbeat.interval.ms": "10000",
+    
+    "decimal.handling.mode": "string",
+    "time.precision.mode": "adaptive",
+    
+    "tombstones.on.delete": "true",
+    "snapshot.mode": "initial"
+  }
+}
+```
+
+When a row changes in `public.orders`, Debezium publishes a message to the Kafka topic `ecommerce.public.orders`. The message has this structure:
+
+```json
+{
+  "schema": { ... },
+  "payload": {
+    "before": {
+      "order_id": "ord-789",
+      "status": "pending",
+      "total_amount": 4999
+    },
+    "after": {
+      "order_id": "ord-789",
+      "status": "completed",
+      "total_amount": 4999
+    },
+    "source": {
+      "version": "2.5.0",
+      "connector": "postgresql",
+      "db": "ecommerce",
+      "schema": "public",
+      "table": "orders",
+      "txId": 756432,
+      "lsn": 28835872,
+      "ts_ms": 1706745600000
+    },
+    "op": "u",    // "c" = create, "u" = update, "d" = delete, "r" = read (snapshot)
+    "ts_ms": 1706745600050
+  }
+}
+```
+
+The `before` and `after` fields give you the complete row state before and after the change. A consumer can see that the order status changed from "pending" to "completed" without any JOIN to the orders table — the full context is in the event.
+
+**The killer use cases, in depth:**
+
+**Microservice synchronization without coupling:** The inventory service needs to know when an order is placed so it can decrement stock. Without CDC, you'd either have the orders service call the inventory service directly (tight coupling — what happens when inventory is down?), or you'd poll the orders table from the inventory service (inefficient and creates load on the OLTP database). With Debezium, the orders service writes to its own database. Debezium reads the WAL. The inventory service consumes the Kafka topic. The orders service doesn't know or care that inventory exists. The inventory service doesn't need database access to the orders service. Zero coupling.
+
+**Near-real-time data warehouse feeding:** Instead of nightly batch extracts that leave your analytics 12+ hours stale, Debezium streams changes to your warehouse continuously. A row inserted into orders appears in BigQuery or Snowflake within seconds. Your product managers stop waiting for "tomorrow's data" to see yesterday's trends.
+
+**Materialized cache synchronization:** When a user profile changes in PostgreSQL, Debezium emits the change. A consumer updates Redis immediately. Your cache never serves data that's more than a few seconds stale — and you never need to write cache invalidation logic in your application code.
+
+**Outbox pattern relay:** The Outbox pattern (Section 6) requires a process that reads from the outbox table and publishes to Kafka. Debezium is the perfect relay: when a row is inserted into the `outbox` table, Debezium captures the insertion from the WAL and publishes it to Kafka. The outbox relay is now a Kafka Connect configuration file instead of application code.
+
+**Gotchas to understand before deploying:**
+
+The WAL slot holds position in the WAL until Debezium consumes it. If Debezium is down for an extended period, the WAL accumulates on your PostgreSQL server. Watch `pg_replication_slots` for `restart_lsn` lag and alert if Debezium falls too far behind — a WAL that grows unbounded will eventually fill your disk.
+
+Schema changes need care. Adding a nullable column is usually safe. Renaming or dropping a column while Debezium is running requires careful coordination because the schema registry (if you're using Confluent Schema Registry with Avro) needs to handle the transition.
+
+For high-throughput tables, the Kafka topic partition count determines parallelism in consumers. A single-partition topic processes messages serially. Set partition count based on your consumer parallelism needs.
+
+**AWS DMS (Database Migration Service)** provides managed CDC on AWS, useful for migrations and cross-region replication. It's simpler to operate than self-hosted Debezium but has less flexibility and doesn't support the full before/after row data by default.
 
 ---
 

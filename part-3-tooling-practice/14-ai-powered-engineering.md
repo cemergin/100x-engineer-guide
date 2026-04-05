@@ -1459,3 +1459,19 @@ The meta-point: the list of things AI is bad at today will get shorter over the 
 *Next: Chapter 15 — Testing Strategies for Modern Web Applications. We'll cover testing pyramids, integration testing patterns, and how to test the parts of your system that AI has the hardest time generating good tests for.*
 
 *Related: Chapter 17 — Claude Code takes the patterns in this chapter to the next level, running AI as an agentic system that can actually operate across your entire codebase with persistent memory and tool use. If the techniques here feel like the basics, Chapter 17 is where it gets interesting.*
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L3-M86: AI-Powered Engineering Workflow](../course/modules/loop-3/L3-M86-ai-powered-engineering.md)** — Build a complete AI-assisted development workflow and measure the speed difference on real TicketPulse tasks
+- **[L3-M86a: AI-Native Spec-Driven Development](../course/modules/loop-3/L3-M86a-ai-native-spec-driven-development.md)** — Write specs that AI can execute, review what it produces, and close the feedback loop between intent and implementation
+- **[L3-M71: AI-Powered Features](../course/modules/loop-3/L3-M71-ai-powered-features.md)** — Integrate AI capabilities into TicketPulse and learn how to test and evaluate non-deterministic outputs
+
+### Quick Exercises
+
+1. **Use AI to generate a design doc for your next feature, then critically review it** — note every gap, incorrect assumption, and missing constraint. The exercise is not to accept the doc; it is to find what AI does not know about your system.
+2. **Have AI review one of your PRs and compare its feedback to human review** — submit the same diff to an AI assistant and a colleague. Map the overlap and the gaps. Calibrate what kinds of issues each reliably catches.
+3. **Write 3 different prompts for the same task and compare output quality** — vary specificity, context, and format. Identify which prompt structure produces the most usable result and document it as your personal template.

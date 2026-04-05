@@ -2595,3 +2595,20 @@ This is the most practical architecture for adding graph capabilities to an exis
 This chapter covered the knowledge that separates engineers who can write SQL from engineers who can make databases perform. Every concept here — MVCC, WAL, vacuum, the query planner, buffer management — is something you will encounter in production. These aren't academic concepts; they're the explanations for the performance mystery you'll be debugging six months from now.
 
 The difference between knowing these internals and not knowing them is the difference between spending 5 minutes diagnosing a problem and spending 5 days. When you see a 45-second query and reach for `EXPLAIN ANALYZE`, when you notice dead tuple counts climbing and tune autovacuum, when you set `random_page_cost = 1.1` on your SSD cluster and watch index scans suddenly get preferred — that's when these concepts pay off. The database is not a black box. It's a beautiful machine, and now you know how it works.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L1-M05: PostgreSQL From Zero](../course/modules/loop-1/L1-M05-postgresql-from-zero.md)** — Set up PostgreSQL for TicketPulse and write your first production-grade schema with proper constraints
+- **[L1-M07: Indexing & Query Performance](../course/modules/loop-1/L1-M07-indexing-and-query-performance.md)** — Use `EXPLAIN ANALYZE` to diagnose slow queries and add the right indexes to TicketPulse's most-hit tables
+- **[L2-M37: PostgreSQL Internals](../course/modules/loop-2/L2-M37-postgresql-internals.md)** — Go deep on MVCC, WAL, and the query planner as you tune TicketPulse for high-concurrency ticket sales
+- **[L3-M63: Database at Scale](../course/modules/loop-3/L3-M63-database-at-scale.md)** — Add read replicas, connection pooling, and partitioning to handle TicketPulse's peak-event load
+
+### Quick Exercises
+
+1. **Run `EXPLAIN (ANALYZE, BUFFERS)` on your three slowest queries and look at the "Buffers: shared hit/read" ratio — a low hit ratio means your working set doesn't fit in `shared_buffers`.**
+2. **Check your table bloat with `SELECT relname, n_dead_tup, n_live_tup FROM pg_stat_user_tables ORDER BY n_dead_tup DESC LIMIT 10` and investigate any table where dead tuples exceed 20% of live tuples.**
+3. **Enable `pg_stat_statements`, run your application under load for 15 minutes, then find your top 10 queries by total time with `SELECT query, total_exec_time, calls FROM pg_stat_statements ORDER BY total_exec_time DESC LIMIT 10`.**

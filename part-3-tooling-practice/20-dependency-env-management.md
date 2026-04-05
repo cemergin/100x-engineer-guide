@@ -1917,3 +1917,18 @@ The whole chapter boils down to a few decisions and a set of invariants. Make th
 The goal is a world where "it works on my machine" is a phrase that no longer exists in your team's vocabulary. Where a new developer can go from `git clone` to a running development environment in under fifteen minutes. Where CI and local development use the same toolchain, the same dependency versions, the same environment configuration. Where "works in CI but not locally" is as rare as a unicorn.
 
 This isn't a dream. It's a set of engineering decisions you can make today. Make them.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L1-M27: Dependency & Environment Management](../course/modules/loop-1/L1-M27-dependency-and-environment-management.md)** — Lock TicketPulse's dependencies, pin its runtime versions, and make the dev environment reproducible from a single command
+- **[L1-M02: Your Dev Environment](../course/modules/loop-1/L1-M02-your-dev-environment.md)** — Set up the foundational dev environment that TicketPulse builds on, covering toolchain management and container-based isolation
+
+### Quick Exercises
+
+1. **Run `npm audit`, `pip-audit`, `cargo audit`, or your ecosystem's equivalent and triage every vulnerability: for each finding, record whether it's reachable in your code, then fix or suppress with a documented reason.**
+2. **Check if your lockfile is committed — if not, commit it now, then verify that `git clone` followed by the install command produces a bit-for-bit identical `node_modules` (or equivalent) on two different machines.**
+3. **Create a `.tool-versions` (asdf), `flake.nix` (Nix), or `.mise.toml` (mise) for your project that pins every runtime version, then delete your local toolchain and verify you can restore the exact versions in under two minutes.**

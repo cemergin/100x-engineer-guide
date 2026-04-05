@@ -1548,3 +1548,20 @@ The seven sections of this chapter are not independent topics. They form a coher
 The difference between a senior engineer and a staff+ engineer is understanding these connections. Any competent engineer can configure Kafka or write a database migration. A 100x engineer understands *why* the CDC pipeline feeds Elasticsearch instead of querying Postgres directly, *why* the saga compensates in reverse order, *why* the NAT Gateway is consuming 15% of the cloud bill, and *how* a schema migration that looks harmless will lock a table for 20 minutes during peak traffic.
 
 Build the system that works. Observe it rigorously. Understand where it breaks and where it wastes money. Then make it better. That's the loop.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L2-M33: Kafka Deep Dive](../course/modules/loop-2/L2-M33-kafka-deep-dive.md)** — Build TicketPulse's event streaming backbone: topics, partitions, consumer groups, and exactly-once semantics under load
+- **[L2-M34: The Saga Pattern](../course/modules/loop-2/L2-M34-the-saga-pattern.md)** — Implement a distributed transaction for ticket purchase with choreography-based compensation on failure
+- **[L3-M61: Multi-Region Design](../course/modules/loop-3/L3-M61-multi-region-design.md)** — Deploy TicketPulse across regions and work through the replication lag, failover, and data residency trade-offs in a live system
+- **[L3-M82: Event Sourcing at Scale](../course/modules/loop-3/L3-M82-event-sourcing-at-scale.md)** — Replace mutable state with an immutable event log and build projections for TicketPulse's audit and analytics needs
+
+### Quick Exercises
+
+1. **Draw your system's data flow diagram** — map every service, every database, every queue, and every external dependency. Annotate each arrow with the protocol and whether it is synchronous or asynchronous.
+2. **Identify one synchronous call that should be async** — find a request path where the caller blocks waiting for a downstream service that does not need to respond immediately. Sketch what the async version would look like.
+3. **Calculate your monthly spend on NAT Gateways and evaluate VPC endpoints** — pull your AWS Cost Explorer data, find the NAT Gateway line, and check whether any of your high-volume traffic to S3 or DynamoDB could use a VPC endpoint instead.

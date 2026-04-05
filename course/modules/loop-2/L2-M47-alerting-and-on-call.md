@@ -471,6 +471,148 @@ After this module, you should have:
 
 ---
 
+## 8. Hands-On Walkthrough: Trigger and Respond to an Alert (20 min)
+
+Theory only takes you so far. This walkthrough makes you experience the full alert lifecycle: trigger, page, diagnose, mitigate.
+
+### Step 1: Create a Synthetic Failure
+
+Inject a high error rate into TicketPulse's event service:
+
+```bash
+# Option A: Kill the event-service pod (complete outage)
+kubectl delete pod -n ticketpulse -l app=event-service
+
+# Option B: Inject errors via environment variable (if your service supports it)
+kubectl set env deployment/event-service -n ticketpulse ERROR_RATE=0.5
+# Then roll it back: kubectl set env deployment/event-service -n ticketpulse ERROR_RATE=0
+
+# Option C: Simulate with a Prometheus metric injection (most controlled)
+# If you have a /internal/inject-errors endpoint for testing:
+curl -X POST http://localhost:3000/internal/inject-errors \
+  -H 'Content-Type: application/json' \
+  -d '{"rate": 0.15, "durationSeconds": 300}'
+```
+
+### Step 2: Watch the Alert Fire in Prometheus
+
+```bash
+# Watch the rules evaluation every 15 seconds
+watch -n 15 'curl -s http://localhost:9090/api/v1/alerts | jq ".data.alerts[] | {name: .labels.alertname, state: .state, value: .annotations.description}"'
+```
+
+Expected progression:
+```
+After ~30s:  PENDING (threshold crossed but for: 2m not elapsed yet)
+After ~2m:   FIRING (alert is now active)
+```
+
+### Step 3: Receive the Alert (Slack Simulation)
+
+In a real setup, PagerDuty would wake you up. For this exercise, check Alertmanager's local UI or Slack webhook:
+
+```bash
+# Alertmanager UI (if running locally)
+open http://localhost:9093
+
+# List active alerts via API
+curl -s http://localhost:9093/api/v1/alerts | jq '.data[] | {name: .labels.alertname, severity: .labels.severity}'
+```
+
+### Step 4: Follow Your Runbook
+
+Now practice being an on-call engineer. Work through the HighErrorRate runbook you wrote above:
+
+```bash
+# Step 1: Which service is erroring?
+curl -s 'http://localhost:9090/api/v1/query?query=sum+by+(service)+(rate(http_requests_total{status_code=~"5.."}[5m]))' \
+  | jq '.data.result[] | {service: .metric.service, rate: .value[1]}'
+
+# Step 2: Check recent deployments
+kubectl rollout history deployment -n ticketpulse
+
+# Step 3: Check logs
+kubectl logs -n ticketpulse -l app=event-service --tail=50 --since=5m | grep -E "ERROR|error|Error"
+
+# Step 4: Check health endpoint
+kubectl exec -it deploy/api-gateway -n ticketpulse -- \
+  wget -qO- http://event-service:3000/health
+```
+
+### Step 5: Resolve and Verify Alert Clears
+
+```bash
+# Undo the synthetic failure
+kubectl rollout restart deployment/event-service -n ticketpulse
+# -- OR --
+kubectl set env deployment/event-service -n ticketpulse ERROR_RATE=0
+
+# Wait for the alert to clear (watch the burn rate drop below threshold)
+watch -n 30 'curl -s http://localhost:9090/api/v1/alerts | jq ".data.alerts | length"'
+# Should go to 0 after the for: 2m window resolves
+```
+
+### Step 6: Write a Mini Postmortem
+
+Even for a synthetic incident, practice the format:
+
+```markdown
+## Incident: HighErrorRate_Critical (Synthetic)
+
+**Duration**: 12:03 PM – 12:18 PM (15 minutes)
+**Impact**: 15% of requests to event-service returned 5xx errors.
+**Burn rate**: ~6x the SLO error budget
+
+**Timeline**:
+- 12:03: Error injection started (simulated)
+- 12:05: Alert entered PENDING state
+- 12:07: Alert FIRED, on-call engineer paged
+- 12:10: Engineer began runbook. Identified event-service pod was OOM-killed.
+- 12:15: Rollout restart issued
+- 12:18: Error rate normalized, alert resolved
+
+**Root cause**: Memory limit too low for current traffic; pod hit the limit and was killed.
+
+**Action items**:
+- [ ] Increase memory limit for event-service from 256Mi to 512Mi
+- [ ] Add OOM kill alert (kubernetes_pod_oom_kills_total)
+- [ ] Add a load test to CI that catches OOM at 2x expected traffic
+
+**Lessons**:
+- The runbook worked — reduced time to mitigation from "no idea" to 8 minutes.
+- Alert firing correctly at 2m into the incident. Good sensitivity.
+```
+
+---
+
+## 9. Extended Reflection: Alert Design Decisions (10 min)
+
+Work through these scenarios. There is no single right answer — the goal is to reason through trade-offs.
+
+### Scenario A: Alert Fatigue
+
+Your team is getting paged 8 times per night, and 7 of those pages turn out to be noise (auto-resolved within 10 minutes, no user impact). The team starts ignoring alerts. What do you do?
+
+> **Guided approach**: Do not raise the threshold blindly. First, analyze: which alerts are noisy? Are they flapping (firing and resolving repeatedly)? Increase the `for:` duration on those specific alerts. Second, check if the metric is the right signal — CPU at 95% is rarely the right thing to alert on. Switch to latency or error rate. Third, add a `group_wait` in Alertmanager to prevent alert storms where one root cause triggers 10 dependent alerts.
+
+### Scenario B: The Slow Burn
+
+Your error budget is draining at 2x the normal rate — not urgent enough for a page, but you will exhaust the budget in 15 days instead of 30. The on-call rotation changes in 3 days. What does the alert system do?
+
+> **Guided approach**: This is exactly the 6x burn rate scenario (Warning severity). It should create a Jira ticket automatically via Alertmanager's webhook receiver, not page anyone. The incoming on-call engineer should see this open ticket in their handoff notes. The key: warning alerts must actually flow to a tracking system, not just Slack, or they get lost.
+
+### Scenario C: Disagreement on Severity
+
+Your colleague says: "Disk at 85% is critical — we should page on it." You say: "Disk at 85% is fine, we have two weeks before it's full." How do you resolve this?
+
+> **Guided approach**: Convert the metric to time-to-impact. `node_filesystem_avail_bytes` combined with a fill-rate projection tells you "at current rate, disk will be full in N days." Page if N < 1 day. Create a ticket if N < 7 days. Dashboard-only if N > 7 days. Remove the opinion from the discussion by making it concrete.
+
+---
+
+> **Want the deep theory?** See Ch 18 of the 100x Engineer Guide: "Alert Design and On-Call Culture" — covers the full Google SRE burn rate methodology and alert routing patterns used at scale.
+
+---
+
 ## Glossary
 
 | Term | Definition |

@@ -2031,3 +2031,18 @@ What to avoid: ending up on two clouds because of organizational entropy rather 
 ---
 
 > **Next:** Chapter 32 explores Azure and multi-cloud strategies for organizations that need to operate across cloud providers.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L3-M62: Cloud Provider Deep Dive](../course/modules/loop-3/L3-M62-cloud-provider-deep-dive.md)** — Compare AWS and GCP primitives side by side using TicketPulse as the reference workload, and make deliberate placement decisions
+- **[L3-M75: Cost Optimization](../course/modules/loop-3/L3-M75-cost-optimization.md)** — Apply committed use discounts, right-size GKE node pools, and instrument BigQuery queries to control cost as TicketPulse scales
+
+### Quick Exercises
+
+1. **Run a BigQuery dry run on your most expensive query to see bytes scanned** — add `--dry_run` to your `bq query` command or use the query validator in the console. If the estimate surprises you, find the missing partition filter or clustering key.
+2. **Check your GKE cluster for over-provisioned nodes** — look at actual CPU and memory utilization in Cloud Monitoring over the past 7 days. If nodes are consistently below 40% utilized, evaluate a smaller machine type or the cluster autoscaler's scale-down settings.
+3. **Set up a Cloud Run service with minimum instances = 0 and test cold start latency** — deploy a lightweight service with no minimum instances, then measure the p50 and p99 latency for a cold request. Decide whether the cost saving is worth the latency for your use case.

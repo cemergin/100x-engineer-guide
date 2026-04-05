@@ -75,6 +75,39 @@ The subtle part: callback-based code has historically been painful to reason abo
 
 **Watch out for:** CPU-bound work that blocks the loop. Forgetting that `await` only yields when there's actual async work — you can still write blocking synchronous code inside an async function.
 
+#### What Actually Happens When 10,000 Connections Arrive
+
+This is a scenario worth tracing through both models, because the numbers are striking.
+
+**Thread-per-connection model (classic Apache):**
+
+```
+10,000 connections arrive
+→ 10,000 OS threads created
+→ 10,000 × 1MB stack = 10GB RAM just for thread stacks
+→ Each thread context-switch: ~1-10 microseconds
+→ With 10K threads, the scheduler is burning significant CPU just deciding who runs next
+→ Most threads are blocked on I/O, achieving nothing useful
+→ System bogs down around 1,000-5,000 threads on typical hardware
+```
+
+**Event-loop model (Nginx, Node.js):**
+
+```
+10,000 connections arrive
+→ 1 thread, 1 event loop, 10,000 file descriptors registered with epoll/kqueue
+→ Memory: ~kilobytes per connection for the socket buffer
+→ When connection 1's data arrives, epoll returns it
+→ Callback fires, processes the data, kicks off async I/O, returns to loop
+→ Loop immediately handles the next ready event
+→ CPU is only busy when there's actually work to do
+→ 10,000 connections handled with ~10MB overhead, not 10GB
+```
+
+The C10K problem (can a server handle 10,000 concurrent connections?) was a famous 1999 engineering challenge. The event loop model solved it. Nginx regularly handles 100K+ concurrent connections on a single machine. The thread model can't compete on I/O-bound workloads — not because threads are bad, but because threads were designed for CPU parallelism, not I/O concurrency.
+
+The punchline: **threads give you parallelism; event loops give you concurrency.** They're solving different problems. If you have 10,000 database connections all waiting for results, you don't need 10,000 CPU cores — you just need a way to track 10,000 pending operations and dispatch callbacks when they complete. That's the event loop.
+
 ### Actor Model (Erlang/OTP, Akka, Orleans)
 
 What if you gave up on shared memory entirely?
@@ -85,7 +118,21 @@ This eliminates an entire category of bugs. You can't have a race condition on a
 
 The supervision hierarchy is the other killer feature. Erlang actors can be arranged in trees: supervisors at the branches, workers at the leaves. When a worker crashes — and the philosophy is "let it crash" rather than trying to handle every error defensively — the supervisor detects it and restarts it. This is how Erlang systems achieve the legendary "nine nines" uptime. It's not that individual components never fail; it's that failure is isolated and recovery is automatic.
 
-The numbers speak for themselves: WhatsApp ran on Erlang and handled 2 million concurrent connections per server. Microsoft's Halo game services used Orleans (a .NET actor framework) to manage stateful game sessions at scale. The actor model shines when you have a natural entity decomposition — users, sessions, devices, game characters — where each entity has its own state and behavior.
+#### The WhatsApp Story
+
+WhatsApp's infrastructure is one of the most cited proofs of concept for the actor model at scale. In 2012, they were serving 450 million users with a team of 32 engineers. Each WhatsApp server ran Erlang and handled roughly **2 million simultaneous TCP connections** per machine. At the time, most messaging systems required many more servers to handle the same load.
+
+How? Each user connection was an Erlang process (actor). Each user session was an actor. Each message routing decision was actor-to-actor messaging. When a connection dropped, its actor died and its supervisor restarted a fresh one. No shared mutable state meant no synchronization overhead. No synchronization overhead meant the system scaled almost linearly with hardware.
+
+When Facebook acquired WhatsApp in 2014 for $19 billion, they had 55 engineers total and served 700 million users. The ratio of users-to-engineers was extraordinary precisely because the actor model's fault isolation made the system self-healing — engineers weren't paged at 3 AM because a session actor crashed and caused cascading failures. It crashed, restarted, and the user's phone reconnected without them noticing.
+
+#### The Akka Story (Lightbend / Reactive Microservices)
+
+Akka brought the actor model to the JVM ecosystem. LinkedIn used Akka to power real-time data pipelines at scale. The Kafka project itself was built at LinkedIn, and its internal architecture for handling partition leadership, consumer group coordination, and metadata management borrowed actor-like patterns.
+
+The more vivid story is from the gaming world. Microsoft's **Azure PlayFab** (acquired from a gaming backend startup) uses an Orleans-based actor model for game session management. Each game session, each player inventory, each leaderboard entry is an actor (called a "grain" in Orleans). When 10 million players are online simultaneously, you have 10 million+ active grains. Grains that haven't been active for a while are deactivated and their state is persisted. When a player returns, their grain is reactivated from storage. The runtime handles all of this transparently.
+
+The key insight: **the actor model matches the problem shape of stateful entities.** If your system is fundamentally about things that have identity and state — users, sessions, devices, game characters, bank accounts — then an actor per entity is architecturally natural. One actor owns one entity's state. No one else touches it. Coordination happens through messages.
 
 The trade-off is message passing overhead and the different mental model. Synchronous-feeling operations become asynchronous conversations. Simple mutations become message exchanges. For some problems this is natural; for others it feels like bureaucracy.
 
@@ -197,6 +244,67 @@ try {
 
 The tricky part isn't using a mutex — it's using it *consistently*. Every path that touches the shared state must hold the lock. One missed call site and you've broken the invariant. This is why higher-level abstractions like `synchronized` blocks in Java or `with lock:` in Python exist — they make it harder to accidentally forget to release.
 
+#### The Dining Philosophers: A Modern Framing
+
+The dining philosophers problem was invented by Dijkstra in 1965 as a teaching tool, but it maps almost perfectly onto a class of real production bugs you will encounter.
+
+The original setup: five philosophers sit at a round table. Between each adjacent pair is one fork (five forks total). A philosopher either thinks (no resources needed) or eats (needs both the fork to their left and the fork to their right). Since forks are shared, two adjacent philosophers can't eat simultaneously.
+
+The naive code:
+
+```python
+def philosopher(id, left_fork, right_fork):
+    while True:
+        think()
+        left_fork.acquire()   # pick up left fork
+        right_fork.acquire()  # pick up right fork
+        eat()
+        right_fork.release()
+        left_fork.release()
+```
+
+This deadlocks. Every philosopher picks up their left fork simultaneously. Now every philosopher is waiting for their right fork — which is held by their right neighbor, who is waiting for *their* right fork, and so on around the table. Circular wait. Everyone starves.
+
+**Modern equivalent:** You have five microservices, each of which needs to hold a distributed lock on two resources before processing. Service A holds lock "payments" and waits for "inventory". Service B holds "inventory" and waits for "notifications". Service C holds "notifications" and waits for "payments". Classic circular deadlock, played out across RPC calls instead of forks.
+
+**The classic fix — global lock ordering:**
+
+```python
+def philosopher(id, left_fork, right_fork):
+    # Always acquire the lower-numbered fork first
+    first, second = sorted([left_fork, right_fork], key=lambda f: f.id)
+    while True:
+        think()
+        first.acquire()
+        second.acquire()
+        eat()
+        second.release()
+        first.release()
+```
+
+If every philosopher acquires locks in the same global order (by fork ID), the circular wait cannot form. Philosopher 4 will try to acquire fork 0 before fork 4, breaking the cycle. This principle — **always acquire multiple locks in a consistent global order** — is one of the most important rules in concurrent systems engineering.
+
+**The modern fix — resource hierarchy or timeout:**
+
+In distributed systems where you can't always control lock acquisition order, use `tryLock` with a timeout and backoff:
+
+```python
+def philosopher(id, left_fork, right_fork):
+    while True:
+        think()
+        while True:
+            if left_fork.try_acquire(timeout=100ms):
+                if right_fork.try_acquire(timeout=100ms):
+                    break  # got both
+                left_fork.release()  # give up, retry
+            sleep(random_jitter())  # avoid livelock
+        eat()
+        right_fork.release()
+        left_fork.release()
+```
+
+The randomized jitter prevents livelock — without it, all philosophers could retry in lockstep, repeatedly grabbing and releasing forks without ever getting to eat (just as in the hallway collision analogy).
+
 ### Semaphore — The Capacity Controller
 
 A semaphore generalizes a mutex. Instead of "only one thread at a time," a semaphore says "up to N threads at a time." This makes it perfect for resource pool management.
@@ -300,6 +408,65 @@ do {
 ```
 
 **Lock-Free Data Structures** are built this way. The Michael-Scott queue, the Treiber stack, Java's `ConcurrentHashMap` — all built on CAS loops. The appeal: no deadlock (you can always make progress), better worst-case latency (no thread ever blocks indefinitely). The cost: much harder to implement correctly. The ABA problem (more on this shortly) lurks here.
+
+#### The CAS Retry Loop: Step by Step
+
+The CAS retry loop is worth stepping through slowly, because it's the foundation of all lock-free programming and the subtle parts are easy to miss.
+
+Here's the goal: implement a thread-safe `max` operation — atomically update a value to be the maximum of its current value and a new candidate.
+
+**Why this is hard without CAS:**
+
+```java
+// NOT thread-safe
+void updateMax(AtomicLong value, long candidate) {
+    if (candidate > value.get()) {   // read
+        value.set(candidate);         // write  ← another thread can modify between read and write
+    }
+}
+```
+
+Between the `get()` and the `set()`, another thread can also do a `set()` with a higher value, which we'd then overwrite with a smaller one. Classic race.
+
+**The CAS retry loop:**
+
+```java
+void updateMax(AtomicLong value, long candidate) {
+    long current;
+    do {
+        current = value.get();            // Step 1: Read current value
+        if (candidate <= current) return; // Step 2: If candidate isn't bigger, nothing to do
+        // Step 3: Try to atomically swap current → candidate
+        // This only succeeds if value is still `current` at the moment of the swap.
+        // If another thread changed value between Step 1 and Step 3, CAS returns false
+        // and we loop back to Step 1 to re-read.
+    } while (!value.compareAndSet(current, candidate));
+}
+```
+
+Walk through a three-thread scenario:
+
+```
+Initial value: 5
+
+Thread A: reads current = 5, candidate = 10
+Thread B: reads current = 5, candidate = 7
+Thread C: reads current = 5, candidate = 3
+
+Thread A: CAS(5 → 10) succeeds. Value is now 10.
+Thread B: CAS(5 → 7) FAILS — value is 10, not 5. Loop.
+          re-reads current = 10. 7 <= 10 → returns early (correct, 10 > 7)
+Thread C: CAS(5 → 3) FAILS — value is 10, not 5. Loop.
+          re-reads current = 10. 3 <= 10 → returns early (correct, 10 > 3)
+```
+
+Final value: 10. Correct, with zero locks.
+
+**What makes a retry loop safe vs. a spinning loop:**
+
+A spinning loop holds no resources and can always retry. A CAS retry is progress-safe — each failed CAS means *some other thread* succeeded. The system as a whole is always making progress, even if your thread specifically is retrying. This is the lock-free guarantee: no thread can prevent other threads from making progress.
+
+Under high contention, retry loops can be wasteful (many CPUs spinning on the same memory location). The practical threshold: CAS loops are excellent for a few dozen threads. Beyond that, contention on a single atomic variable becomes a bottleneck and you want either finer-grained structures or coordination (semaphores, queues).
 
 ### Memory Barriers — The Secret Third Thing
 
@@ -416,6 +583,163 @@ Thread B: balance > 0? Yes. Debit 100. Write -100.  ← race condition
 Prevention: make the check-and-debit atomic using a lock, or use an atomic compare-and-swap. Or, at the architecture level, use a single-threaded actor for each account — no concurrent writes possible.
 
 Tools like Go's race detector (`go test -race`) and Java's Thread Sanitizer can detect race conditions at runtime. Use them in your test suite. Always.
+
+#### Race Condition: A Full Worked Example
+
+Here's a race condition you could reasonably write in a production system, how to detect it, and three ways to fix it.
+
+**The bug — a naive rate limiter:**
+
+```go
+type RateLimiter struct {
+    requests int
+    limit    int
+    window   time.Time
+}
+
+func (r *RateLimiter) Allow() bool {
+    now := time.Now()
+    if now.After(r.window) {
+        r.requests = 0                       // reset counter
+        r.window = now.Add(time.Second)      // new window
+    }
+    if r.requests >= r.limit {
+        return false
+    }
+    r.requests++                             // increment counter
+    return true
+}
+```
+
+This looks reasonable. But it's not thread-safe. The check-then-act on `r.requests` is not atomic. With concurrent requests:
+
+```
+Thread A: reads r.requests = 99  (limit = 100)
+Thread B: reads r.requests = 99
+Thread A: 99 < 100 → increments to 100, returns true
+Thread B: 99 < 100 → increments to 100, returns true ← both allowed!
+          (but r.requests is now 100, not 101 — the increment raced too)
+```
+
+In fact it's worse: `r.requests++` is three operations (read, add, write), so you can also get lost increments, making the counter less than the true number of requests seen.
+
+**Step 1: Detect it with the race detector:**
+
+```bash
+go test -race ./...
+```
+
+Output:
+```
+WARNING: DATA RACE
+Write at 0x00c000018050 by goroutine 7:
+  RateLimiter.Allow()
+      ./ratelimiter.go:18
+
+Previous write at 0x00c000018050 by goroutine 6:
+  RateLimiter.Allow()
+      ./ratelimiter.go:18
+
+Goroutine 7 (running) created at:
+  TestConcurrentRateLimit()
+```
+
+The race detector catches it immediately. This is why you run tests under `-race` in CI — not just locally, not just occasionally, but on every push.
+
+**Fix 1: Mutex (simplest, often fine):**
+
+```go
+type RateLimiter struct {
+    mu       sync.Mutex
+    requests int
+    limit    int
+    window   time.Time
+}
+
+func (r *RateLimiter) Allow() bool {
+    r.mu.Lock()
+    defer r.mu.Unlock()
+
+    now := time.Now()
+    if now.After(r.window) {
+        r.requests = 0
+        r.window = now.Add(time.Second)
+    }
+    if r.requests >= r.limit {
+        return false
+    }
+    r.requests++
+    return true
+}
+```
+
+One mutex, all reads and writes protected. Simple, correct. Performance is fine for most use cases — a mutex acquisition under low contention is ~20-30ns.
+
+**Fix 2: Atomic counter (higher throughput, no window reset logic):**
+
+```go
+type RateLimiter struct {
+    requests atomic.Int64
+    resetAt  atomic.Int64   // unix nano
+    limit    int64
+}
+
+func (r *RateLimiter) Allow() bool {
+    now := time.Now().UnixNano()
+    resetAt := r.resetAt.Load()
+    
+    if now > resetAt {
+        // Try to be the one to reset the window (only one goroutine should win)
+        if r.resetAt.CompareAndSwap(resetAt, now+int64(time.Second)) {
+            r.requests.Store(0)
+        }
+    }
+    
+    return r.requests.Add(1) <= r.limit
+}
+```
+
+This uses atomics for lock-free operation. Higher throughput under extreme contention, but more complex and has subtle edge cases (multiple goroutines can race on the window reset even with the CAS — production rate limiters often use Redis or a dedicated counter service for this reason).
+
+**Fix 3: Actor model (single goroutine owns the state):**
+
+```go
+type rateLimiterMsg struct {
+    reply chan bool
+}
+
+type RateLimiter struct {
+    ch chan rateLimiterMsg
+}
+
+func NewRateLimiter(limit int) *RateLimiter {
+    rl := &RateLimiter{ch: make(chan rateLimiterMsg, 100)}
+    go func() {
+        requests := 0
+        window := time.Now().Add(time.Second)
+        for msg := range rl.ch {
+            if time.Now().After(window) {
+                requests = 0
+                window = time.Now().Add(time.Second)
+            }
+            allowed := requests < limit
+            if allowed { requests++ }
+            msg.reply <- allowed
+        }
+    }()
+    return rl
+}
+
+func (r *RateLimiter) Allow() bool {
+    reply := make(chan bool, 1)
+    r.ch <- rateLimiterMsg{reply: reply}
+    return <-reply
+}
+```
+
+No shared state, no locks — a single goroutine owns all the state and processes requests sequentially. This is the actor model at micro-scale. It's never wrong about thread safety because only one goroutine ever touches the variables.
+
+The lesson: there are usually multiple correct solutions to a race condition. The mutex solution is easiest to understand. The atomic solution is fastest under contention. The actor solution is architecturally cleanest. Choose based on your performance requirements and team familiarity.
 
 ### Deadlock
 
@@ -597,6 +921,61 @@ A memory model is a formal specification of what guarantees a multi-threaded pro
 **C++11 memory orderings** are more explicit and fine-grained. Six orderings, from `relaxed` (no ordering guarantees, just atomicity) to `seq_cst` (sequential consistency, total order across all operations). The trade-off is performance: `relaxed` is cheapest, `seq_cst` is most expensive. Getting the ordering right requires deep expertise — use `seq_cst` by default and only loosen it after profiling and careful reasoning.
 
 The practical lesson: don't write lock-free code that relies on specific hardware memory ordering behavior. Write to the language's memory model. Your code will be portable, and the compiler/runtime will insert the right hardware instructions for each target architecture.
+
+#### Why You Should Care: The x86 vs. ARM Bug That Bites in Production
+
+This is not a theoretical concern. It is a class of bugs that kills engineers in production when they move workloads from x86 to ARM — which, in 2024 and beyond, is increasingly common as AWS Graviton, Apple Silicon, and Ampere Altra servers go mainstream.
+
+**x86's memory model is unusually strong.** The Total Store Order (TSO) model means that on x86:
+- Stores are not reordered with respect to other stores.
+- Loads are not reordered with respect to other loads.
+- Loads are not reordered with respect to prior stores.
+
+This means many programs that are technically incorrect from a memory model perspective will appear to work correctly on x86, because the hardware provides stronger guarantees than the language standard requires.
+
+**ARM's memory model is weak.** ARM allows stores to be reordered with respect to other stores, and loads to be reordered with respect to other loads, unless you insert explicit memory barrier instructions (`dmb`, `dsb`, `isb`). The CPU is free to reorder memory operations in ways that produce different results when observed from another core.
+
+**The bug scenario:**
+
+```c
+// Shared flag pattern — common in low-level systems code
+// This is technically undefined behavior in C without proper atomics,
+// but let's trace what actually happens on different hardware.
+
+// Thread 1 (writer):
+data = 42;         // write data
+ready = 1;         // signal that data is ready
+
+// Thread 2 (reader):
+while (!ready) {}  // wait for signal
+use(data);         // use data — is this always 42?
+```
+
+On x86: this almost always works. The TSO model means stores are observed in order by other processors. By the time Thread 2 sees `ready = 1`, it will also see `data = 42`.
+
+On ARM: this can fail. The ARM CPU can reorder the two stores, so Thread 2 might observe `ready = 1` before it observes `data = 42`. It reads `data` and gets whatever garbage was in memory before the write, or 0. The bug is real, intermittent, and potentially data-corrupting.
+
+**How to fix it properly (C11/C++):**
+
+```c
+// Thread 1:
+atomic_store_explicit(&data, 42, memory_order_relaxed);
+atomic_store_explicit(&ready, 1, memory_order_release);  // release barrier
+
+// Thread 2:
+while (!atomic_load_explicit(&ready, memory_order_acquire)) {} // acquire barrier
+use(atomic_load_explicit(&data, memory_order_relaxed));
+```
+
+The `memory_order_release` on the store ensures all prior stores are visible before the flag is set. The `memory_order_acquire` on the load ensures all subsequent loads see the stores that happened before the release. Together they form the acquire-release pair that the language standard defines — and the compiler emits the right barrier instructions for both x86 and ARM.
+
+**The AWS Graviton production story:**
+
+Multiple engineering teams have documented bugs discovered only when migrating to Graviton (ARM-based AWS instances). A common pattern: C++ code that used `volatile` instead of `std::atomic` for inter-thread flags. On x86, `volatile` happens to prevent compiler reordering, and the hardware's strong ordering prevents the worst CPU reordering. On ARM, both compiler and hardware reordering can happen, surfacing data corruption.
+
+One specific case (documented publicly by a kernel developer): a Linux kernel driver used plain writes to shared flag variables between interrupt handler and process context. It had been "working" on x86 for years. On ARM, the missing memory barriers caused occasional data corruption during high-interrupt-rate workloads.
+
+**The practical rule:** if you're writing any code that coordinates threads without using high-level primitives (mutexes, channels, language atomics with explicit ordering), test it on ARM before shipping. If you can't easily test on ARM, use the strongest memory ordering (`seq_cst`) everywhere that correctness is involved, and only consider loosening it after profiling reveals it's actually a bottleneck.
 
 ### NUMA: The Memory Hierarchy You Forgot About
 

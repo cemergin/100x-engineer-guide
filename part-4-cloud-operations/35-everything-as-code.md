@@ -1985,3 +1985,20 @@ The new engineer can answer questions about the system by reading the code. They
 If it is not in Git, it does not exist.
 
 That is not a philosophy. That is a practice. Start today.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L2-M44: Terraform & Infrastructure as Code](../course/modules/loop-2/L2-M44-terraform-and-iac.md)** — Write Terraform modules for TicketPulse's core infrastructure and manage state with remote backends and workspaces
+- **[L2-M44a: Policy & IaC Security Scanning](../course/modules/loop-2/L2-M44a-policy-and-iac-scanning.md)** — Add Checkov and OPA policies to your CI pipeline so policy violations block merges before they reach production
+- **[L3-M83a: Observability & GitOps as Code](../course/modules/loop-3/L3-M83a-observability-and-gitops-as-code.md)** — Version-control Grafana dashboards, Prometheus rules, and ArgoCD applications so every alert and dashboard has a commit history
+- **[L3-M83b: Platform Engineering & Crossplane](../course/modules/loop-3/L3-M83b-platform-engineering-crossplane.md)** — Build a self-service infrastructure platform where developers provision resources through pull requests, not tickets
+
+### Quick Exercises
+
+1. **Export one manually-created cloud resource to Terraform** — use `terraform import` or `terraformer` to bring an existing resource under Terraform management. Run `terraform plan` and verify it shows no changes before committing.
+2. **Add one OPA policy to your CI pipeline** — write a Rego rule that enforces one real constraint (e.g., no public S3 buckets, all Lambda functions must have reserved concurrency set), wire it into CI, and verify it blocks a violating change.
+3. **Version-control one dashboard that currently only exists in a UI** — export a Grafana dashboard as JSON, commit it to a repository, and set up provisioning so the dashboard is recreated from code on deploy.

@@ -1499,3 +1499,18 @@ go-licenses check ./...          # Go
 ---
 
 **Next chapter**: Chapter 29 — where we cover testing strategies and building confidence that your code actually works.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L3-M85: Open Source Your Work](../course/modules/loop-3/L3-M85-open-source-your-work.md)** — Extract a reusable component from TicketPulse, write the README, and publish it — going through the full OSS contributor experience from the maintainer side
+- **[L1-M03: Git Beyond the Basics](../course/modules/loop-1/L1-M03-git-beyond-the-basics.md)** — Use `git log`, `git blame`, and `git bisect` to navigate a codebase's history the way experienced contributors do
+
+### Quick Exercises
+
+1. **Pick an open source library you use daily and read its main entry point** — find the top-level file that bootstraps the library and trace one request or function call through to its resolution. No docs allowed.
+2. **Find and read one closed PR in a project you admire** — look at the review comments, the back-and-forth, and the final merge commit message. Notice what the maintainers cared about and what they pushed back on.
+3. **Submit one documentation fix to an OSS project this week** — find a README section that confused you when you first read it, improve it, and open a PR. It does not need to be code; the habit of contributing matters more than the size.

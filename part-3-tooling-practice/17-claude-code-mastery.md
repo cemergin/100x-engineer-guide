@@ -1942,3 +1942,18 @@ CROSS-REFERENCES
   Chapter 14  AI engineering principles — the theory behind the practice
   Chapter 36  Beast Mode — advanced orchestration at scale
 ```
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L3-M86: AI-Powered Engineering Workflow](../course/modules/loop-3/L3-M86-ai-powered-engineering.md)** — Integrate Claude Code into TicketPulse's development workflow and measure the impact on your throughput
+- **[L3-M86a: AI-Native Spec-Driven Development](../course/modules/loop-3/L3-M86a-ai-native-spec-driven-development.md)** — Write a spec for a new TicketPulse feature and use Claude Code to implement it end-to-end from the spec
+
+### Quick Exercises
+
+1. **Write a `CLAUDE.md` file for your current project: include how to run tests, the code style rules Claude must follow, which files are off-limits, and the commands for your most common workflows.**
+2. **Create one custom skill for a task you repeat weekly — a code review checklist, a migration generator, a test scaffolder — and run it three times to measure how much time it saves.**
+3. **Set up one MCP server integration for your workflow: connect Claude Code to your issue tracker, your database, or your internal docs, then use it to answer a question you'd normally have to context-switch to answer.**

@@ -1912,3 +1912,19 @@ Every principle in this chapter has a cost. SRP adds files. DIP adds interfaces.
 The failure modes run in both directions. Under-engineering leaves you with 400-line functions, copy-pasted business rules, and zero test coverage. Over-engineering leaves you with 47 files to trace a single user registration, abstractions built for requirements that will never materialize, and a codebase where every "simple" change requires an architect's approval.
 
 Start with the basics: name things well, keep functions small, separate concerns, minimize coupling. Then layer in SOLID, design patterns, and package principles as the codebase grows and the pain becomes real. The goal is always the same: code that a new team member can read, understand, and change with confidence. Principles are just the accumulated wisdom of engineers who got burned so you do not have to — provided you apply them with the judgment to know when they help and the courage to skip them when they do not.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L1-M16a: SOLID Principles in Practice](../course/modules/loop-1/L1-M16a-solid-principles-in-practice.md)** — Refactor a tangled TicketPulse feature using SRP, OCP, and DIP so it becomes testable and independently deployable
+- **[L1-M16b: Clean Code & Design Principles](../course/modules/loop-1/L1-M16b-clean-code-and-design-principles.md)** — Apply naming, function size, and abstraction rules to TicketPulse's messiest module
+- **[L1-M16c: Design Patterns That Matter](../course/modules/loop-1/L1-M16c-design-patterns-that-matter.md)** — Implement the Strategy, Observer, and Decorator patterns to add features to TicketPulse without touching existing code
+
+### Quick Exercises
+
+1. **Find one God Class in your codebase — a class with more than five distinct reasons to change — and sketch how you'd split its responsibilities across two or three smaller classes.**
+2. **Identify a Primitive Obsession: a raw string or integer that represents a domain concept (email address, money amount, user ID) and write the value object that should replace it.**
+3. **Find one place in your codebase where a deep inheritance hierarchy could be flattened using composition — draw both versions and count the number of files a new developer would need to read to understand each.**

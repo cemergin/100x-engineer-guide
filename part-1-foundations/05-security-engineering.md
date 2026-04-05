@@ -220,6 +220,92 @@ This is the detective story part: every element of the OAuth flow exists to prev
 
 Avoid the Implicit flow (deprecated, insecure) and Resource Owner Password Credentials (requires sharing the user's password, defeats the purpose of OAuth).
 
+### "Login with Google": The Full Story
+
+Let's trace exactly what happens when a user clicks "Login with Google" on a web application. Understanding this end-to-end saves hours of debugging auth issues and helps you spot misconfigurations instantly.
+
+**The cast of characters:**
+- **User** — the person clicking the button
+- **Your App** — the relying party (RP) that wants to know who the user is
+- **Google** — the identity provider (IdP) and authorization server
+
+**Step 1: The user clicks the button (T+0ms)**
+
+Your app generates two values in memory:
+- `state`: a random 32-byte hex string (`a3f7b2c1...`), stored in the user's session
+- `code_verifier`: a random 43-128 character URL-safe string, also stored in session
+
+It computes `code_challenge = BASE64URL(SHA256(code_verifier))` and redirects the browser to:
+
+```
+https://accounts.google.com/o/oauth2/v2/auth
+  ?client_id=482910-xyz.apps.googleusercontent.com
+  &redirect_uri=https://yourapp.com/auth/callback
+  &response_type=code
+  &scope=openid email profile
+  &state=a3f7b2c1...
+  &code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8UrAn8MuBKU=
+  &code_challenge_method=S256
+```
+
+Note `scope=openid email profile` — the `openid` scope is what turns this from pure OAuth (authorization only) into OIDC (authentication + identity).
+
+**Step 2: Google shows the consent screen (T+200ms)**
+
+The browser lands on Google's login page. The user logs in (if not already) and sees "yourapp.com wants to access your name, email address, and profile picture." They click Allow.
+
+**Step 3: Google redirects back with an authorization code (T+5s)**
+
+Google sends the browser to:
+
+```
+https://yourapp.com/auth/callback
+  ?code=4/0AX4XfWj9CQk2VzfVTp...
+  &state=a3f7b2c1...
+```
+
+The `code` is a short-lived (usually 60-second) single-use token. It's worthless without the `code_verifier`.
+
+**Step 4: Your server validates state and exchanges the code (T+5.1s)**
+
+Your backend (the browser never sees this request) POSTs to Google:
+
+```
+POST https://oauth2.googleapis.com/token
+Content-Type: application/x-www-form-urlencoded
+
+code=4/0AX4XfWj9CQk2VzfVTp...
+&client_id=482910-xyz.apps.googleusercontent.com
+&client_secret=GOCSPX-xxxxx
+&redirect_uri=https://yourapp.com/auth/callback
+&grant_type=authorization_code
+&code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk
+```
+
+Google hashes the `code_verifier`, compares it against the `code_challenge` from step 1, and — if they match — returns:
+
+```json
+{
+  "access_token": "ya29.a0AfH6SMB...",
+  "expires_in": 3599,
+  "id_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6...",
+  "scope": "openid email profile",
+  "token_type": "Bearer"
+}
+```
+
+**Step 5: Your app validates the ID token (T+5.2s)**
+
+The `id_token` is a JWT. Your app verifies it cryptographically against Google's published public keys (available at `https://www.googleapis.com/oauth2/v3/certs`). After validation, you can trust the claims inside.
+
+**Step 6: You establish your own session (T+5.3s)**
+
+You look up (or create) the user in your database using `sub` (the stable Google user ID that never changes, even if they change their email). You set an `httpOnly`, `Secure`, `SameSite=Lax` session cookie and redirect to the dashboard.
+
+The browser never saw Google's `access_token`. The backend never stored the `code_verifier` anywhere permanent. The user is now logged in.
+
+The whole flow completes in under 6 seconds from button click to authenticated dashboard. Every step has a specific security purpose. If you skip `state` validation you're open to CSRF. If you skip PKCE you're open to code interception. If you skip ID token signature verification you can be fed forged tokens. The protocol is designed so each step is necessary.
+
 ### OIDC: Adding Identity on Top of OAuth
 
 OAuth 2.0 is about authorization — granting access to resources. It says nothing about identity. If GitHub gives MyApp an access token, MyApp can use it to call GitHub's API, but it has no idea who the user is.
@@ -249,15 +335,62 @@ A JSON Web Token is a compact, URL-safe way to represent claims between two part
 A JWT looks like this:
 
 ```
-eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9
-.eyJzdWIiOiJ1c2VyXzEyMzQ1IiwiZW1haWwiOiJhbGljZUBleGFtcGxlLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTcxMTIzNDU2NywiZXhwIjoxNzExMjM1NDY3fQ
-.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InByb2QtMjAyNS0wMSJ9
+.eyJzdWIiOiJ1c2VyXzEyMzQ1IiwiZW1haWwiOiJhbGljZUBleGFtcGxlLmNvbSIsIm5hbWUiOiJBbGljZSBDaGVuIiwicm9sZSI6ImFkbWluIiwib3JnX2lkIjoib3JnX2FiY2QxMjM0IiwiaXNzIjoiaHR0cHM6Ly9hdXRoLmV4YW1wbGUuY29tIiwiYXVkIjoiaHR0cHM6Ly9hcGkuZXhhbXBsZS5jb20iLCJpYXQiOjE3NDM2MDAwMDAsImV4cCI6MTc0MzYwMDkwMH0
+.Rk9vb2JhckJhekJhckZvb2Jhck9vYmFyQmF6QmFyRm9vYmFyT29iYXI
 ```
 
-Three base64-encoded segments separated by dots:
-1. **Header:** Algorithm and token type (`{"alg": "RS256", "typ": "JWT"}`)
-2. **Payload:** The claims (`{"sub": "user_12345", "email": "alice@example.com", "role": "admin", "iat": ..., "exp": ...}`)
-3. **Signature:** Cryptographic proof that the header and payload weren't tampered with
+Three base64-encoded segments separated by dots. Let's decode each one:
+
+**Segment 1 — Header:**
+```json
+{
+  "alg": "RS256",
+  "typ": "JWT",
+  "kid": "prod-2025-01"
+}
+```
+
+- `alg`: The signing algorithm. `RS256` means RSA with SHA-256. This is asymmetric — signed with a private key, verified with the public key.
+- `kid`: Key ID. When issuers rotate signing keys (which they do), `kid` tells the verifier which public key to use. Your library fetches the JWKS (JSON Web Key Set) endpoint and finds the key with this ID.
+
+**Segment 2 — Payload (the claims):**
+```json
+{
+  "sub": "user_12345",
+  "email": "alice@example.com",
+  "name": "Alice Chen",
+  "role": "admin",
+  "org_id": "org_abcd1234",
+  "iss": "https://auth.example.com",
+  "aud": "https://api.example.com",
+  "iat": 1743600000,
+  "exp": 1743600900
+}
+```
+
+Reading each field:
+- `sub` (subject): The stable identifier for this user. This is what you store in your database as the foreign key. It never changes even if Alice changes her email.
+- `email`, `name`: Profile claims. Convenient, but treat them as hints — verify them through your own database if they're security-sensitive.
+- `role`: An application-specific custom claim. You added this. It's not part of the JWT spec.
+- `org_id`: Another custom claim. Useful for multi-tenant apps to know which organization this user belongs to.
+- `iss` (issuer): Who issued this token. Your verification code must check this matches what you expect.
+- `aud` (audience): Who this token is intended for. Your API must check this matches itself. A token issued for `api.example.com` should be rejected by `admin.example.com`.
+- `iat` (issued at): Unix timestamp when the token was created. `1743600000` = 2025-04-02 12:00:00 UTC.
+- `exp` (expiration): Unix timestamp after which the token is invalid. `1743600900` = 15 minutes after `iat`. Always verify this is in the future.
+
+**Segment 3 — Signature:**
+
+The raw bytes of `RSASHA256(base64url(header) + "." + base64url(payload))`. You cannot verify this without the issuer's public key. You cannot forge this without the issuer's private key.
+
+**The critical thing to understand:** segments 1 and 2 are just base64-encoded. Anyone can decode and read them. Run this in your browser console:
+
+```javascript
+atob('eyJzdWIiOiJ1c2VyXzEyMzQ1Iiw...')
+// Returns the JSON payload as a string
+```
+
+This is why you must never put sensitive data in JWT claims. No passwords, SSNs, credit card numbers, internal system details, pricing rules you don't want customers to see. Treat the payload as publicly readable — because it is.
 
 When your API receives a JWT, it:
 1. Verifies the signature using the public key of the issuer
@@ -467,6 +600,130 @@ The defense has two main variants:
 **SameSite Cookie Attribute (simpler but slightly weaker):** Setting `SameSite=Strict` on your session cookie means the browser won't send it on cross-site requests. `evil.com`'s form submission won't include your bank's cookie, so the bank sees an unauthenticated request. Use `SameSite=Lax` if you need to support navigating to your site via links from other sites (like clicking a link in an email).
 
 Modern frameworks handle CSRF protection automatically. Django generates CSRF tokens for every form. Rails does the same. If you're writing a custom API, use `SameSite` cookies + verify the `Origin` header on state-changing requests.
+
+### Insecure Deserialization: Turning Data Into Code
+
+Your API accepts a serialized object from the client — maybe a pickled Python object, a Java serialized object, or a YAML payload. The assumption: the client sends valid data. The attack: the client sends crafted data that, when deserialized, executes arbitrary code on the server.
+
+The dangerous pattern is using a serialization format that can execute code during deserialization and running it on untrusted input. Python's `pickle` module is the textbook example — `pickle.loads()` can execute arbitrary Python code embedded in the payload. If a server endpoint accepts user-supplied data and deserializes it with `pickle`, an attacker can craft a malicious payload whose `__reduce__` method calls `os.system()` or `subprocess.run()` with any shell command. Remote code execution from a settings field.
+
+The safe alternative:
+
+```python
+# SAFE: use structured JSON with explicit schema validation
+from pydantic import BaseModel
+from typing import Literal
+
+class UserPreferences(BaseModel):
+    theme: Literal['light', 'dark', 'system']
+    notifications_enabled: bool
+    timezone: str
+
+@app.route('/api/load-preferences', methods=['POST'])
+def load_preferences():
+    try:
+        prefs = UserPreferences(**request.json['prefs'])
+    except Exception:
+        return jsonify({'error': 'Invalid preferences'}), 400
+    return jsonify(prefs.dict())
+```
+
+The fix is structural: use a format that cannot embed executable code (JSON), and validate against an explicit schema (Pydantic, JSON Schema, protobuf) before touching the data. The schema defines exactly what fields and types are permitted — anything outside that shape is rejected.
+
+Rules:
+- Never deserialize Java serialized objects, PHP `unserialize()`, or any binary format from untrusted input without extensive hardening
+- For structured data: JSON + explicit schema validation
+- YAML deserializers have the same risk — use `yaml.safe_load()` not `yaml.load()` in Python (the safe variant restricts to basic data types and cannot instantiate arbitrary objects)
+- For complex object graphs, define a protobuf or JSON Schema and validate before use
+
+### Path Traversal: Escaping the Intended Directory
+
+Your application serves files from a directory. The path comes from user input. An attacker includes `../` sequences to escape the intended directory and read files from anywhere on the filesystem.
+
+```python
+# VULNERABLE: naively joining user-supplied path
+import os
+
+BASE_DIR = '/var/app/uploads'
+
+@app.route('/files/<filename>')
+@login_required
+def serve_file(filename):
+    file_path = os.path.join(BASE_DIR, filename)
+    return send_file(file_path)  # What if filename is "../../etc/passwd"?
+```
+
+Request: `GET /files/../../etc/passwd`
+
+`os.path.join('/var/app/uploads', '../../etc/passwd')` resolves to `/etc/passwd`. The server returns the system's password file. In a containerized environment with secrets mounted at predictable paths (`/run/secrets/db_password`, `/var/run/secrets/kubernetes.io/serviceaccount/token`), this is worse — the attacker gets live credentials.
+
+```python
+# SAFE: canonicalize and verify the resolved path stays within BASE_DIR
+import os
+
+BASE_DIR = os.path.realpath('/var/app/uploads')
+
+@app.route('/files/<filename>')
+@login_required
+def serve_file(filename):
+    # Resolve symlinks and normalize the path completely
+    requested_path = os.path.realpath(os.path.join(BASE_DIR, filename))
+
+    # Verify it's still inside the intended directory
+    if not requested_path.startswith(BASE_DIR + os.sep):
+        return jsonify({'error': 'Access denied'}), 403
+
+    if not os.path.isfile(requested_path):
+        return jsonify({'error': 'Not found'}), 404
+
+    return send_file(requested_path)
+```
+
+`os.path.realpath()` resolves all symlinks and `../` sequences to an absolute canonical path. The prefix check ensures the resolved path is inside `BASE_DIR`. Even if `filename` is `../../../etc/passwd`, `realpath()` resolves it to `/etc/passwd`, which does not start with `/var/app/uploads/`, and the request is rejected.
+
+The same pattern applies in Node.js (`path.resolve()` + startsWith check), Go (`filepath.Clean()` + prefix check), and every other language. Always canonicalize, always verify the prefix.
+
+### Mass Assignment: When the ORM Does Too Much
+
+Mass assignment is the vulnerability where your code blindly assigns user-supplied JSON fields to a model object, including fields the user was never meant to control.
+
+```javascript
+// VULNERABLE: directly assigning all request body fields to the model
+app.put('/api/users/:id', authenticate, async (req, res) => {
+  const user = await User.findByPk(req.params.id);
+  if (user.id !== req.user.id) return res.status(403).json({ error: 'Forbidden' });
+
+  // User sends: { "name": "Alice", "email": "alice@example.com", "role": "admin" }
+  await user.update(req.body);   // Updates ALL fields, including role
+  res.json(user);
+});
+```
+
+A user who discovers this endpoint can set `"role": "admin"` in the request body and grant themselves admin privileges. GitHub had this exact vulnerability in 2012 — a researcher used mass assignment to add his SSH key to another user's account, demonstrating full account takeover.
+
+```javascript
+// SAFE: explicitly allowlist updatable fields
+const UPDATABLE_FIELDS = ['name', 'email', 'bio', 'avatar_url'];
+
+app.put('/api/users/:id', authenticate, async (req, res) => {
+  const user = await User.findByPk(req.params.id);
+  if (user.id !== req.user.id) return res.status(403).json({ error: 'Forbidden' });
+
+  const updates = {};
+  for (const field of UPDATABLE_FIELDS) {
+    if (req.body[field] !== undefined) {
+      updates[field] = req.body[field];
+    }
+  }
+
+  await user.update(updates);
+  res.json(user);
+});
+```
+
+The fix is an explicit allowlist of fields users can modify. `role`, `is_admin`, `email_verified`, `account_balance`, `created_at` — none of these appear in `UPDATABLE_FIELDS`. An attacker can send them in the request body all they want; the server ignores them.
+
+In Rails, this is prevented by Strong Parameters (`params.require(:user).permit(:name, :email, :bio)`). In Django, specify `fields` in your serializer class. In Pydantic, define separate request schemas that only include the user-editable subset of the model. The pattern is identical everywhere: be explicit about which input is permitted.
 
 ### SSRF: When Your Server Makes Requests for You
 

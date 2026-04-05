@@ -2592,3 +2592,19 @@ a+$             # Remove nesting
 ---
 
 > **The meta-lesson:** Tools are multipliers. Spending 30 minutes learning a tool you use daily saves hundreds of hours per year. The commands in this chapter are not trivia — they are the difference between spending 10 minutes or 10 seconds on a task you do 20 times a day. Go set up your shell, configure your editor, tune your `.gitconfig`. Then pair all of this with Claude Code (Ch 17) running in your terminal and the full Beast Mode toolchain (Ch 36), and you'll have a development environment that most engineers have never experienced. Once you've worked that way, you can't go back.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L1-M01: Course Setup & TicketPulse Kickoff](../course/modules/loop-1/L1-M01-course-setup-ticketpulse-kickoff.md)** — Wire up the full local development environment from scratch, including shell, editor, and Docker
+- **[L1-M02: Your Dev Environment](../course/modules/loop-1/L1-M02-your-dev-environment.md)** — Configure your terminal, dotfiles, and editor extensions for maximum leverage
+- **[L1-M03: Git Beyond the Basics](../course/modules/loop-1/L1-M03-git-beyond-the-basics.md)** — Interactive rebase, bisect, worktrees, and the git workflows that senior engineers use daily
+
+### Quick Exercises
+
+1. **Time yourself finding a function definition with and without fzf/ripgrep** — pick any function in a codebase you know, find it with `grep -r`, then find it again with `rg` or `fzf`. Note the difference in keystrokes and seconds.
+2. **Set up 3 git aliases that save you keystrokes daily** — candidates: `git st` for status, `git co` for checkout, `git lg` for a one-line log. Add them to your `.gitconfig` and commit to using them for a week.
+3. **Learn 5 new Vim motions or VS Code shortcuts this week** — pick from the tables in this chapter, add them to a sticky note on your monitor, and practice until they're muscle memory.

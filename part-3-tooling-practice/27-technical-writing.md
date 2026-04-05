@@ -1396,3 +1396,18 @@ Code with clear documentation is an asset that compounds over time. Every time s
 ---
 
 **Key Takeaway:** Write the document you wish existed when you were the new person, the on-call engineer at 3 AM, or the developer trying to understand a decision made two years ago. Technical writing is not overhead — it is the work. Your future colleagues, your future self, and your career will all thank you for taking it seriously.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L3-M77: Architecture Decision Records](../course/modules/loop-3/L3-M77-architecture-decision-records.md)** — Write the ADRs for TicketPulse's three most consequential architecture choices using the format from this chapter
+- **[L3-M89: Your Career Engineering Plan](../course/modules/loop-3/L3-M89-career-engineering-plan.md)** — Apply technical writing skills to build a brag doc and career narrative that makes your impact legible to others
+
+### Quick Exercises
+
+1. **Rewrite one confusing paragraph in your project's README: find the section that generates the most Slack questions from new developers, rewrite it assuming zero context, and ask one person to read both versions.**
+2. **Write an ADR for a recent technical decision your team made: use the Context / Decision / Consequences format, and include the alternatives you considered and why you rejected them.**
+3. **Draft a runbook for your team's most common on-call scenario: write it so that someone woken up at 3 AM with no prior context could follow it to resolution without pinging you.**
