@@ -1,18 +1,20 @@
 # L3-M64: CDN & Edge Computing
 
-> **Loop 3 (Mastery)** | Section 3A: Global Scale Architecture | ⏱️ 60 min | 🟢 Core | Prerequisites: L3-M61 (Multi-Region Design), L3-M62 (Cloud Provider Deep Dive)
+> **Loop 3 (Mastery)** | Section 3A: Global Scale Architecture | ⏱️ 75 min | 🟢 Core | Prerequisites: L3-M61 (Multi-Region Design), L3-M62 (Cloud Provider Deep Dive)
 >
-> **Source:** Chapters 1, 19, 31, 22, 23 of the 100x Engineer Guide
+> **Source:** Chapters 1, 19, 21, 22, 23 of the 100x Engineer Guide
 
 ---
 
-## The Goal
+## Why This Matters
 
 TicketPulse serves everything from the origin server in US-East. Every user worldwide — whether they are in New York or New Zealand — makes a round trip to Virginia for every image, JavaScript bundle, and CSS file. Your 2MB of static assets multiply by 160ms of round-trip time for users in Tokyo.
 
 A CDN (Content Delivery Network) caches your content at edge locations worldwide. There are 400+ CDN edge locations globally. The nearest one to any user is typically within 20ms. Putting your static assets behind a CDN turns a 160ms fetch into a 20ms fetch for most users.
 
 Edge computing goes further: instead of just caching static files, you run code at the edge. Auth token validation, feature flag resolution, geo-based recommendations — all without hitting your origin server.
+
+> 💡 **Chapter 21 of the 100x Engineer Guide** covers the networking fundamentals that make CDNs work: BGP routing, anycast, TLS termination, and the physics of network latency. Understanding those mechanics gives you intuition for when CDNs help (latency-dominated workloads) and when they do not (compute-dominated workloads). This module is the applied companion: you will configure Cache-Control headers, set up a CDN, measure the improvement, and design an edge compute strategy.
 
 **By the end of this module, your TicketPulse assets will be served from the edge, and you will have a design for what logic should run there.**
 
@@ -56,6 +58,17 @@ CDN Edge (Tokyo)
 
 The first request to any edge location pays the full round trip. Every subsequent request to that edge is served locally. For popular assets (JavaScript bundles, CSS, images), the cache hit ratio is typically 95-99%.
 
+### Why CDNs Are Not Just "Caches"
+
+Modern CDNs do far more than cache:
+- **TLS termination at the edge:** Your users' HTTPS connections terminate at the nearby edge, not the distant origin. This eliminates the TLS handshake latency for distant users.
+- **HTTP/2 multiplexing:** CDNs speak HTTP/2 or HTTP/3 to clients even if your origin only speaks HTTP/1.1.
+- **Compression:** Brotli/gzip compression is applied at the edge, reducing payload size.
+- **DDoS protection:** Most CDN providers absorb attack traffic at their edge rather than passing it to your origin.
+- **Bot detection:** Cloudflare and others fingerprint and block bots at the edge.
+
+Understanding this matters because "adding a CDN" is often presented as a single decision. In practice, you are making many decisions about which CDN capabilities to enable.
+
 ### CDN Providers
 
 | Provider | Strengths | Free Tier |
@@ -65,11 +78,9 @@ The first request to any edge location pays the full round trip. Every subsequen
 | **Cloud CDN (GCP)** | Integrated with Global Load Balancer. Simple setup. | Included with LB; pay per GB |
 | **Fastly** | Real-time purging. VCL-based configuration. Compute@Edge (Wasm). | Limited free tier |
 
-For this module, Cloudflare or CloudFront are the best options. Cloudflare's free tier has no bandwidth limit, making it ideal for learning.
-
 ---
 
-## 1. Put TicketPulse Behind a CDN (15 minutes)
+## 1. Put TicketPulse Behind a CDN (20 minutes)
 
 ### 🛠️ Build: Configure Cache-Control Headers
 
@@ -151,7 +162,7 @@ aws cloudfront create-distribution \
   }'
 ```
 
-### 📊 Observe: Measure the Improvement
+### 📊 Exercise: Measure the Improvement
 
 Test your CDN cache hit ratio and latency improvement:
 
@@ -182,9 +193,25 @@ curl -sI https://ticketpulse.example.com/assets/app.a1b2c3.js | grep -i "cf-cach
 - Latency for cached assets: 10-50ms regardless of user location
 - Latency reduction for users far from origin: 3-10x improvement
 
+**Record your measurements:**
+
+```
+CDN Performance Baseline (before)
+──────────────────────────────────
+Asset request from local:   ___ ms
+Asset request from Tokyo:   ___ ms (use a VPN or testing tool)
+Cache hit ratio:            N/A (no CDN yet)
+
+CDN Performance After Setup
+────────────────────────────
+Asset request from local:   ___ ms (first: miss, second: hit)
+Asset request from Tokyo:   ___ ms
+Cache hit ratio (after 1h): ___ %
+```
+
 ---
 
-## 2. Stale-While-Revalidate (5 minutes)
+## 2. Stale-While-Revalidate: The Best Caching Strategy You're Not Using (5 minutes)
 
 ### The Best of Both Worlds
 
@@ -209,9 +236,30 @@ Timeline:
 - Serving a 90-second-old event listing is perfectly fine.
 - The user gets instant response. The CDN refreshes in the background. Everyone wins.
 
+### 📐 Caching Strategy Workshop
+
+For each TicketPulse resource, choose the right caching strategy and justify it:
+
+| Resource | Description | Staleness Tolerance | Your Cache-Control |
+|---|---|---|---|
+| `GET /api/events?city=london` | Public event listings | Up to 60 seconds | |
+| `GET /api/events/{id}/tickets` | Available tickets for an event | 5 seconds maximum | |
+| `GET /api/users/me` | Current user profile | Must be fresh | |
+| `GET /static/logo.png` | Site logo (never changes) | Forever | |
+| `GET /events/concert-2026` | HTML page for a concert | Up to 60 seconds | |
+| `GET /api/events/{id}/reviews` | Reviews for an event | Up to 5 minutes | |
+
+**Reference answers:**
+- Event listings: `public, s-maxage=60, stale-while-revalidate=300` — stale is fine for browsing
+- Available tickets: `public, s-maxage=5, stale-while-revalidate=10` — tight TTL; stale could show wrong count
+- User profile: `private, no-store` — personalized, must never be shared
+- Logo: `public, max-age=31536000, immutable` — never changes, cache forever
+- Concert HTML: `public, max-age=0, s-maxage=60, stale-while-revalidate=300`
+- Reviews: `public, s-maxage=300, stale-while-revalidate=600` — reviews are slow-moving
+
 ---
 
-## 3. Cache Invalidation (10 minutes)
+## 3. Cache Invalidation (15 minutes)
 
 ### The Two Hardest Problems in Computer Science
 
@@ -297,9 +345,92 @@ For TicketPulse, combine strategies:
 - **Event pages and API:** Short TTL (60s) with stale-while-revalidate (300s) as the baseline. Active purge via Pub/Sub for critical updates (event cancellation, lineup change).
 - **User-specific data:** Never cached on CDN (`private, no-store`).
 
+### 🛠️ Build: The Cache Invalidation Worker
+
+```typescript
+// workers/cache-invalidation.ts
+import { Kafka, Consumer } from 'kafkajs';
+
+const CLOUDFLARE_ZONE_ID = process.env.CLOUDFLARE_ZONE_ID!;
+const CLOUDFLARE_TOKEN = process.env.CLOUDFLARE_TOKEN!;
+
+async function purgeCloudflareCache(urls: string[]): Promise<void> {
+  const response = await fetch(
+    `https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/purge_cache`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${CLOUDFLARE_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ files: urls }),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(`Cache purge failed: ${JSON.stringify(error)}`);
+  }
+
+  console.log(`Purged ${urls.length} URLs from CDN cache`);
+}
+
+async function handleEventUpdated(eventId: string): Promise<void> {
+  const baseUrl = 'https://ticketpulse.example.com';
+  const urlsToPurge = [
+    `${baseUrl}/api/events/${eventId}`,
+    `${baseUrl}/api/events/${eventId}/tickets`,
+    `${baseUrl}/events/${eventId}`,  // The HTML page
+  ];
+
+  await purgeCloudflareCache(urlsToPurge);
+}
+
+// Kafka consumer for EventUpdated messages
+const consumer: Consumer = /* initialize */;
+await consumer.subscribe({ topic: 'events.updated' });
+
+await consumer.run({
+  eachMessage: async ({ message }) => {
+    const event = JSON.parse(message.value!.toString());
+    await handleEventUpdated(event.eventId);
+  },
+});
+```
+
+### 📐 Cache Invalidation Scenario Workshop
+
+Work through these scenarios. For each one, decide the right invalidation strategy and any edge cases to handle:
+
+**Scenario A:** An event organizer changes the event description from "Doors open at 7pm" to "Doors open at 8pm." The event page is cached at the CDN with `s-maxage=60`.
+
+Questions:
+- How quickly should this update be visible to users?
+- Is this worth an active purge call? Or is a 60-second TTL acceptable?
+- What if the change was "Event cancelled" instead?
+
+**Scenario B:** TicketPulse adds a new feature where event pages display a real-time ticket count. The ticket count changes every second during a flash sale.
+
+Questions:
+- Can you cache this at the CDN? If so, with what TTL?
+- What is the user experience trade-off between freshness and performance?
+- Is there a different architectural approach that avoids the caching problem entirely?
+
+**Scenario C:** A JavaScript bundle (`/assets/app.a1b2c3.js`) cached with `max-age=31536000, immutable` has a security vulnerability. You need to update it immediately.
+
+Questions:
+- How do you invalidate a URL cached with `immutable`?
+- Why is the answer "you change the URL" rather than "you purge the cache"?
+- What build system changes are needed to guarantee this works?
+
+**Answers:**
+- Scenario A: The description change is low urgency — 60s TTL is fine. "Event cancelled" is high urgency — trigger an active purge immediately via the cache invalidation worker.
+- Scenario B: You cannot meaningfully cache a real-time count with a 60s TTL — it will always be wrong during fast sales. Better approach: cache the static event page but serve the ticket count via a separate client-side request to a non-cached API endpoint (or WebSocket). Separating concerns at the page level avoids the problem.
+- Scenario C: Change the URL. Your build tool should generate a new hash when the file content changes (it will, because the content changed). The old URL stays cached (harmless, since no users should have it in their HTML anymore after a new deploy). The new URL is fetched fresh.
+
 ---
 
-## 4. Edge Computing (15 minutes)
+## 4. Edge Computing (20 minutes)
 
 ### Beyond Static Caching: Running Code at the Edge
 
@@ -380,6 +511,64 @@ export default {
 
 This rejects 100% of invalid tokens at the edge. Your origin server never sees them. During a credential stuffing attack, the edge absorbs the load instead of your backend.
 
+### 🛠️ Build: Rate Limiting at the Edge
+
+Here is a more complete Cloudflare Worker that combines JWT validation, rate limiting, and bot detection:
+
+```typescript
+// Cloudflare Worker with rate limiting
+const RATE_LIMIT = 100; // requests per minute per IP
+const RATE_WINDOW = 60; // seconds
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+    const clientIP = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+
+    // Step 1: Bot detection (Cloudflare provides bot score)
+    const botScore = (request as any).cf?.botManagement?.score ?? 100;
+    if (botScore < 30) {
+      // Very likely a bot — reject
+      return new Response('Forbidden', { status: 403 });
+    }
+
+    // Step 2: Rate limiting using Cloudflare KV
+    const rateLimitKey = `rate:${clientIP}`;
+    const currentCount = parseInt(await env.KV.get(rateLimitKey) ?? '0');
+
+    if (currentCount >= RATE_LIMIT) {
+      return new Response('Rate limit exceeded', {
+        status: 429,
+        headers: {
+          'Retry-After': RATE_WINDOW.toString(),
+          'X-RateLimit-Limit': RATE_LIMIT.toString(),
+          'X-RateLimit-Remaining': '0',
+        },
+      });
+    }
+
+    // Increment the counter (with TTL for auto-expiry)
+    await env.KV.put(rateLimitKey, (currentCount + 1).toString(), {
+      expirationTtl: RATE_WINDOW,
+    });
+
+    // Step 3: JWT validation (only for authenticated endpoints)
+    if (url.pathname.startsWith('/api/users') || url.pathname.startsWith('/api/orders')) {
+      const authHeader = request.headers.get('Authorization');
+      if (!authHeader?.startsWith('Bearer ')) {
+        return new Response('Unauthorized', { status: 401 });
+      }
+      // ... validate JWT ...
+    }
+
+    // Forward to origin
+    return fetch(request);
+  },
+};
+```
+
+This single Worker, running at Cloudflare's edge in 300+ cities, handles bot detection, rate limiting, and auth — all before your origin sees a single request.
+
 ### 🤔 Reflect: What Percentage of TicketPulse Requests Could Be Served Entirely from the Edge?
 
 Think about the traffic breakdown:
@@ -391,6 +580,8 @@ Think about the traffic breakdown:
 
 **~80% of TicketPulse requests can be served entirely from the edge** with no origin hit. This means your origin servers only need to handle 20% of total traffic. This is the power of a well-designed CDN and edge compute strategy.
 
+The economic implication: your origin needs to be sized for 20% of expected traffic, not 100%. If you expect 100,000 requests/minute at peak, your origin only needs to handle 20,000 requests/minute. This dramatically reduces infrastructure cost.
+
 ---
 
 ## 5. Reflect (5 minutes)
@@ -399,11 +590,13 @@ Think about the traffic breakdown:
 
 1. **A CDN edge in Tokyo has a cached event page showing 500 tickets available. The origin in US-East knows only 50 are left (they sold fast). A user in Tokyo sees "500 available" and tries to buy. What happens?** How do you handle this gracefully?
 
-2. **You add edge caching with `s-maxage=60`. Your CEO updates the homepage banner and calls you asking why it has not changed. What do you tell them?**
+2. **You add edge caching with `s-maxage=60`. Your CEO updates the homepage banner and calls you asking why it has not changed. What do you tell them? What will you change to prevent this call from happening again?**
 
-3. **Cloudflare Workers have no cold start but limited CPU time (10ms on free, 50ms on paid per request). What kinds of operations fit within 10ms?**
+3. **Cloudflare Workers have no cold start but limited CPU time (10ms on free, 50ms on paid per request). What kinds of operations fit within 10ms? What operations are too slow?**
 
 4. **A competitor runs their entire application at the edge using Cloudflare Workers + Durable Objects. What are the trade-offs compared to TicketPulse's origin-centric architecture?**
+
+5. **You have a TicketPulse event page with `s-maxage=60`. During a Taylor Swift flash sale, 50,000 requests/second hit the CDN for that event page. How many of those requests reach your origin server?** (Hint: think about cache hit rate after the first requests warm the cache.)
 
 ---
 
@@ -415,7 +608,9 @@ After this module, you should have:
 - [ ] A CDN (Cloudflare or CloudFront) in front of TicketPulse (or a documented setup plan)
 - [ ] Measured cache hit ratio and latency improvement from multiple regions
 - [ ] Understanding of stale-while-revalidate and when to use it
+- [ ] Completed the caching strategy workshop for TicketPulse's key endpoints
 - [ ] A cache invalidation strategy combining TTL, purge API, and versioned URLs
+- [ ] A cache invalidation worker that listens to event update messages and purges affected URLs
 - [ ] A design document listing which TicketPulse operations should run at the edge
 - [ ] Understanding that ~80% of typical web traffic can be served from the edge
 
@@ -428,9 +623,10 @@ After this module, you should have:
 | **CDN basics** | Cache content at 400+ edge locations worldwide. First request is slow, subsequent requests are fast. |
 | **Cache-Control headers** | The origin server controls caching behavior. `immutable` for hashed assets, `s-maxage` + `stale-while-revalidate` for dynamic content. |
 | **Stale-while-revalidate** | Serve stale content instantly while refreshing in the background. Best of both worlds for freshness and speed. |
-| **Cache invalidation** | Use versioned URLs for static assets, purge API for critical updates, TTL for everything else. |
+| **Cache invalidation** | Use versioned URLs for static assets, purge API for critical updates, TTL for everything else. Never try to invalidate `immutable` URLs — change the URL instead. |
 | **Edge compute** | Run code at CDN edge locations. Best for auth, feature flags, geo-routing, and rate limiting. Not for database operations. |
 | **80% at the edge** | Most web traffic is cacheable or computable at the edge. Design your system to minimize origin hits. |
+| **Edge economics** | Shifting 80% of traffic to the edge means your origin only needs to handle 20% of peak load. This reduces infrastructure cost significantly. |
 
 ---
 
@@ -445,6 +641,8 @@ After this module, you should have:
 | **Purge / Invalidation** | Removing cached content from CDN edge locations, forcing the next request to fetch from origin. |
 | **Edge compute** | Running application code at CDN edge locations instead of (or in addition to) a central origin server. |
 | **V8 isolate** | A lightweight execution environment used by Cloudflare Workers. Faster startup than containers or VMs. |
+| **TLS termination** | The process of decrypting an HTTPS connection. When done at the edge, users get fast TLS handshakes regardless of origin distance. |
+| **Cache warming** | The process of pre-populating CDN caches, either by sending requests through the CDN or using the provider's warming API. |
 
 ---
 
@@ -453,5 +651,6 @@ After this module, you should have:
 - [Cloudflare CDN Documentation](https://developers.cloudflare.com/cache/) — comprehensive caching guide
 - [HTTP Caching (MDN)](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching) — the definitive reference for Cache-Control
 - [Cloudflare Workers Documentation](https://developers.cloudflare.com/workers/) — edge compute platform
-- Jake Archibald, ["Caching best practices"](https://jakearchibald.com/2016/caching-best-practices/) — practical caching patterns
-- Chapter 1 of the 100x Engineer Guide: Section 2.3 (Load Balancing), Section 4.7 (Graceful Degradation)
+- Jake Archibald, ["Caching best practices"](https://jakearchibald.com/2016/caching-best-practices/) — practical caching patterns, especially on the `immutable` directive
+- **Chapter 21 of the 100x Engineer Guide**: Networking fundamentals — BGP, anycast, TLS, and the physics of latency
+- [Cloudflare Blog: "How Cloudflare's Global Network Works"](https://blog.cloudflare.com/) — the engineering behind one of the world's largest CDNs

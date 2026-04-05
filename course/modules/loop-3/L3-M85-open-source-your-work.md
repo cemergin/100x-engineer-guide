@@ -1,6 +1,6 @@
 # L3-M85: Open Source Your Work
 
-> **Loop 3 (Mastery)** | Section 3D: The Cutting Edge | ⏱️ 45 min | 🟢 Core | Prerequisites: L2-M34, L3-M67
+> **Loop 3 (Mastery)** | Section 3D: The Cutting Edge | ⏱️ 60 min | 🟢 Core | Prerequisites: L2-M34, L3-M67
 >
 > **Source:** Chapter 28 of the 100x Engineer Guide
 
@@ -10,13 +10,16 @@
 - Preparing a repository that invites contributions: README, CONTRIBUTING.md, LICENSE, issue templates
 - What makes open source READMEs effective (studied from Redis, Fastify, and Prisma)
 - Publishing to npm with semantic versioning and automated releases
+- How to actually contribute to an existing OSS project (the pull request path)
 - What makes a project actually get adopted vs what makes it sit at zero stars
 
 ## Why This Matters
 
-Throughout this course, you have built components that solve real problems: a rate limiter, a webhook delivery system, an event bus, a circuit breaker. These are not TicketPulse-specific -- they solve problems that thousands of other engineers face every day.
+Throughout this course, you have built components that solve real problems: a rate limiter, a webhook delivery system, an event bus, a circuit breaker. These are not TicketPulse-specific — they solve problems that thousands of other engineers face every day.
 
-Open-sourcing one of these components does three things simultaneously. First, it forces you to write clean, documented, well-tested code -- the act of preparing for public release improves the code. Second, it builds your engineering profile in a way that a resume cannot -- a maintained open source project with a clear README, tests, and CI demonstrates more engineering maturity than any number of bullet points. Third, it contributes back to the ecosystem you have been learning from.
+Open-sourcing one of these components does three things simultaneously. First, it forces you to write clean, documented, well-tested code — the act of preparing for public release improves the code. Second, it builds your engineering profile in a way that a resume cannot — a maintained open source project with a clear README, tests, and CI demonstrates more engineering maturity than any number of bullet points. Third, it contributes back to the ecosystem you have been learning from.
+
+> 💡 **Chapter 28 of the 100x Engineer Guide** covers both sides of open source: reading other people's code to accelerate your own learning, and contributing your own work back. This module is the applied companion: you will go from "I have a component" to "I have a published, documented, maintained library."
 
 Most engineers never open-source anything because they think their code is not good enough, or the problem is too small, or someone else already solved it. But a well-packaged solution to a real problem, even a small one, is more valuable than an ambitious project that is half-finished and undocumented.
 
@@ -30,13 +33,48 @@ Look at what you have built across the course. Which components are general-purp
 
 | Component | Module Built | Reusable? | Existing Alternatives |
 |-----------|-------------|-----------|----------------------|
-| Rate limiter (token bucket + sliding window) | L1-M15 | High -- every API needs one | Many, but yours has a specific approach |
-| Webhook delivery system (with retries, signatures, dead letter) | L2-M35 | High -- common infra need | Few good open-source options |
-| Event bus (pub/sub with typed events) | L2-M34 | Medium -- tightly coupled to your stack | Many options exist |
-| Circuit breaker | L2-M38 | High -- cross-cutting concern | Existing libraries, but good for learning |
-| Durable workflow engine (simplified) | L3-M81 | Low -- better to use Temporal/Restate | Mature alternatives exist |
+| Rate limiter (token bucket + sliding window) | L1-M15 | High — every API needs one | Many, but yours has a specific approach |
+| Webhook delivery system (with retries, signatures, dead letter) | L2-M35 | High — common infra need | Few good open-source options |
+| Event bus (pub/sub with typed events) | L2-M34 | Medium — tightly coupled to your stack | Many options exist |
+| Circuit breaker | L2-M38 | High — cross-cutting concern | Existing libraries, but good for learning |
+| Durable workflow engine (simplified) | L3-M81 | Low — better to use Temporal/Restate | Mature alternatives exist |
 
 Pick one. For this module, we will use the **webhook delivery system** as the example, but apply the same process to whichever component you choose.
+
+### 📐 Exercise: Component Readiness Assessment
+
+Before you extract a component for open source, assess its readiness:
+
+```
+OSS READINESS CHECKLIST
+────────────────────────
+
+1. SCOPE CLARITY
+   □ Can you describe the component in one sentence?
+   □ Does it have clear boundaries — what it does and what it does NOT do?
+   □ Is there a README.md draft in your head? (If you cannot describe it, users cannot use it)
+
+2. QUALITY BASELINE
+   □ Does the component have unit tests? (Target: >80% coverage)
+   □ Do the tests describe behavior, not implementation?
+   □ Would the tests catch a regression if you refactored internals?
+
+3. DEPENDENCY HEALTH
+   □ How many dependencies does it have?
+   □ Are all dependencies actively maintained?
+   □ Can a new user install it without also installing 50 other things?
+
+4. API STABILITY
+   □ Would you be comfortable making this public API a contract with users?
+   □ Have you tried using the API from an "outside" perspective?
+   □ Have you tried to write documentation for every public function?
+      (Writing docs often reveals API design problems)
+
+5. NAME AVAILABILITY
+   □ Is the npm package name available? (check npmjs.com)
+   □ Is the GitHub repository name available?
+   □ Does a Google search for the name return anything confusing?
+```
 
 ---
 
@@ -185,6 +223,35 @@ Before finalizing your README, study three well-known projects:
 - Badges for build status, npm version, license
 - "Why this over alternatives?" section for competitive landscapes
 
+### 📐 README Critique Exercise
+
+Find any open source library on npm that you have used. Read its README critically for 5 minutes:
+
+```
+README CRITIQUE FRAMEWORK
+─────────────────────────
+
+1. First 10 seconds: Can you tell what it does?
+   □ Yes  □ No  □ Partially
+
+2. First screenful: Is there an install command?
+   □ Yes  □ No
+
+3. First screenful: Is there a working code example?
+   □ Yes  □ No
+
+4. After 2 minutes: Do you know when to use it and when NOT to?
+   □ Yes  □ No  □ Partially
+
+5. After 5 minutes: Could you use it without visiting any other URL?
+   □ Yes  □ No  □ I would need to visit the API docs
+
+6. What is the single most confusing thing about this README?
+   Write it down.
+```
+
+Then apply the same critique to your own README draft. The confusion you found in someone else's README is likely present in yours too.
+
 ### CONTRIBUTING.md
 
 ```markdown
@@ -219,6 +286,18 @@ pnpm lint        # Run linter
 - Update the README if the public API changes.
 - Follow the existing code style (enforced by the linter).
 
+## What Makes a Good Issue
+
+For bug reports:
+- What did you expect to happen?
+- What actually happened?
+- A minimal reproduction (ideally a code snippet)
+- Node.js version and OS
+
+For feature requests:
+- The use case that motivates it (not just the feature)
+- What you tried before opening the request
+
 ## Code of Conduct
 
 Be respectful and constructive. We are all here to build good software.
@@ -229,6 +308,8 @@ Open a GitHub Discussion or file an issue.
 ```
 
 ### LICENSE
+
+Choose MIT for maximum adoption. If you want patent protection, use Apache 2.0. If you want to ensure derivatives stay open, use GPL. When in doubt, MIT.
 
 ```
 MIT License
@@ -249,8 +330,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 ```
-
-Choose MIT for maximum adoption. If you want patent protection, use Apache 2.0. If you want to ensure derivatives stay open, use GPL. When in doubt, MIT.
 
 ### Issue Templates
 
@@ -275,6 +354,12 @@ Steps to reproduce:
 ## Expected Behavior
 
 What you expected to happen.
+
+## Minimal Reproduction
+
+```typescript
+// A code snippet that demonstrates the bug
+```
 
 ## Environment
 
@@ -312,6 +397,8 @@ jobs:
       - run: pnpm test
       - run: pnpm build
 ```
+
+Testing against Node 18, 20, and 22 ensures your library works for users who have not yet upgraded. A badge showing green across all three Node versions builds trust.
 
 ### Automated Publishing with Changesets
 
@@ -352,18 +439,99 @@ jobs:
 
 ---
 
-## 4. Reflect: What Makes Projects Get Adopted?
+## 4. Contributing to Existing OSS Projects
+
+Releasing your own library is one side of open source. The other side — contributing to existing projects — is often more impactful for learning and career growth.
+
+### The OSS Contribution Path
+
+```
+CONTRIBUTING TO AN EXISTING OSS PROJECT
+────────────────────────────────────────
+
+Step 1: Find a good first issue
+  - GitHub: search "good first issue" or "help wanted" labels
+  - Pick something specific and bounded (not "add feature X")
+  - Comment on the issue before starting work: "I'd like to work on this"
+    (Prevents duplicated effort and gets maintainer buy-in early)
+
+Step 2: Set up the dev environment correctly
+  - Read CONTRIBUTING.md thoroughly before writing a line
+  - Run the full test suite locally — if it doesn't pass, stop and investigate
+  - Understand how the CI works before you start
+
+Step 3: Make the smallest possible change
+  - Open source maintainers review dozens of PRs a week
+  - A 50-line PR with clear intent gets reviewed in hours
+  - A 500-line PR with unclear scope waits days or weeks
+  - If your change is large, split it into multiple PRs
+
+Step 4: Write the PR description for a maintainer who knows nothing about you
+  - What problem does this solve?
+  - What approach did you take, and why?
+  - Are there any trade-offs to this approach?
+  - How did you test it?
+
+Step 5: Respond to review quickly and graciously
+  - The maintainer is a volunteer
+  - "No" is a valid answer and not a rejection of you as a person
+  - If they request changes, do them promptly and add a review comment
+    explaining what you changed and why
+```
+
+### 🛠️ Exercise: Your First Real Contribution
+
+Pick a library that TicketPulse depends on. Look at its issue list. Find one issue where you can contribute:
+
+**Option A: Documentation improvement** (easiest, highest acceptance rate)
+- Find a function or config option with unclear documentation
+- Submit a PR that clarifies it with a concrete example
+- Acceptance rate: very high, turnaround: fast
+
+**Option B: Fix a bug with a clear reproduction case**
+- Find an issue where someone posted a code snippet that demonstrates the bug
+- Reproduce it locally first
+- Write a failing test that captures the bug, then fix it
+- Acceptance rate: high if the fix is clean
+
+**Option C: Add a missing test case**
+- Look at the test directory — what edge cases are not tested?
+- Add a test for one of them (no behavior change, just coverage)
+- Acceptance rate: high, low risk
+
+For your first contribution, Option A or B is ideal. Document the experience:
+- Which library did you target?
+- What was the issue?
+- How long did it take to set up the dev environment?
+- What was the review feedback?
+- Was your PR accepted?
+
+The experience of having code reviewed by a stranger — and incorporating their feedback — teaches things that internal code review cannot.
+
+### The OSS Contribution as Portfolio
+
+A merged PR to a popular library is worth more than a hundred lines of private code. Here is why:
+
+1. **Proof of collaboration:** You navigated someone else's codebase, understood their conventions, and delivered something they were willing to merge.
+2. **Public artifact:** Any interviewer can read your PR and the review conversation.
+3. **Community recognition:** Repeated contributions earn you contributor status, which opens doors to maintainership.
+
+Build a habit: one small contribution per month. After a year, you have 12 PRs across 3-4 projects. That is a meaningful open source footprint.
+
+---
+
+## 5. Reflect: What Makes Projects Get Adopted?
 
 ### Stop and Think (10 minutes)
 
 Think about the last three open source libraries you adopted. Why did you choose them?
 
 **What drives adoption:**
-- **Solves a real, specific problem** -- not "a framework for everything" but "does this one thing well"
-- **Easy to start** -- install command + working example in under 2 minutes
-- **Good documentation** -- API reference, examples, error messages that help you fix the problem
-- **Active maintenance** -- recent commits, responsive issues, regular releases
-- **Small surface area** -- fewer dependencies, smaller bundle, less to go wrong
+- **Solves a real, specific problem** — not "a framework for everything" but "does this one thing well"
+- **Easy to start** — install command + working example in under 2 minutes
+- **Good documentation** — API reference, examples, error messages that help you fix the problem
+- **Active maintenance** — recent commits, responsive issues, regular releases
+- **Small surface area** — fewer dependencies, smaller bundle, less to go wrong
 
 **What does NOT drive adoption:**
 - Number of features (more features = more complexity = fewer adopters)
@@ -372,9 +540,22 @@ Think about the last three open source libraries you adopted. Why did you choose
 
 One well-maintained, well-documented, focused library demonstrates more engineering maturity than fifty abandoned repositories.
 
+### 🤔 The "Zero Stars" Autopsy
+
+Look at a repository on GitHub with 0-5 stars that has been around for more than a year. What went wrong?
+
+Common patterns:
+- No README or a README with only "TODO"
+- Works on the author's machine but has no CI
+- Solves a problem that only exists in one codebase
+- Solves a real problem but is 10x harder to set up than alternatives
+- Published and then never updated (security vulnerabilities accumulate)
+
+Apply this analysis to your own project before you publish. If you can identify the failure mode, you can prevent it.
+
 ---
 
-## 5. Maintenance: The Work After the Launch
+## 6. Maintenance: The Work After the Launch
 
 ### What Maintenance Looks Like
 
@@ -406,6 +587,35 @@ Publishing is 20% of the effort. Maintenance is the other 80%. Be prepared for:
 - Timeout errors now include the URL that timed out (#23)
 ```
 
+### Semver in Practice
+
+```
+SEMANTIC VERSIONING QUICK REFERENCE
+─────────────────────────────────────
+
+Given version MAJOR.MINOR.PATCH (e.g., 1.4.2):
+
+PATCH (1.4.2 → 1.4.3):
+  - Bug fixes
+  - Performance improvements
+  - Internal refactoring with no API changes
+  Users can upgrade safely with no code changes.
+
+MINOR (1.4.2 → 1.5.0):
+  - New features that are backward compatible
+  - New optional parameters
+  - New exports
+  Users can upgrade safely. New functionality is available.
+
+MAJOR (1.4.2 → 2.0.0):
+  - Breaking API changes
+  - Removed exports or parameters
+  - Changed behavior that users may depend on
+  Users MUST read the migration guide before upgrading.
+```
+
+The discipline of semantic versioning is a contract with your users. Break it once and they stop trusting your releases.
+
 ### When to Archive a Project
 
 It is better to archive a project clearly than to let it rot silently. If you are no longer maintaining a library:
@@ -428,17 +638,18 @@ Archiving with a clear message and alternatives is a sign of engineering maturit
 
 You have:
 
-- [x] Chosen a TicketPulse component to open-source
+- [x] Chosen a TicketPulse component to open-source using the readiness assessment
 - [x] Structured the repository with README, CONTRIBUTING.md, LICENSE, issue templates
-- [x] Studied effective READMEs from Redis, Fastify, and Prisma
+- [x] Studied effective READMEs from Redis, Fastify, and Prisma, and critiqued one critically
 - [x] Set up CI (multi-version Node testing) and automated publishing (changesets)
-- [x] Reflected on what drives adoption vs what does not
+- [x] Understood the OSS contribution path and attempted a real contribution
+- [x] Reflected on what drives adoption vs what makes projects sit at zero stars
 
-**Key insight**: Open source is not about writing impressive code. It is about solving a real problem and packaging the solution so well that other engineers can adopt it in minutes. The README is more important than the implementation.
+**Key insight**: Open source is not about writing impressive code. It is about solving a real problem and packaging the solution so well that other engineers can adopt it in minutes. The README is more important than the implementation. And one merged PR to an existing library teaches you more than a dozen unreviewed personal projects.
 
 ---
 
-**Next module**: L3-M86 -- AI-Powered Engineering Workflow, where we use Claude Code to implement a new TicketPulse feature and evaluate where AI accelerates us and where it needs correction.
+**Next module**: L3-M86 — AI-Powered Engineering Workflow, where we use Claude Code to implement a new TicketPulse feature and evaluate where AI accelerates us and where it needs correction.
 
 ## Key Terms
 
@@ -450,3 +661,13 @@ You have:
 | **Semver** | Semantic Versioning; a versioning scheme (MAJOR.MINOR.PATCH) that communicates the nature of changes in each release. |
 | **Changeset** | A structured description of changes in a release, often auto-generated from commit messages or PR metadata. |
 | **Maintainer** | A person responsible for reviewing contributions, merging changes, and guiding the direction of an open-source project. |
+| **Good first issue** | A GitHub label used by maintainers to mark issues that are appropriate for new contributors. |
+| **Scope creep** | The gradual expansion of a project's goals beyond its original intent, often making it harder to use and maintain. |
+
+## Further Reading
+
+- **Chapter 28 of the 100x Engineer Guide**: Code reading, OSS contribution, and building your engineering portfolio
+- **GitHub's "How to contribute to open source"** — practical guide from the platform perspective
+- **"Working in Public" by Nadia Eghbal** — the economics and dynamics of modern open source maintenance
+- **firstcontributions.github.io** — a practice repository for making your very first PR
+- **choosealicense.com** — side-by-side license comparison to help you choose
