@@ -314,18 +314,18 @@ Your numbers will differ. The important thing is identifying the sequence and un
 ### 🐛 Debug: Find the First Bottleneck
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-Before drawing the architecture, try to list every service, database, message broker, and external dependency from memory. Then verify against your actual setup.
+<summary>💡 Hint 1</summary>
+Run `k6 run ticketpulse-stress-test.js` while watching `kubectl top pods -n ticketpulse` in a second terminal. The first pod to hit its CPU or memory limit is your primary bottleneck. Common first failure: the event-service database connection pool fills up around 200 concurrent users because each purchase checks ticket availability, and the connection pool defaults to 20 connections.
 </details>
 
 <details>
-<summary>💡 Hint 2: Approach</summary>
-Use a load testing tool (wrk or k6) to find the breaking point. Gradually increase concurrency and watch Grafana for the metric that degrades first.
+<summary>💡 Hint 2</summary>
+In Grafana, correlate three panels simultaneously: (1) `rate(http_requests_total{status=~"5.."}[1m])` for error rate, (2) `histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[1m]))` for p99 latency, (3) `pg_stat_activity_count{datname="events"}` for database connections. The metric that degrades FIRST is the root bottleneck -- everything else is a cascade.
 </details>
 
 <details>
-<summary>💡 Hint 3: Almost There</summary>
-Rate every Loop 2 skill on the self-assessment rubric. Be honest about gaps -- Loop 3 will build on your strongest areas while strengthening the weakest.
+<summary>💡 Hint 3</summary>
+To double capacity from the current ceiling, identify the cheapest fix: if the bottleneck is database connections, increase `max_connections` in Postgres and the pool size in the application (cheapest). If it is CPU on a service pod, increase the resource limit or add replicas via HPA (medium cost). If it is a slow synchronous call to the payment provider, add a circuit breaker with a shorter timeout and a retry queue (highest effort but biggest payoff).
 </details>
 
 
@@ -337,18 +337,18 @@ Using the observability skills from L2-M58, identify:
 
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-Start with the end-to-end latency measurement. Use distributed tracing to identify which service contributes the most time to the critical path.
+<summary>💡 Hint 1</summary>
+Open Jaeger and search for traces with `minDuration=1s` during the load test. The waterfall view shows which service span dominates the critical path. If `event-service: GET /availability` takes 800ms out of a 1200ms total trace, that is your 67% contributor. Focus optimization there first -- improving a 50ms span by 50% saves 25ms, but improving an 800ms span by 50% saves 400ms.
 </details>
 
 <details>
-<summary>💡 Hint 2: Approach</summary>
-Run a load test with gradually increasing concurrency. Monitor response times, error rates, and resource utilization (CPU, memory, connections) across all services. The first service to degrade is your bottleneck.
+<summary>💡 Hint 2</summary>
+Check Kafka consumer lag during the stress test: `kafka-consumer-groups.sh --describe --group purchase-processor`. If lag grows linearly while traffic is constant, the consumer is processing slower than the production rate. Solutions in order of effort: (1) increase consumer `max.poll.records` to process batches, (2) add consumer replicas with more Kafka partitions, (3) switch to an async consumer with a connection pool instead of single-threaded processing.
 </details>
 
 <details>
-<summary>💡 Hint 3: Almost There</summary>
-Common bottlenecks in order of likelihood: (1) database connection pool exhaustion, (2) a slow SQL query that was not visible at low traffic, (3) a synchronous call to an external service without a timeout, (4) insufficient container CPU/memory limits in Kubernetes.
+<summary>💡 Hint 3</summary>
+Fill in the results table from section 2.4 with your actual numbers. The "First Problem" column is the most valuable -- it tells you the order of cascade. Typical pattern: DB connection pool exhaustion (200 users) -> purchase service timeouts (400 users) -> circuit breaker opens on payment service (600 users) -> Kafka consumer lag grows (800 users) -> pod OOMKills (1000 users). Your optimization plan should address these in order.
 </details>
 
 ---

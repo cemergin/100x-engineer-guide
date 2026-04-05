@@ -143,18 +143,18 @@ Your RFC should address:
 
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-An RFC has a standard structure: problem statement, proposed solution, alternatives considered, and migration plan. Start with the problem — what is broken or missing, and why does it matter?
+<summary>💡 Hint 1</summary>
+For the waitlist data model, consider a `waitlist_entries` table with `(id, event_id, user_id, position, status, notified_at, expires_at, created_at)`. The `position` column enables fair ordering. Use an ADR (Architecture Decision Record) format for the data store choice: "We chose Postgres over a Redis sorted set because waitlist entries need durability across restarts and we need JOIN queries for analytics."
 </details>
 
 <details>
-<summary>💡 Hint 2: Approach</summary>
-The proposed solution should be specific enough to implement but not so detailed it reads like code. Include diagrams, API contracts, and data models. The "alternatives considered" section shows you thought broadly before narrowing.
+<summary>💡 Hint 2</summary>
+The Proposed Solution should include an API contract: `POST /api/events/:id/waitlist` (join), `DELETE /api/events/:id/waitlist` (leave), `GET /api/events/:id/waitlist/position` (check position). Include the notification flow: when inventory is released, a Kafka consumer reads `inventory.released` events and sends batched notifications via the notification service. Specify the time-limited purchase window (e.g., 15 minutes).
 </details>
 
 <details>
-<summary>💡 Hint 3: Almost There</summary>
-The strongest RFCs have a clear "non-goals" section (what this proposal intentionally does NOT address), a rollback plan (how to undo it if it fails), and concrete success metrics (how will you know it worked). Write for a reader who has 15 minutes, not 2 hours.
+<summary>💡 Hint 3</summary>
+Address the scale concern explicitly: "A Taylor Swift concert waitlist could have 50,000 entries. Notification delivery at this scale requires batched processing (100 users per batch, 1-second delay between batches) to avoid overwhelming the email provider. Use a feature flag to control batch size during initial rollout." Add a rollback plan: "The waitlist can be disabled via feature flag. Existing waitlist entries remain in the database but no new notifications are sent."
 </details>
 
 ### 🤔 Reflect: Pre-Address Reviewer Concerns
@@ -218,18 +218,18 @@ Include names, PagerDuty schedules, Slack channels.]
 ### 🛠️ Build: Write the TicketPulse Purchase Failures Runbook
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-Think about your audience: an RFC is for decision-makers (scope and alternatives matter), a runbook is for a half-awake engineer (commands must be copy-pasteable), a postmortem is for the team (blameless, focused on prevention).
+<summary>💡 Hint 1</summary>
+A runbook is a how-to guide (task-oriented in the Diataxis framework), not an explanation. Every step must have a copy-pasteable command. Never say "check the database" -- say `kubectl -n ticketpulse exec -it deployment/event-db -- psql -U ticketpulse -d events -c "SELECT count(*), state FROM pg_stat_activity GROUP BY state;"` and specify what the output means.
 </details>
 
 <details>
-<summary>💡 Hint 2: Approach</summary>
-Use the Diataxis framework to categorize your document: tutorial (learning-oriented), how-to (task-oriented), explanation (understanding), reference (information). Each has a different structure.
+<summary>💡 Hint 2</summary>
+Structure the runbook as a decision tree: Step 1 (assess impact) branches to "major outage" (escalate immediately) or "degraded" (continue investigation). Step 2 (check deployments) branches to "recent deployment found" (rollback with `kubectl rollout undo`) or "no recent deployment" (check dependencies). Each branch has a specific action and a way to verify it worked.
 </details>
 
 <details>
-<summary>💡 Hint 3: Almost There</summary>
-Fill in the template provided, focusing on concrete details from TicketPulse. An RFC needs problem statement, proposed solution, alternatives considered, and rollout plan. A runbook needs symptom, diagnostic steps, mitigation commands, and escalation path.
+<summary>💡 Hint 3</summary>
+Include exact log search queries: `kubectl -n ticketpulse logs deployment/purchase-service --since=30m | jq 'select(.level == "error") | {message, error, traceId}'`. Include the escalation path: "If error rate > 50% or unresolved after 15 minutes, page the purchase-service team lead via PagerDuty: #tp-purchase-oncall." Include the verification step: "After mitigation, watch the Grafana error rate panel for 5 minutes. If it drops below 1%, the incident is resolved."
 </details>
 
 
@@ -241,18 +241,18 @@ Your runbook should cover:
 ```markdown
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-A runbook is not documentation — it is a step-by-step procedure an on-call engineer follows at 3am when the alert fires. Every step must be copy-pasteable.
+<summary>💡 Hint 1</summary>
+For the database connectivity check, provide the exact command: `kubectl -n ticketpulse exec -it deployment/purchase-service -- node -e "const pg = require('pg'); const p = new pg.Pool({connectionString: process.env.DATABASE_URL}); p.query('SELECT 1').then(() => console.log('DB OK')).catch(e => console.error('DB FAIL:', e.message))"`. Provide expected output for both success and failure.
 </details>
 
 <details>
-<summary>💡 Hint 2: Approach</summary>
-Structure: (1) symptoms and alert description, (2) immediate triage steps with exact commands, (3) common causes ranked by likelihood, (4) resolution steps for each cause, (5) escalation path if unresolved after 15 minutes.
+<summary>💡 Hint 2</summary>
+For the Kafka consumer lag check: `kubectl -n ticketpulse exec -it kafka-0 -- kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group purchase-processor`. Expected: LAG column should be 0-10. If LAG > 1000 on any partition, the consumer is stuck. Resolution: restart the consumer pod with `kubectl -n ticketpulse rollout restart deployment/purchase-processor`.
 </details>
 
 <details>
-<summary>💡 Hint 3: Almost There</summary>
-Include exact shell commands, dashboard URLs, and log search queries. Never say "check the database" — say "run `SELECT count(*) FROM pg_stat_activity WHERE state = 'idle in transaction'` and if the result is > 10, run `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state = 'idle in transaction' AND duration > interval '5 minutes'`."
+<summary>💡 Hint 3</summary>
+For the connection pool check: `kubectl -n ticketpulse exec -it deployment/purchase-db -- psql -U ticketpulse -c "SELECT state, count(*) FROM pg_stat_activity GROUP BY state;"`. If `active` > 15 (out of a pool of 20), connections are nearly exhausted. Immediate mitigation: `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state = 'idle in transaction' AND query_start < now() - interval '5 minutes';` -- this kills stale transactions hogging connections.
 </details>
 
 ### 1. Assess Impact
@@ -408,18 +408,18 @@ slow escalation?]
 ### 🛠️ Build: Write the Postmortem for the L2-M58 Incident
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-Think about your audience: an RFC is for decision-makers (scope and alternatives matter), a runbook is for a half-awake engineer (commands must be copy-pasteable), a postmortem is for the team (blameless, focused on prevention).
+<summary>💡 Hint 1</summary>
+Start with a one-paragraph summary that any engineer in the company can understand: what broke, how long, how many users were affected, and what fixed it. Example: "Purchase error rate spiked to 8.3% for 43 minutes due to a missing database index on the tickets table. The slow query caused cascading connection pool exhaustion. Mitigation: added a composite index. 1,247 purchase attempts failed."
 </details>
 
 <details>
-<summary>💡 Hint 2: Approach</summary>
-Use the Diataxis framework to categorize your document: tutorial (learning-oriented), how-to (task-oriented), explanation (understanding), reference (information). Each has a different structure.
+<summary>💡 Hint 2</summary>
+Apply the "5 Whys" to find the root cause: (1) Why did purchases fail? Connection pool exhausted. (2) Why was the pool exhausted? Connections held for 4+ seconds per query. (3) Why were queries slow? Sequential scan on 50K-row tickets table. (4) Why was there a sequential scan? Missing index on `(event_id, status)`. (5) Why was the index missing? The migration that added the new query path did not include an index, and CI does not check query plans.
 </details>
 
 <details>
-<summary>💡 Hint 3: Almost There</summary>
-Fill in the template provided, focusing on concrete details from TicketPulse. An RFC needs problem statement, proposed solution, alternatives considered, and rollout plan. A runbook needs symptom, diagnostic steps, mitigation commands, and escalation path.
+<summary>💡 Hint 3</summary>
+Make action items specific and measurable: not "improve monitoring" but "add Grafana alert: `pg_stat_activity_count{datname='events'} > 40` triggers PagerDuty (owner: Alice, due: March 15)". Not "add tests" but "add a load test scenario with events containing 10K+ tickets and assert p99 < 200ms (owner: Bob, due: March 22)". Each action item should have a Jira/Linear ticket number.
 </details>
 
 
@@ -471,18 +471,18 @@ Each action item must be:
 
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-A postmortem is blameless — it focuses on what happened, why, and how to prevent recurrence. Never name individuals as the cause.
+<summary>💡 Hint 1</summary>
+Blameless means writing "the deployment at 2:15 PM introduced a query regression" not "Alice's deployment broke production." Systems fail, not people. Focus on the process gaps: why did the system allow a deployment with a missing index? What guardrails were absent?
 </details>
 
 <details>
-<summary>💡 Hint 2: Approach</summary>
-Structure: (1) incident summary (one paragraph), (2) timeline with timestamps, (3) root cause analysis (the "5 whys"), (4) impact (users affected, revenue lost, SLA breached), (5) action items with owners and due dates.
+<summary>💡 Hint 2</summary>
+Include a "What Went Well" section: (1) "The Grafana alert fired within 5 minutes of the error rate spike." (2) "Distributed tracing in Jaeger pinpointed the slow query within 3 minutes of investigation." (3) "The read-your-writes pattern from L2-M51 prevented data loss during the period of degraded writes." Celebrating what worked builds confidence in the team's observability investment.
 </details>
 
 <details>
-<summary>💡 Hint 3: Almost There</summary>
-The most valuable section is "what went well" alongside "what went wrong." Celebrate the things that worked (alerts fired correctly, runbook was followed, rollback was fast). Action items must be specific and assigned — "improve monitoring" is not an action item; "add alert for connection pool utilization > 80% (owner: Alice, due: March 15)" is.
+<summary>💡 Hint 3</summary>
+Use the ADR (Architecture Decision Record) format for each action item: "We will add `EXPLAIN ANALYZE` checks to the CI pipeline for all migration files because the missing index was not caught during code review. This trades ~30 seconds of CI time per migration for early detection of query regressions. Alternative considered: manual review -- rejected because human reviewers consistently miss index requirements on large tables."
 </details>
 
 ---
