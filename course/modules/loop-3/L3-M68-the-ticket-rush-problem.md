@@ -49,6 +49,10 @@ Stop. Before reading any implementation, design the ticket rush system yourself.
 3. Where is the bottleneck: the application server, the database, or the network?
 4. Should you process all 50K requests simultaneously, or queue them?
 
+### 🤔 Prediction Prompt
+
+Before reading the solutions, predict: will the bottleneck be the application server, the database, or something else entirely? What is the simplest mechanism that could prevent the 501st ticket from being sold?
+
 Write down your design. Draw the data flow. Then continue.
 
 ---
@@ -759,9 +763,16 @@ Before moving on, verify:
 
 ---
 
+
+> **What did you notice?** Consider how this connects to systems you've worked on. Where have you seen similar patterns — or missed opportunities to apply them?
+
 ## Summary
 
 The ticket rush is a concurrency gauntlet. The naive approach fails immediately. Optimistic locking at the database level is the foundation of correctness -- never rely on application-level checks alone. A virtual queue transforms a chaotic stampede into an orderly line, with WebSocket providing real-time feedback. Database constraints are the final safety net: even if everything else has a bug, the database will refuse the 501st ticket.
+
+### 🤔 Reflection Prompt
+
+Compare your initial design from Section 1 with the final solution. What did you get right? What failure mode would have bitten you hardest in production?
 
 This pattern -- queue + optimistic locking + idempotency + database constraints -- applies far beyond ticketing. Flash sales, limited-edition drops, reservation systems, auction closings: any time many users compete for scarce resources under time pressure.
 
@@ -774,3 +785,9 @@ This pattern -- queue + optimistic locking + idempotency + database constraints 
 | **Distributed lock** | A lock held across multiple processes or machines, ensuring only one can access a resource at a time. |
 | **FOR UPDATE SKIP LOCKED** | A PostgreSQL clause that locks selected rows and skips any already locked by another transaction. |
 | **Race condition** | A bug where the system's behavior depends on the unpredictable timing of concurrent operations. |
+
+---
+
+## What's Next
+
+Next up: **[L3-M69: Notification System](L3-M69-notification-system.md)** -- you will design the multi-channel notification system that tells users their ticket was confirmed, their event is tomorrow, or their payment failed.

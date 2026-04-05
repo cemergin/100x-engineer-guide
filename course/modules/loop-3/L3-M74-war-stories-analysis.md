@@ -18,13 +18,17 @@ Every major outage has already happened to someone else. Cloudflare, GitHub, Kni
 
 TicketPulse is not Cloudflare. But the failure modes are universal. Regex backtracking, database inconsistency, partial deployments — these can happen to any system at any scale. The question is not "could this happen to us?" but "what would happen when it does?"
 
-> 💡 **Chapter 26 of the 100x Engineer Guide** analyzes these incidents and more (including Facebook's BGP outage, CrowdStrike's kernel update disaster, and GitLab's accidental database deletion). This module is the applied companion — you will not just read the stories, you will run structured analysis and produce artifacts that make TicketPulse more resilient.
+> **Ecosystem note:** Chapter 26 of the 100x Engineer Guide analyzes these incidents and more (including Facebook's BGP outage, CrowdStrike's kernel update disaster, and GitLab's accidental database deletion). This module is the applied companion — you will not just read the stories, you will run structured analysis and produce artifacts that make TicketPulse more resilient.
 
 Sidney Dekker, the human factors researcher, argues that we should study incidents not to find the "root cause" but to understand the system conditions that made failure likely. The cause is never a single mistake. It is always a system that allowed the mistake to propagate. Our analysis framework will reflect that.
 
 ---
 
 ## The Analysis Framework
+
+### 🤔 Prediction Prompt
+
+Before reading the analysis framework, think: when you read a postmortem, what do you look for first -- the technical cause, the human decisions, or the missing safeguards? Your instinct reveals your mental model for how failures happen.
 
 Every war story analysis in this module follows the same structure:
 
@@ -92,7 +96,20 @@ DANGEROUS: /(\w+\s?)+$/      → Exponential: O(2^n)
 
 The pattern is nested quantifiers: a quantifier inside a group that itself has a quantifier. When the regex engine fails to match, it backtracks through every possible combination.
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Regex Safety Audit for TicketPulse
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Run this audit against your codebase right now:
 
@@ -166,6 +183,17 @@ describe('regex ReDoS safety', () => {
 ```
 
 ### 📐 Design: Apply to TicketPulse
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Answer these questions about TicketPulse:
 
@@ -262,6 +290,17 @@ The lesson: the write-path during a split-brain event may be only seconds. The r
 
 ### 🛠️ Build: Consistency Check Design
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 ```sql
 CONSISTENCY CHECK: Ticket Inventory
 ───────────────────────────────────
@@ -317,6 +356,17 @@ async function checkReplicaConsistency(): Promise<void> {
 ```
 
 ### 📐 Design: Apply to TicketPulse
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 ```
 GITHUB VULNERABILITY CHECK
@@ -391,6 +441,17 @@ Each individual shortcut seemed reasonable. The combination was catastrophic. Th
 
 ### 🛠️ Build: Kill Switch Design
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 ```typescript
 // TicketPulse Kill Switches -- feature flags that can be
 // toggled in seconds without a deployment
@@ -448,6 +509,17 @@ If you skip the quarterly drill, the kill switch might not work when you need it
 
 ### 📐 Design: Apply to TicketPulse
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 ```
 KNIGHT CAPITAL VULNERABILITY CHECK
 ───────────────────────────────────
@@ -481,6 +553,17 @@ KNIGHT CAPITAL VULNERABILITY CHECK
 ---
 
 ## 🛠️ Build: Structured Postmortem Template
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 After an incident, the postmortem is the artifact that determines whether the organization learns or repeats the mistake. A poor postmortem produces a list of blame. A great postmortem produces systemic change.
 
@@ -580,6 +663,17 @@ Here is the template TicketPulse should use:
 
 ### 📐 Exercise: Write a Postmortem for TicketPulse
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 Choose one of the following scenarios and write a postmortem using the template above:
 
 **Scenario A:** During a Taylor Swift ticket sale, the tickets service throws 500 errors for 8 minutes because a database migration that ran at midnight added a NOT NULL column without a default, and the code was deployed before the migration completed (migration was on the replica, code was on the primary).
@@ -593,6 +687,17 @@ For the scenario you choose, answer every section of the postmortem. Do not skip
 ---
 
 ## 🛠️ Build: TicketPulse Vulnerability Checklist
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Synthesize lessons from all three war stories into a checklist that any team could use to audit TicketPulse.
 
@@ -662,6 +767,10 @@ For each "No" answer, write an action item with an owner and a due date. This ch
 
 7. **The GitHub incident took 24 hours to recover from a 43-second network partition.** What does this asymmetry tell you about the importance of preventing failure vs planning for recovery?
 
+### 🤔 Reflection Prompt
+
+Which war story hit closest to home for your own systems? What is the single most likely failure mode in your current codebase that, if triggered, would cause the most damage?
+
 ---
 
 ## Key Terms
@@ -687,3 +796,9 @@ For each "No" answer, write an action item with an owner and a due date. This ch
 - **"Normal Accidents" by Charles Perrow**: the theory of why complex, tightly-coupled systems inevitably fail
 - **"The Field Guide to Understanding Human Error" by Sidney Dekker**: why blame is counterproductive and what to study instead
 - **Google SRE Book, Chapter 15**: "Postmortem Culture: Learning from Failure"
+
+---
+
+## What's Next
+
+Next up: **[L3-M75: Cost Optimization](L3-M75-cost-optimization.md)** -- you will analyze TicketPulse's cloud bill and find $6,000/month in savings without degrading the product.

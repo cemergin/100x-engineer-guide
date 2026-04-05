@@ -147,7 +147,7 @@ Read EXPLAIN output **bottom-up** (innermost to outermost):
 - The **actual** time in milliseconds. Startup took 0.03ms, full execution took 24.8ms.
 - Compare estimated rows (300) vs actual rows (287) — close enough. If these differ wildly, your statistics are stale (run `ANALYZE`).
 
-### 💡 Insight: Why Seq Scan is Bad at Scale
+> **Pro tip:** Why Seq Scan is Bad at Scale
 
 With 100K rows, reading 834 pages takes ~25ms. That seems fine. But consider:
 - With 10M rows: 83,400 pages = ~650 MB = **2.5 seconds**
@@ -367,6 +367,8 @@ Without the expression index, Postgres cannot use any index because `LOWER()` tr
 
 ## Part 7: Design Optimal Indexes for TicketPulse (5 min)
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Your Turn
 
 TicketPulse runs these 5 queries most frequently. Design the optimal set of indexes. Think about which indexes overlap and which are truly needed.
@@ -476,6 +478,9 @@ ANALYZE tickets;
 ```
 
 ---
+
+
+> **What did you notice?** Look back at what you just built. What surprised you? What felt harder than expected? That's where the real learning happened.
 
 ## 🏁 Module Summary
 

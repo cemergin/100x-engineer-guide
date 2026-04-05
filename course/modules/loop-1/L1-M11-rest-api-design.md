@@ -837,3 +837,8 @@ Every response uses `{ data: ... }` or `{ error: { code, message } }`. Every lis
 | **Soft delete** | Marking a record as cancelled/deleted without removing it from the database. Preserves history. |
 | **Offset pagination** | Using `page` and `limit` to paginate. Simple but degrades on large datasets. |
 | **Cursor pagination** | Using an opaque token to mark your position. Stable and fast at any depth. |
+---
+
+## What's Next
+
+In **Error Handling That Doesn't Suck** (L1-M12), you'll build on what you learned here and take it further.

@@ -21,7 +21,7 @@ That is enough to be useful. More than useful — that is enough to be the perso
 
 The difference between a helpful new engineer and a panicking new engineer is not knowledge. It is preparation. A new engineer with a tested runbook and practiced muscle memory will outperform an experienced engineer who is winging it every time. This module builds that muscle memory.
 
-> 💡 **Insight**: "The military does not wait for combat to practice combat. Pilots do not wait for engine failure to practice engine failure recovery. And you should not wait for a 2 AM page to practice incident response. The time to learn is now, when the stakes are low and the coffee is hot."
+> **Pro tip:** "The military does not wait for combat to practice combat. Pilots do not wait for engine failure to practice engine failure recovery. And you should not wait for a 2 AM page to practice incident response. The time to learn is now, when the stakes are low and the coffee is hot."
 
 ---
 
@@ -53,6 +53,17 @@ You are the on-call engineer. You are new. The clock is ticking.
 ## Phase 1: The "What Changed?" Drill (~25 min)
 
 ### 🐛 Debug: Systematic Investigation Under Pressure
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 The single most powerful question during any incident is: **what changed?** Systems do not break spontaneously. Something changed — a deploy, a config update, a traffic spike, a dependency failure, a certificate expiry. Your job is to find it, fast.
 
@@ -174,7 +185,20 @@ Overall investigation time  │                      │
 
 ## Phase 2: Rollback Practice (~30 min)
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Three Rollback Methods, Timed
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 You identified the root cause: a bad deployment. Now you need to fix it. There are multiple ways to roll back, and each has different tradeoffs. You are going to practice all three so that when it matters, you do not have to think — you just execute.
 
@@ -313,6 +337,17 @@ Reason:              _______________________________________________
 ## Phase 3: Write Your Personal Runbook (~35 min)
 
 ### 📐 Design: The Document You Open at 2 AM
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Everything you practiced in Phase 1 and Phase 2 needs to be captured in a single document — your personal incident response runbook. This is not a team runbook (those exist too). This is YOUR runbook, tailored to YOUR level of context, YOUR hotlinks, and YOUR muscle memory.
 
@@ -549,3 +584,8 @@ I know when and how to escalate          │
 - L3-M73: Incident Response Simulation — the experienced-team-member version of incident response
 - L2-M47: Alerting & On-Call — the alerting rules that trigger the pages you practiced responding to
 - L2-M58: Debugging in Production — techniques for investigating live system issues
+---
+
+## What's Next
+
+In **Beast Mode — Tribal Knowledge & the Newcomer Superpower** (L3-M91c), you'll build on what you learned here and take it further.

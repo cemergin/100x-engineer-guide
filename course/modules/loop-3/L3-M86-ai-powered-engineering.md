@@ -666,3 +666,8 @@ You have:
 | **Adversarial review** | A technique where the AI is asked to critique and attack its own output, simulating a skeptical reviewer. |
 | **Constraint-first prompting** | A prompting style that specifies what the output must NOT do before describing what it should do. |
 | **Incremental refinement** | An AI workflow pattern where complex output is built in small, verifiable steps rather than generated all at once. |
+---
+
+## What's Next
+
+In **AI-Native Spec-Driven Development** (L3-M86a), you'll build on what you learned here and take it further.

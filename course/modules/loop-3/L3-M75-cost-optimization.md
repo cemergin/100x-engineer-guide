@@ -21,11 +21,15 @@ $15,000/month is $180,000/year. For a startup, that is an engineer's salary. For
 
 Most companies are 30-50% over-provisioned. Not because engineers are careless, but because the default is to over-provision for safety. Nobody gets fired for provisioning too much. They do get fired for an outage caused by under-provisioning. The result is systemic waste.
 
-> 💡 **Chapter 19 of the 100x Engineer Guide** covers AWS architecture holistically — instance types, managed services, and the cost models behind them. This module is the applied companion: you will read the theory, then do real cost math against TicketPulse's actual bill.
+> **Ecosystem note:** Chapter 19 of the 100x Engineer Guide covers AWS architecture holistically — instance types, managed services, and the cost models behind them. This module is the applied companion: you will read the theory, then do real cost math against TicketPulse's actual bill.
 >
 > Airbnb's cost optimization team saved $60M/year by right-sizing their AWS instances. They found that the average EC2 instance was using 12% of its allocated CPU. The other 88% was paying for peace of mind.
 
 ---
+
+### 🤔 Prediction Prompt
+
+Before reading the bill breakdown, estimate: what percentage of a typical cloud bill do you think is waste from over-provisioning? Where do you expect the biggest surprise cost to be hiding?
 
 ## Part 1: Understanding the Bill
 
@@ -344,7 +348,20 @@ This tells Kubernetes to prefer routing traffic to pods in the same availability
 
 ## Part 3: The Cost Calculation Exercise
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Your Own Cost Model
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Before reading the final plan, do this exercise yourself. Using the utilization table from Part 1:
 
@@ -385,6 +402,17 @@ This exercise illustrates why you should model the math before committing. The "
 ## Part 4: The Optimization Plan
 
 ### 🛠️ Build: Cost Optimization Plan
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Compile all opportunities into a prioritized plan:
 
@@ -449,6 +477,17 @@ Enforcement:
 ```
 
 ### 🛠️ Build: Tag Compliance Check
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 ```bash
 # Simple tag compliance check for Terraform
@@ -542,6 +581,17 @@ FOR EACH OPTIMIZATION, ASK:
 
 ### 📐 Exercise: Risky vs Safe Cuts
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 For each of these potential optimizations, classify it as "Safe," "Risky," or "Never" and explain why:
 
 1. Remove the second Redis node (current: 8% CPU average, 40% memory average)
@@ -557,6 +607,17 @@ For each of these potential optimizations, classify it as "Safe," "Risky," or "N
 ---
 
 ## 📐 Design: The Monthly Cost Review
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Cost optimization is not a one-time project. It is a recurring practice.
 
@@ -606,6 +667,10 @@ The most expensive mistake in cloud cost management is the "temporary" resource 
 
 6. **You reserved 9 m5.large instances for a year. Two months later, the architecture changes and you need m5.xlarge instead.** What are your options? What does this teach you about the timing of reserved instance commitments?
 
+### 🤔 Reflection Prompt
+
+Compare your initial estimate of waste percentage with the actual findings. Were you surprised by where the biggest savings were? How does this change your approach to provisioning new infrastructure?
+
 ---
 
 ## Key Terms
@@ -629,3 +694,9 @@ The most expensive mistake in cloud cost management is the "temporary" resource 
 - **AWS Cost Explorer and Compute Optimizer**: built-in tools for identifying right-sizing opportunities
 - **CloudZero, Vantage, or Infracost**: third-party tools for continuous cost monitoring and optimization
 - Kelsey Hightower: "The cloud is not expensive. Your architecture is expensive."
+
+---
+
+## What's Next
+
+Next up: **[L3-M76: System Design Interview Practice](L3-M76-system-design-interview-practice.md)** -- you will apply everything from this course to three system design problems under interview time pressure, building the skill of structured reasoning under constraints.

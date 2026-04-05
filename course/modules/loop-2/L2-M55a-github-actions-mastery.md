@@ -4,6 +4,8 @@
 >
 > **Source:** Chapter 33 of the 100x Engineer Guide
 
+> **Before you continue:** Your CI pipeline runs tests and deploys. But what if you needed to run tests across Node 18, 20, and 22? Or deploy to staging first, wait for approval, then deploy to production? How would you model that workflow?
+
 ---
 
 ## What You'll Learn
@@ -981,6 +983,14 @@ Before moving on, verify:
 | **Composite action** | A reusable action defined in `action.yml` that bundles multiple steps; lighter-weight than a reusable workflow |
 | **Test sharding** | Splitting a test suite across multiple parallel runners to reduce wall-clock execution time |
 | **CODEOWNERS** | A GitHub file that defines which teams must review changes to specific directories or files |
+
+---
+
+---
+
+## What's Next
+
+In **Advanced Authentication** (L2-M56), you'll add OAuth 2.0, RBAC, and multi-factor authentication to TicketPulse's security model.
 
 ---
 

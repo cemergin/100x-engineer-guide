@@ -103,7 +103,7 @@ GET event:1:views
 -- Returns: "102"
 ```
 
-💡 **Insight:** `INCR` is atomic. If 1,000 users view an event page simultaneously, all 1,000 increments are applied correctly with zero locking, zero contention. Try doing that with `UPDATE events SET views = views + 1` in Postgres under load — you'll hit row-level lock contention.
+> **Pro tip:** `INCR` is atomic. If 1,000 users view an event page simultaneously, all 1,000 increments are applied correctly with zero locking, zero contention. Try doing that with `UPDATE events SET views = views + 1` in Postgres under load — you'll hit row-level lock contention.
 
 ### Hashes (Like a Row in a Table)
 
@@ -299,7 +299,25 @@ Redis is amazing for caching, sessions, counters, and leaderboards. It is NOT a 
 
 ## Part 3: Build a View Counter (10 min)
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Event View Counter with Redis
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the overall approach before diving into implementation details.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the problem into smaller steps. What needs to happen first?
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the concepts from this section. The solution follows the same patterns demonstrated above.
+</details>
+
 
 Every time someone views an event page, we increment a counter. This is a perfect Redis use case — high frequency writes to a single key with no need for ACID.
 
@@ -474,6 +492,22 @@ Problems with this approach:
 
 ### 📐 Design: Which Parts of TicketPulse Belong Where?
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the overall approach before diving into implementation details.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the problem into smaller steps. What needs to happen first?
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the concepts from this section. The solution follows the same patterns demonstrated above.
+</details>
+
+
 Polyglot persistence means using the right database for each access pattern. Here's how TicketPulse might split its data:
 
 | Data | Database | Why |
@@ -518,6 +552,9 @@ QUIT
 Keep both containers running — we need Redis for the next module on caching.
 
 ---
+
+
+> **What did you notice?** Look back at what you just built. What surprised you? What felt harder than expected? That's where the real learning happened.
 
 ## 🏁 Module Summary
 

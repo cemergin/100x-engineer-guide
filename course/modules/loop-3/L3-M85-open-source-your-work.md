@@ -19,7 +19,7 @@ Throughout this course, you have built components that solve real problems: a ra
 
 Open-sourcing one of these components does three things simultaneously. First, it forces you to write clean, documented, well-tested code — the act of preparing for public release improves the code. Second, it builds your engineering profile in a way that a resume cannot — a maintained open source project with a clear README, tests, and CI demonstrates more engineering maturity than any number of bullet points. Third, it contributes back to the ecosystem you have been learning from.
 
-> 💡 **Chapter 28 of the 100x Engineer Guide** covers both sides of open source: reading other people's code to accelerate your own learning, and contributing your own work back. This module is the applied companion: you will go from "I have a component" to "I have a published, documented, maintained library."
+> **Ecosystem note:** Chapter 28 of the 100x Engineer Guide covers both sides of open source: reading other people's code to accelerate your own learning, and contributing your own work back. This module is the applied companion: you will go from "I have a component" to "I have a published, documented, maintained library."
 
 Most engineers never open-source anything because they think their code is not good enough, or the problem is too small, or someone else already solved it. But a well-packaged solution to a real problem, even a small one, is more valuable than an ambitious project that is half-finished and undocumented.
 
@@ -42,6 +42,17 @@ Look at what you have built across the course. Which components are general-purp
 Pick one. For this module, we will use the **webhook delivery system** as the example, but apply the same process to whichever component you choose.
 
 ### 📐 Exercise: Component Readiness Assessment
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Before you extract a component for open source, assess its readiness:
 
@@ -224,6 +235,17 @@ Before finalizing your README, study three well-known projects:
 - "Why this over alternatives?" section for competitive landscapes
 
 ### 📐 README Critique Exercise
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Find any open source library on npm that you have used. Read its README critically for 5 minutes:
 
@@ -479,7 +501,20 @@ Step 5: Respond to review quickly and graciously
     explaining what you changed and why
 ```
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Exercise: Your First Real Contribution
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Pick a library that TicketPulse depends on. Look at its issue list. Find one issue where you can contribute:
 
@@ -671,3 +706,8 @@ You have:
 - **"Working in Public" by Nadia Eghbal** — the economics and dynamics of modern open source maintenance
 - **firstcontributions.github.io** — a practice repository for making your very first PR
 - **choosealicense.com** — side-by-side license comparison to help you choose
+---
+
+## What's Next
+
+In **AI-Powered Engineering Workflow** (L3-M86), you'll build on what you learned here and take it further.

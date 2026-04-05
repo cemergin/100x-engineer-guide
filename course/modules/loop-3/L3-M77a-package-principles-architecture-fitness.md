@@ -20,7 +20,7 @@ None of these are bugs. The tests pass. The app works. But the architecture is q
 
 Package principles and fitness functions are the guardrails that prevent this erosion.
 
-> 💡 **Insight**: "Robert C. Martin defined the package principles in 2002, but they did not become widely practiced until monorepos became popular. In a monorepo, bad dependencies compile and run fine -- the boundary violations only show up as pain during refactoring, deployment, and scaling."
+> **Pro tip:** "Robert C. Martin defined the package principles in 2002, but they did not become widely practiced until monorepos became popular. In a monorepo, bad dependencies compile and run fine -- the boundary violations only show up as pain during refactoring, deployment, and scaling."
 
 ---
 
@@ -198,7 +198,20 @@ UNHEALTHY (cycles, cross-feature imports):
   persistence ────→ order-service  ← SDP VIOLATION (stable depends on unstable)
 ```
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Breaking a Cycle
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 If you find a cycle between order-service and payment-service:
 
@@ -222,6 +235,17 @@ AFTER (acyclic):
 ## Part 3: Enforce with dependency-cruiser
 
 ### 🛠️ Build: CI Rules
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Create a `.dependency-cruiser.cjs` configuration that encodes the architectural rules:
 
@@ -396,6 +420,17 @@ Resilience:
 ```
 
 ### 🛠️ Build: ESLint Rules for Architecture Boundaries
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 For boundaries that dependency-cruiser cannot enforce (intra-package structure):
 
@@ -781,3 +816,8 @@ How do you explain it in a way that builds understanding rather than frustration
 - **"Building Evolutionary Architectures"** by Neal Ford, Rebecca Parsons, Patrick Kua -- the book that coined "architecture fitness functions"
 - **Nx module boundaries**: nx.dev -- monorepo tooling with built-in boundary enforcement
 - **ArchUnit** (Java/Kotlin): archunit.org -- architecture testing for JVM projects
+---
+
+## What's Next
+
+In **DORA Metrics & Team Performance** (L3-M78), you'll build on what you learned here and take it further.

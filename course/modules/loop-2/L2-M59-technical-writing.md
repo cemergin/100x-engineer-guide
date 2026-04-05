@@ -88,7 +88,25 @@ builds trust and focuses the review discussion.]
 [Timelines, milestones, how you will validate each phase.]
 ```
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Write an RFC for TicketPulse
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider the trade-offs between different approaches before choosing one.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Refer back to the patterns introduced earlier in this module.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
 
 **Feature: Add a Waitlist When Events Sell Out**
 
@@ -122,6 +140,22 @@ Your RFC should address:
 - Build waitlist into the existing purchase service vs. create a new waitlist service
 - Notify all waitlisted users simultaneously vs. notify in batches (first in line first)
 - Guarantee a ticket to notified users vs. give them a time-limited purchase window
+
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+An RFC has a standard structure: problem statement, proposed solution, alternatives considered, and migration plan. Start with the problem — what is broken or missing, and why does it matter?
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+The proposed solution should be specific enough to implement but not so detailed it reads like code. Include diagrams, API contracts, and data models. The "alternatives considered" section shows you thought broadly before narrowing.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The strongest RFCs have a clear "non-goals" section (what this proposal intentionally does NOT address), a rollback plan (how to undo it if it fails), and concrete success metrics (how will you know it worked). Write for a reader who has 15 minutes, not 2 hours.
+</details>
 
 ### 🤔 Reflect: Pre-Address Reviewer Concerns
 
@@ -183,12 +217,44 @@ Include names, PagerDuty schedules, Slack channels.]
 
 ### 🛠️ Build: Write the TicketPulse Purchase Failures Runbook
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider the trade-offs between different approaches before choosing one.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Refer back to the patterns introduced earlier in this module.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
+
 Write a runbook for the scenario from L2-M58: "TicketPulse purchase failures -- elevated error rate."
 
 Your runbook should cover:
 
 **Step 1: Assess Impact**
 ```markdown
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+A runbook is not documentation — it is a step-by-step procedure an on-call engineer follows at 3am when the alert fires. Every step must be copy-pasteable.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Structure: (1) symptoms and alert description, (2) immediate triage steps with exact commands, (3) common causes ranked by likelihood, (4) resolution steps for each cause, (5) escalation path if unresolved after 15 minutes.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Include exact shell commands, dashboard URLs, and log search queries. Never say "check the database" — say "run `SELECT count(*) FROM pg_stat_activity WHERE state = 'idle in transaction'` and if the result is > 10, run `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state = 'idle in transaction' AND duration > interval '5 minutes'`."
+</details>
+
 ### 1. Assess Impact
 Open the Grafana purchases dashboard:
 https://grafana.ticketpulse.dev/d/purchases/overview
@@ -296,6 +362,9 @@ Why blameless? If people fear blame, they will hide information. If the on-call 
 ```markdown
 # Postmortem: [Incident Title] ([Date])
 
+
+> **What did you notice?** Reflect on the trade-offs you encountered. Which decisions would you make differently with more information?
+
 ## Summary
 [2-3 sentences. What happened, how long, what was the impact.]
 
@@ -337,6 +406,22 @@ slow escalation?]
 ```
 
 ### 🛠️ Build: Write the Postmortem for the L2-M58 Incident
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider the trade-offs between different approaches before choosing one.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Refer back to the patterns introduced earlier in this module.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
 
 Using the incident timeline you built in L2-M58, write a full postmortem. This is the same incident: purchase failures caused by three layered problems (slow DB queries, stuck Kafka consumer, connection pool exhaustion).
 
@@ -383,6 +468,22 @@ Each action item must be:
 - **Assigned**: one owner, not "the team"
 - **Dated**: a concrete deadline
 - **Tracked**: in your issue tracker, not just in the postmortem document
+
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+A postmortem is blameless — it focuses on what happened, why, and how to prevent recurrence. Never name individuals as the cause.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Structure: (1) incident summary (one paragraph), (2) timeline with timestamps, (3) root cause analysis (the "5 whys"), (4) impact (users affected, revenue lost, SLA breached), (5) action items with owners and due dates.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The most valuable section is "what went well" alongside "what went wrong." Celebrate the things that worked (alerts fired correctly, runbook was followed, rollback was fast). Action items must be specific and assigned — "improve monitoring" is not an action item; "add alert for connection pool utilization > 80% (owner: Alice, due: March 15)" is.
+</details>
 
 ---
 
@@ -584,6 +685,14 @@ Before moving on, verify:
 | **Diataxis** | A documentation framework that classifies content into tutorials, how-to guides, explanations, and reference. |
 | **Blameless** | An incident review culture that focuses on systemic improvements rather than assigning personal fault. |
 | **Action item** | A concrete, assigned follow-up task resulting from a postmortem or review that prevents recurrence. |
+
+---
+
+## What's Next
+
+In **Spec-Driven Development** (L2-M59a), you'll design APIs contract-first with OpenAPI and generate code, docs, and tests from a single source of truth.
+
+---
 
 ## Further Reading
 

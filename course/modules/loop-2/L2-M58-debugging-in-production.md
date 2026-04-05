@@ -19,7 +19,7 @@ This is THE module that separates senior engineers from junior engineers. Junior
 
 TicketPulse v2 is now a distributed system with multiple services, databases, message queues, and external dependencies. When something breaks, the failure might originate in one service and manifest in another. The ability to systematically find the root cause -- under pressure, at 3 AM, with incomplete information -- is the most valuable skill in backend engineering.
 
-> 💡 **Insight**: "Amazon's CTO Werner Vogels: 'The best way to get good at debugging is to spend time debugging.' This module IS that time."
+> **The bigger picture:** "Amazon's CTO Werner Vogels: 'The best way to get good at debugging is to spend time debugging.' This module IS that time."
 
 ## Prereq Check
 
@@ -350,7 +350,25 @@ This is a cascade from Problem 1. Slow event-service responses mean purchase-ser
 
 ## Part 2: The Three-Problem Debug Exercise
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Diagnose All Three Problems
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider the trade-offs between different approaches before choosing one.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Refer back to the patterns introduced earlier in this module.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
 
 Now it is your turn. Set up the three problems in your TicketPulse environment and practice diagnosing them using only observability tools.
 
@@ -423,6 +441,22 @@ Write an incident timeline as you go, documenting:
 - What you found
 - What you concluded
 - What you will check next
+
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Use three different tools for three different problems: distributed tracing (Jaeger) for latency, log aggregation for errors, and metrics (Prometheus/Grafana) for resource exhaustion.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+For intermittent slowness, look at p99 latency in traces — the average may look fine while the 99th percentile is terrible. For errors, search logs by correlation ID to follow a request across services. For resource issues, check connection pool metrics and memory usage.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The three classic production problems: (1) a slow downstream dependency (visible in traces as one span taking 90% of total time), (2) a connection pool leak (visible in metrics as growing active connections that never decrease), (3) a memory leak (visible in metrics as monotonically increasing heap usage). Each requires a different tool to diagnose.
+</details>
 
 ---
 
@@ -633,6 +667,14 @@ Before moving on, verify:
 | **5 Whys** | An iterative questioning technique that asks "why" repeatedly to drill down from a symptom to a root cause. |
 | **Correlation** | The practice of linking related signals (logs, metrics, traces) to reconstruct the sequence of events in an incident. |
 | **Triage** | The process of assessing severity and prioritizing which issues to investigate first during an incident. |
+
+---
+
+## What's Next
+
+In **Technical Writing** (L2-M59), you'll sharpen the skill that multiplies your engineering impact — writing RFCs, docs, and incident reports that people actually read.
+
+---
 
 ## Further Reading
 

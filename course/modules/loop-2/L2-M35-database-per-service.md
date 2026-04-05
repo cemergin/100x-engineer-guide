@@ -24,6 +24,9 @@ By the end, each TicketPulse service will own its data completely. Cross-service
 
 ---
 
+> **Before you continue:** Right now, your "my orders" page uses a single SQL JOIN across orders, events, venues, and payments. After splitting into separate databases, how many network calls will that query require? What will happen to its latency?
+
+
 ## 0. Design: Data Ownership Boundaries (10 minutes)
 
 ### 📐 Design Exercise
@@ -52,6 +55,22 @@ payments (id, order_id, amount_in_cents, currency, status, payment_method, creat
 refunds (id, payment_id, amount_in_cents, reason, status, created_at)
 ledger_entries (id, payment_id, type, amount_in_cents, created_at)
 ```
+
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+For each table, ask: which service creates this data? Which service is the single authority? If two services need it, one owns it and the other calls an API.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Group tables by domain: user tables (users, preferences), event tables (events, venues, artists, tickets, reservations), order tables (orders, order_items), payment tables (payments, refunds, ledger). Each group becomes one service's database.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Tickets and reservations belong to the event service because it manages capacity and seats. The order service stores `ticket_id` and `payment_id` as opaque IDs — no foreign keys across service boundaries. The `orders.event_id` JOIN becomes an API call.
+</details>
 
 ### 🤔 Draw the Boundaries
 
@@ -116,6 +135,22 @@ WHERE o.user_id = $1;
 ## 1. Build: Split the Databases (15 minutes)
 
 ### 🛠️ Update Docker Compose
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider the trade-offs between different approaches before choosing one.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Refer back to the patterns introduced earlier in this module.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
 
 ```yaml
 # docker-compose.yml — replace single postgres with per-service databases
@@ -366,6 +401,22 @@ ticketpulse-db-users      running  0.0.0.0:5435->5432/tcp
       DATABASE_URL: postgresql://payments_svc:payments_pass@postgres-payments:5432/ticketpulse_payments
 ```
 
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Each service gets its own Postgres container on a unique port. Migration scripts go in separate directories per service.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Map ports: events=5432, orders=5433, payments=5434, users=5435. Use `docker-entrypoint-initdb.d` volumes to auto-run SQL migrations on first startup. Update each service's DATABASE_URL environment variable to point to its own database.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Replace cross-service foreign keys with plain INTEGER/VARCHAR columns. The "my orders" query becomes three calls: query orders DB, batch-fetch events from events API, batch-fetch payments from payments API, then join in application code. Design batch endpoints to avoid N+1 API calls.
+</details>
+
 ---
 
 ## 2. Debug: The Broken Query (15 minutes)
@@ -397,7 +448,39 @@ async function getMyOrders(userId: string) {
 
 One query. Four tables. Clean, fast, simple. This query is now **impossible** — the tables live in different databases.
 
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The original single-query JOIN is now impossible because the tables live in different databases. You need to decompose it into multiple API calls.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Query orders from the orders DB, collect unique event IDs and payment IDs, then make two batch API calls: one to the event service, one to the payment service. Build Maps for O(1) lookup when combining results.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Use `Promise.all()` for parallel API calls. The batch endpoint should accept `/api/events?ids=1,2,3` and use `WHERE id = ANY($1)` in SQL. Limit batch size to prevent abuse. The application-level join uses `eventMap.get(order.event_id)` to look up each order's event details.
+</details>
+
 ### 🛠️ Build: The Replacement
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider the trade-offs between different approaches before choosing one.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Refer back to the patterns introduced earlier in this module.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
 
 You must replace the JOIN with multiple API calls and combine the results in application code:
 
@@ -536,6 +619,22 @@ Both the business data and the event are written in one transaction. Either both
 
 ### 🛠️ Build: The Outbox
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider the trade-offs between different approaches before choosing one.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Refer back to the patterns introduced earlier in this module.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
+
 ```sql
 -- db/migrations/payments/002_outbox.sql
 
@@ -625,7 +724,39 @@ export async function processPaymentWithOutbox(
 }
 ```
 
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The outbox table lives in the same database as the business data, so both can be written in a single transaction. A separate process polls for unpublished events.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Create an `outbox` table with columns: aggregate_type, aggregate_id, event_type, topic, payload (JSONB), and published_at (NULL means not yet published). Index on `created_at WHERE published_at IS NULL`.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+In the payment handler, wrap `INSERT INTO payments` and `INSERT INTO outbox` in the same `BEGIN/COMMIT`. The outbox publisher polls with `SELECT ... WHERE published_at IS NULL FOR UPDATE SKIP LOCKED LIMIT 100`, publishes to Kafka, then marks rows with `published_at = NOW()`.
+</details>
+
 ### 🛠️ Build: The Outbox Publisher
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider the trade-offs between different approaches before choosing one.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Refer back to the patterns introduced earlier in this module.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
 
 ```typescript
 // services/payment-service/src/outboxPublisher.ts
@@ -749,6 +880,8 @@ The order service maintains a local, read-only copy of the events table. Updated
 
 ---
 
+> **What did you notice?** The "my orders" query went from 1 SQL statement to 3 API calls plus application-level joining. What did you gain? What did you lose? For your team size, is the trade-off worth it?
+
 ## 5. Checkpoint
 
 After this module, TicketPulse should have:
@@ -788,6 +921,14 @@ After this module, TicketPulse should have:
 | **Change Data Capture (CDC)** | A technique for streaming changes from a database to other systems. Tools like Debezium capture INSERT/UPDATE/DELETE events from the database's transaction log. |
 | **Debezium** | An open-source CDC platform that streams changes from databases (Postgres, MySQL, MongoDB) to Kafka topics. |
 | **FOR UPDATE SKIP LOCKED** | A Postgres clause that locks selected rows and skips rows already locked by other transactions. Used to safely distribute work across multiple publisher instances. |
+
+---
+
+---
+
+## What's Next
+
+In **API Gateway & BFF** (L2-M36), you'll build a proper API gateway with authentication, rate limiting, and correlation IDs — plus a Backend for Frontend for mobile clients.
 
 ---
 

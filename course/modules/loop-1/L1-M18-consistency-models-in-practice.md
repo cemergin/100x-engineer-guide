@@ -307,7 +307,25 @@ User reads (GET /my-tickets)
   │     └── NO → Read from REPLICA (fast, eventually consistent)
 ```
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Database Router
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the overall approach before diving into implementation details.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the problem into smaller steps. What needs to happen first?
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the concepts from this section. The solution follows the same patterns demonstrated above.
+</details>
+
 
 ```typescript
 // src/db/dbRouter.ts
@@ -670,3 +688,8 @@ After this module, TicketPulse should have:
 - Martin Kleppmann, *Designing Data-Intensive Applications*, Chapter 5 (Replication)
 - [How Shopify handles read-your-writes](https://shopify.engineering/read-consistency-taming-database-replication-lag) — Real-world pattern at scale
 - Chapter 1 of the 100x Engineer Guide: Section 1.3 (Consistency Models)
+---
+
+## What's Next
+
+In **Architecture Patterns Overview** (L1-M19), you'll build on what you learned here and take it further.

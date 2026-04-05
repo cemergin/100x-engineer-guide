@@ -610,3 +610,8 @@ Architecture clarity is a compounding skill. Every review cycle — even a pract
 | **Risk assessment** | The process of identifying potential threats to a system and evaluating their likelihood and impact. |
 | **Scaling plan** | A documented strategy for how the system will handle increased load, including horizontal and vertical scaling options. |
 | **Fitness function** | An automated test that continuously validates whether a specific architectural quality attribute is maintained. |
+---
+
+## What's Next
+
+In **Your Career Engineering Plan** (L3-M89), you'll build on what you learned here and take it further.

@@ -1329,3 +1329,8 @@ After this module, you should have:
 | **Kustomize** | A Kubernetes-native configuration management tool that uses base manifests and overlays to customize resources per environment without templating. |
 | **Drift** | When the actual state of a system differs from the declared state in Git, usually caused by manual changes. |
 | **Pull-Based GitOps** | A GitOps model where an in-cluster agent pulls changes from Git, rather than CI pushing to the cluster. More secure because the cluster does not need to expose write access. |
+---
+
+## What's Next
+
+In **Platform Engineering & Crossplane** (L3-M83b), you'll build on what you learned here and take it further.

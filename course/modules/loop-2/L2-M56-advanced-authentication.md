@@ -365,7 +365,25 @@ res.redirect('/dashboard');
 
 ## Part 3: Build It
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Implement the Full OAuth2 Flow
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider the trade-offs between different approaches before choosing one.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Refer back to the patterns introduced earlier in this module.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
 
 If you do not want to set up real Google credentials (requires a Google Cloud project), use a mock OAuth provider. Here is a minimal one:
 
@@ -490,6 +508,22 @@ if (process.env.NODE_ENV === 'development') {
 2. Add the `/auth/google/callback` route that exchanges the code and creates the user
 3. Test with the mock provider (or real Google if you set up credentials)
 4. Verify the user appears in the database with `authProvider: 'google'`
+
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+OAuth2 authorization code flow has four steps: redirect to provider, user authorizes, provider redirects back with a code, your server exchanges the code for tokens.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Create two endpoints: `GET /auth/google` (redirects to Google with client_id and redirect_uri) and `GET /auth/google/callback` (receives the authorization code, exchanges it for tokens, creates/finds the user, and issues your own JWT).
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Use the `state` parameter to prevent CSRF attacks — generate a random state, store it in the session, and verify it matches when the callback comes back. Exchange the code using a server-side POST to Google's token endpoint (never expose client_secret to the browser).
+</details>
 
 ### 🔍 Try It: Walk Through Each Redirect
 
@@ -692,6 +726,22 @@ router.post('/auth/refresh', async (req, res) => {
 
 ### 🛠️ Build: The Complete Auth Module
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider the trade-offs between different approaches before choosing one.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Refer back to the patterns introduced earlier in this module.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
+
 Add a database migration for OAuth support:
 
 ```sql
@@ -782,6 +832,14 @@ Before moving on, verify:
 | **Authorization code** | A short-lived code exchanged for tokens during the OAuth 2.0 authorization code flow. |
 | **Access token** | A credential that grants the bearer permission to access specific resources on behalf of a user. |
 | **ID token** | A JWT issued by an OIDC provider that contains claims about the authenticated user's identity. |
+
+---
+
+## What's Next
+
+In **TLS & Encryption Deep Dive** (L2-M57), you'll understand the cryptography that secures every HTTPS connection and implement end-to-end encryption in TicketPulse.
+
+---
 
 ## Further Reading
 

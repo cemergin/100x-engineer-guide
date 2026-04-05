@@ -87,7 +87,25 @@ Request comes in
   │                              └── Return data to client
 ```
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Cache-Aside for GET /api/events
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the overall approach before diving into implementation details.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the problem into smaller steps. What needs to happen first?
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the concepts from this section. The solution follows the same patterns demonstrated above.
+</details>
+
 
 Here's the implementation in pseudocode that maps to any language:
 
@@ -276,6 +294,22 @@ GET events:listing
 ```
 
 ### 🐛 Debug: The Stale Data Problem
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the overall approach before diving into implementation details.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the problem into smaller steps. What needs to happen first?
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the concepts from this section. The solution follows the same patterns demonstrated above.
+</details>
+
 
 Let's intentionally create a cache inconsistency and see what happens.
 
@@ -586,6 +620,9 @@ DROP MATERIALIZED VIEW IF EXISTS mv_popular_events;
 ```
 
 ---
+
+
+> **What did you notice?** Look back at what you just built. What surprised you? What felt harder than expected? That's where the real learning happened.
 
 ## 🏁 Module Summary
 

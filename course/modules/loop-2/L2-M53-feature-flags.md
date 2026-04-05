@@ -4,6 +4,8 @@
 >
 > **Source:** Chapters 3, 22, 25, 32, 13 of the 100x Engineer Guide
 
+> **Before you continue:** You have a risky new feature — a dynamic pricing algorithm for tickets. How would you deploy it to production without exposing it to all users at once? What if you wanted to test it with 5% of traffic first, then gradually increase?
+
 ---
 
 ## The Goal
@@ -714,6 +716,14 @@ Reflect on these questions:
 | **Canary** | A release strategy where a change is deployed to a small subset of users before a full rollout. |
 | **A/B test** | An experiment that compares two variants of a feature to measure which performs better. |
 | **Flag hygiene** | The practice of regularly cleaning up old or fully-rolled-out feature flags to reduce code complexity. |
+
+---
+
+## What's Next
+
+In **Zero-Downtime Migrations** (L2-M54), you'll change TicketPulse's database schema and API contracts without any downtime or breaking existing clients.
+
+---
 
 ## Further Reading
 

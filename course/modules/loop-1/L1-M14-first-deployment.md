@@ -540,3 +540,8 @@ After this module, TicketPulse should have:
 | **Graceful shutdown** | Handling SIGTERM by finishing in-flight work and closing connections cleanly before exiting. |
 | **Build context** | The set of files Docker sends to the build engine. Controlled by `.dockerignore`. |
 | **Immutable infrastructure** | The practice of never modifying running servers. Instead, deploy a new image and replace the old one. |
+---
+
+## What's Next
+
+In **CI/CD Pipeline** (L1-M15), you'll build on what you learned here and take it further.

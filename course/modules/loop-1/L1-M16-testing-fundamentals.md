@@ -974,3 +974,8 @@ After this module, TicketPulse should have:
 | **Coverage** | The percentage of code executed by tests. Useful as a negative signal (low = under-tested). Poor as a positive signal (high does not mean well-tested). |
 | **Supertest** | A library for testing HTTP endpoints in Node.js without starting a server. |
 | **Testcontainers** | A library that spins up real Docker containers (Postgres, Redis, etc.) for integration tests. |
+---
+
+## What's Next
+
+In **SOLID Principles in Practice** (L1-M16a), you'll build on what you learned here and take it further.

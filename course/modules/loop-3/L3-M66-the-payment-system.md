@@ -25,7 +25,21 @@ This is a classic system design interview question, and for good reason — it t
 
 ## 0. The Architecture (5 minutes)
 
+### 🤔 Prediction Prompt
+
+Before reading the architecture, sketch your own payment flow from "Buy button click" to "Ticket confirmed." Where does the card number go? What happens if step 3 of 5 fails?
+
 ### 📐 Design Exercise: Before You Read On
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The card number should never touch your servers. Think about a tokenization step on the client side before anything hits your API.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Use Stripe Elements (an iframe) to collect card details client-side. Your server only receives a payment_method_id token. The flow is: client tokenizes -> your API creates a PaymentIntent -> Stripe charges -> webhook confirms.
+</details>
 
 Draw TicketPulse's payment architecture. Include:
 - Where the customer's card number goes (spoiler: it should never touch your servers).
@@ -109,7 +123,20 @@ Request 2: POST /api/payments { idempotency_key: "idem_abc123", amount: 5000 }
   → NO second charge
 ```
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Implement Idempotency
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 ```typescript
 // src/payments/idempotency.ts
@@ -232,7 +259,9 @@ CREATE INDEX idx_idempotency_expires ON idempotency_keys (expires_at);
 -- This matches Stripe's idempotency key retention period.
 ```
 
-### 💡 Insight: Stripe's Idempotency at Scale
+> **The bigger picture:** Idempotency is not just a payment concern -- it is a fundamental distributed systems principle. Any operation that can be retried (and in distributed systems, everything can be retried) needs idempotency.
+
+### Stripe's Idempotency at Scale
 
 Stripe processes over $1 trillion annually. Their idempotency key system handles approximately 1% of all requests being retries. That is billions of idempotent replay requests per year. The system works because:
 - Every API endpoint accepts an `Idempotency-Key` header.
@@ -253,6 +282,17 @@ Every money movement in TicketPulse creates exactly two ledger entries: a debit 
 - Double-entry: "Customer account debited $50. Merchant account credited $50." The money is tracked from source to destination. The books always balance.
 
 ### 🛠️ Build: Implement a Simple Ledger
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 ```sql
 -- The ledger table (append-only, immutable)
@@ -364,6 +404,17 @@ Reconciliation is the process of comparing TicketPulse's ledger with the payment
 
 ### 📐 Design: The Reconciliation Process
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 ```
 Daily at 2:00 AM UTC:
 
@@ -403,6 +454,17 @@ Daily at 2:00 AM UTC:
 ```
 
 ### 📐 Design Exercise: What Happens When They Don't Match?
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 For each mismatch category, design the automated resolution and the escalation path. Think about:
 - What does the customer experience?
@@ -519,6 +581,17 @@ The ledger entries are already written. The Stripe refund call fails (network ti
 
 ### 🐛 Debug: Payment Succeeds at Stripe, Callback Times Out
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 This is the nightmare scenario every payment engineer fears:
 
 ```
@@ -613,6 +686,10 @@ No single defense is sufficient. Together, they ensure that no payment is ever l
 
    Think about: ticket reservation duration, ledger entries for pending payments, what happens if the customer never pays, and how this interacts with the saga pattern.
 
+### 🤔 Reflection Prompt
+
+Which of the four defense layers (idempotency, webhooks, reconciliation, manual ops) would you have missed if you designed this system from scratch? What does that tell you about how you approach failure handling?
+
 ---
 
 ## 7. Checkpoint
@@ -630,6 +707,9 @@ After this module, you should have:
 - [ ] Answers to all reflect questions
 
 ---
+
+
+> **What did you notice?** Consider how this connects to systems you've worked on. Where have you seen similar patterns — or missed opportunities to apply them?
 
 ## Module Summary
 
@@ -668,3 +748,9 @@ After this module, you should have:
 - Chapter 23 of the 100x Engineer Guide: Section 8 (Payment System Case Study)
 - Chapter 1 of the 100x Engineer Guide: Section 5.2 (Idempotency Everywhere)
 - Patrick McKenzie, ["Designing Robust and Predictable APIs with Idempotency"](https://brandur.org/idempotency-keys) — Stripe's idempotency key design
+
+---
+
+## What's Next
+
+Next up: **[L3-M67: WebSockets & Real-Time](L3-M67-websockets-and-real-time.md)** -- you will build the real-time layer that keeps TicketPulse users updated on ticket availability, purchase confirmations, and live event updates without polling.

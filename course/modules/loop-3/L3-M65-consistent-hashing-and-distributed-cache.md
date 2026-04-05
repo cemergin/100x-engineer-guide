@@ -81,7 +81,23 @@ Rule: A key maps to the first server found
       going clockwise from the key's position.
 ```
 
+### 🤔 Prediction Prompt
+
+Before looking at the implementation, think: if you add a 6th node to a 5-node consistent hashing ring, what percentage of keys would you expect to move? Compare that with naive `hash % N`.
+
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Implement a Consistent Hashing Ring
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Map both servers and keys onto the same circular hash space (0 to 2^32-1). A key belongs to the first server found clockwise from its position on the ring.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Use MD5 (or any hash) to place nodes on the ring. For lookup, binary search the sorted positions array for the first position >= the key's hash. Wrap around to position 0 if past the end.
+</details>
 
 Implement this in TypeScript (or pseudocode). The implementation should support:
 - Adding a node
@@ -246,7 +262,9 @@ Virtual nodes place each physical server at many positions on the ring. With 150
 
 150 is a good balance between memory overhead and distribution quality. Each virtual node costs a few bytes of memory — negligible.
 
-### 💡 Insight: Amazon's Dynamo Paper
+> **The bigger picture:** Consistent hashing is not just a caching technique -- it is the foundational algorithm behind Cassandra, DynamoDB, Riak, and most distributed storage systems built after 2007.
+
+### Amazon's Dynamo Paper
 
 Amazon's Dynamo paper (2007) introduced consistent hashing to the mainstream. Dynamo used consistent hashing to distribute data across a cluster of commodity servers. Each server owned a range of the hash ring. Adding or removing servers only required migrating data from neighboring nodes.
 
@@ -312,6 +330,17 @@ Redis uses the content inside `{}` for the hash calculation. This guarantees co-
 ## 3. Design: TicketPulse's Cache Architecture (15 minutes)
 
 ### 📐 Design Exercise: Multi-Layer Cache
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Design a caching strategy for TicketPulse with three layers:
 
@@ -502,6 +531,10 @@ setInterval(refreshPopularKeys, 60_000);
 
 4. **TicketPulse has a hot key problem: `event:taylor-swift` gets 50,000 reads/second, all hitting the same Redis Cluster node. How do you distribute the load?** (Hint: read replicas, key replication, or client-side caching.)
 
+### 🤔 Reflection Prompt
+
+Now that you understand consistent hashing and multi-layer caching, revisit the CDN caching decisions from M64. How does the L1/L2/L3 hierarchy change your thinking about where to cache what?
+
 ---
 
 ## 6. Checkpoint
@@ -517,6 +550,9 @@ After this module, you should have:
 - [ ] Understanding of the Dynamo paper's influence on modern distributed systems
 
 ---
+
+
+> **What did you notice?** Consider how this connects to systems you've worked on. Where have you seen similar patterns — or missed opportunities to apply them?
 
 ## Module Summary
 
@@ -552,3 +588,9 @@ After this module, you should have:
 - Karger et al., ["Consistent Hashing and Random Trees"](https://dl.acm.org/doi/10.1145/258533.258660) — the original 1997 paper
 - Chapter 22 of the 100x Engineer Guide: Section 2.5 (Consistent Hashing), Section 6.3 (Consistent Hashing Ring)
 - Chapter 1 of the 100x Engineer Guide: Section 2.2 (Sharding Strategies)
+
+---
+
+## What's Next
+
+Next up: **[L3-M66: The Payment System](L3-M66-the-payment-system.md)** -- you will design the most critical system in TicketPulse, where bugs mean double-charging customers and idempotency is not optional.

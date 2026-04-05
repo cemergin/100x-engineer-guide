@@ -219,7 +219,25 @@ Data flows before the handshake completes. But there is a catch:
 
 ## Part 3: Certificates for TicketPulse
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Generate a Self-Signed Certificate
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider the trade-offs between different approaches before choosing one.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Refer back to the patterns introduced earlier in this module.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
 
 ```bash
 # Generate a self-signed certificate for local development
@@ -259,7 +277,39 @@ openssl x509 -in ticketpulse-cert.pem -noout -ext subjectAltName
 openssl rsa -in ticketpulse-key.pem -check -noout
 ```
 
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Use `openssl` to generate a private key and a self-signed certificate. The key is the secret; the certificate is the public identity that clients verify.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Run `openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes`. The `-nodes` flag means no password on the key (fine for development, never for production).
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Inspect the certificate with `openssl x509 -in cert.pem -text -noout`. You should see the subject, issuer (same as subject for self-signed), validity dates, and the public key. Browsers will warn about self-signed certs — that is expected.
+</details>
+
 ### 🛠️ Build: Configure HTTPS on the API Gateway
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider the trade-offs between different approaches before choosing one.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Refer back to the patterns introduced earlier in this module.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
 
 ```typescript
 // src/server.ts
@@ -286,6 +336,22 @@ if (process.env.NODE_ENV === 'production' || process.env.ENABLE_TLS === 'true') 
   });
 }
 ```
+
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The gateway terminates TLS — it decrypts HTTPS from clients and forwards plain HTTP to internal services. This is called TLS termination.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+In the Express gateway, use `https.createServer({ key: fs.readFileSync('key.pem'), cert: fs.readFileSync('cert.pem') }, app)`. Redirect HTTP to HTTPS with a middleware that checks `req.secure`.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Add security headers: `Strict-Transport-Security` (HSTS) tells browsers to always use HTTPS. Set `max-age=31536000; includeSubDomains`. In production, use Let's Encrypt with auto-renewal via certbot instead of self-signed certificates.
+</details>
 
 ### 🔍 Try It: See Your TLS Handshake
 
@@ -340,6 +406,22 @@ This is used for:
 - **API authentication** where API keys are insufficient
 
 ### 🛠️ Build: Set Up mTLS for TicketPulse Services
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider the trade-offs between different approaches before choosing one.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Refer back to the patterns introduced earlier in this module.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
 
 First, create a Certificate Authority (CA) for TicketPulse:
 
@@ -456,6 +538,22 @@ spec:
 ```
 
 With this configuration, every service-to-service call within the `ticketpulse` namespace is automatically encrypted and authenticated with mTLS. No application code changes needed.
+
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Mutual TLS means both sides verify each other's certificate. The gateway verifies the service, AND the service verifies the gateway. This prevents unauthorized services from joining the mesh.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Create a CA (Certificate Authority), then issue certificates for each service signed by that CA. Configure each service to require client certificates and verify them against the CA.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Use `requestCert: true, rejectUnauthorized: true, ca: [caCert]` in the Node.js HTTPS server options. Each service presents its own cert and verifies the caller's cert was signed by the same CA. In production, a service mesh (Istio, Linkerd) handles mTLS automatically.
+</details>
 
 ---
 
@@ -600,7 +698,7 @@ With connection pooling:    Request (1 RTT)                                     
 
 For a server 50ms away, that is 200-250ms vs 50ms. Connection pooling is the single largest optimization for latency.
 
-> 💡 **Insight**: "Cloudflare terminates TLS for roughly 30% of the internet's web traffic. Their TLS 1.3 implementation saved an average of 300ms per connection for users on slow networks. For TicketPulse, TLS 1.3 saves one round trip per new connection -- which adds up when you have thousands of users making their first request."
+> **The bigger picture:** "Cloudflare terminates TLS for roughly 30% of the internet's web traffic. Their TLS 1.3 implementation saved an average of 300ms per connection for users on slow networks. For TicketPulse, TLS 1.3 saves one round trip per new connection -- which adds up when you have thousands of users making their first request."
 
 ---
 
@@ -693,6 +791,14 @@ Before moving on, verify:
 | **Handshake** | The initial negotiation between client and server that establishes encryption parameters for a TLS session. |
 | **Cipher suite** | A named combination of algorithms for key exchange, encryption, and message authentication used in a TLS session. |
 | **Let's Encrypt** | A free, automated certificate authority that issues TLS certificates trusted by major browsers. |
+
+---
+
+## What's Next
+
+In **Debugging in Production** (L2-M58), you'll learn the tools and techniques for diagnosing problems in live systems without taking them down.
+
+---
 
 ## Further Reading
 

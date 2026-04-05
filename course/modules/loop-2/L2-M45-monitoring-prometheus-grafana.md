@@ -556,6 +556,8 @@ Click the save icon. Name it "TicketPulse Overview."
 
 ---
 
+> **Before you continue:** When you generate load with wrk, which Grafana panel do you expect to change first -- request rate, error rate, or latency? What would it mean if error rate spikes before latency increases?
+
 ## 5. Observe: Generate Traffic and Watch
 
 Install a load testing tool:
@@ -755,6 +757,8 @@ For resource-oriented components (databases, caches, queues), use the **USE meth
 
 ## 8. Reflect
 
+> **What did you notice?** When you generated load and watched the Grafana dashboard in real time, which panel gave you the most useful signal? How did it feel compared to debugging with logs alone?
+
 > **"We have metrics on every HTTP request. What should we NOT put a metric on?"**
 >
 > Individual user IDs, individual request IDs, full URLs with query parameters -- anything that creates unbounded cardinality. If a label can have millions of distinct values, it will overwhelm Prometheus. Use traces (L2-M46) for per-request debugging.
@@ -804,3 +808,9 @@ After this module, you should have:
 | **USE Method** | Utilization, Saturation, Errors -- the three metrics every resource (CPU, disk, pool) needs. |
 | **Alert Rule** | A PromQL expression that Prometheus evaluates periodically. When true for the `for` duration, the alert fires. |
 | **High Cardinality** | A label with many distinct values (e.g., user_id). Causes excessive memory usage in Prometheus. Avoid. |
+
+---
+
+## What's Next
+
+In **Distributed Tracing with OpenTelemetry** (L2-M46), you'll trace requests across TicketPulse's services and pinpoint exactly where latency hides.

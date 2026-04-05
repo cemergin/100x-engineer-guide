@@ -381,6 +381,8 @@ For Kafka, the auto-instrumentation injects trace context into Kafka message hea
 
 ---
 
+> **Before you continue:** A ticket purchase involves the API gateway, event service, payment service, and Kafka. Where do you predict the most time will be spent in the trace waterfall? Write down your guess before finding the trace.
+
 ## 5. Try It: Buy a Ticket and Find the Trace
 
 Make a purchase request:
@@ -567,6 +569,8 @@ Twitter open-sourced Zipkin (2012) based on the Dapper paper. Uber built Jaeger 
 
 ## 11. Reflect
 
+> **What did you notice?** When you found the trace waterfall for a ticket purchase, where did the time actually go? Was it where you expected, or did the gaps between spans reveal something surprising?
+
 > **"Auto-instrumentation captured HTTP requests, database queries, and Kafka messages. What does it NOT capture?"**
 >
 > Business logic, in-memory computations, conditional branches, cache lookups that do not use an instrumented library, and external API calls to non-instrumented clients. Anything that happens inside your code without crossing an instrumented boundary needs a manual span.
@@ -617,3 +621,9 @@ After this module, you should have:
 | **Sampling** | Reducing the volume of traces collected. Head-based (decide upfront) or tail-based (decide after collecting). |
 | **Waterfall** | A visualization showing spans as horizontal bars on a timeline, revealing the time spent in each operation. |
 | **Dapper** | Google's internal distributed tracing system (2010). The conceptual ancestor of Zipkin, Jaeger, and OpenTelemetry. |
+
+---
+
+## What's Next
+
+In **Alerting and On-Call** (L2-M47), you'll turn your monitoring data into actionable alerts and build an on-call rotation that does not burn out the team.

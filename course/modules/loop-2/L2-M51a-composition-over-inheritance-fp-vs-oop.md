@@ -4,6 +4,8 @@
 >
 > **Source:** Chapters 3, 22, 25, 32, 13 of the 100x Engineer Guide
 
+> **Before you continue:** When you need to add new behavior to existing code, do you reach for class inheritance or function composition first? Think about a real example from your experience — which approach would have been simpler?
+
 ---
 
 ## The Goal
@@ -679,6 +681,14 @@ Go and Rust have no class inheritance at all. They use composition plus interfac
 | **Read model** | A data representation optimized for queries, often denormalized for fast lookups. |
 | **Write model** | A data representation optimized for processing commands, enforcing business rules and consistency. |
 | **Projection** | The process of transforming events or commands into a read-optimized view of the data. |
+
+---
+
+## What's Next
+
+In **Data Pipelines** (L2-M52), you'll build a data pipeline that moves TicketPulse's event data from operational databases into an analytics warehouse.
+
+---
 
 ## Further Reading
 

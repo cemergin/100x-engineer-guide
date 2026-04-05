@@ -120,7 +120,25 @@ Request comes in
   └── Return data to client either way
 ```
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Resilient Cache Wrapper
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the overall approach before diving into implementation details.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the problem into smaller steps. What needs to happen first?
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the concepts from this section. The solution follows the same patterns demonstrated above.
+</details>
+
 
 ```typescript
 // src/services/resilientCache.ts
@@ -464,6 +482,22 @@ The Postgres latency experiment revealed a critical weakness: TicketPulse waits 
 
 ### 🛠️ Build: Database Query Timeout
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the overall approach before diving into implementation details.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the problem into smaller steps. What needs to happen first?
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the concepts from this section. The solution follows the same patterns demonstrated above.
+</details>
+
+
 ```typescript
 // src/db/queryWithTimeout.ts
 
@@ -500,6 +534,22 @@ export async function queryWithTimeout(
 ```
 
 ### 🛠️ Build: Simple Circuit Breaker
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the overall approach before diving into implementation details.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the problem into smaller steps. What needs to happen first?
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the concepts from this section. The solution follows the same patterns demonstrated above.
+</details>
+
 
 A circuit breaker prevents your application from repeatedly calling a service that is known to be failing:
 
@@ -773,3 +823,8 @@ After this module, TicketPulse should have:
 - [CAP Twelve Years Later](https://www.infoq.com/articles/cap-twelve-years-later-how-the-rules-have-changed/) — Eric Brewer's own retrospective on CAP
 - Martin Kleppmann, *Designing Data-Intensive Applications*, Chapter 8 (The Trouble with Distributed Systems)
 - Chapter 1 of the 100x Engineer Guide: Sections 1.1-1.2 (CAP and PACELC)
+---
+
+## What's Next
+
+In **Consistency Models in Practice** (L1-M18), you'll build on what you learned here and take it further.

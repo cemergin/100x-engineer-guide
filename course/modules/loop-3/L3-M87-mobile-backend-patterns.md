@@ -861,3 +861,8 @@ You have:
 | **Notification batching** | Aggregating multiple related notifications into a single push to reduce notification volume and prevent fatigue. |
 | **Delivery receipt** | A confirmation sent from the app back to the server when a push notification is received or opened. |
 | **Conflict resolution** | The strategy for handling simultaneous mutations to the same data from different clients or actors. |
+---
+
+## What's Next
+
+In **The TicketPulse Architecture Review** (L3-M88), you'll build on what you learned here and take it further.

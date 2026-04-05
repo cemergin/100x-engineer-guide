@@ -46,6 +46,10 @@ Before reading the architecture, design it yourself. Here are the requirements:
 3. If a user opts out of push notifications, how does the system know?
 4. How do you prevent sending the same "order shipped" notification twice if the upstream service retries?
 
+### 🤔 Prediction Prompt
+
+Before reading the architecture, think about priority. If the email service is overwhelmed, which notification should be delayed: the purchase confirmation or the weekly recommendation digest? How would you enforce that ordering?
+
 Write down your design. Then continue.
 
 ---
@@ -543,11 +547,18 @@ Before moving on, verify:
 
 ---
 
+
+> **What did you notice?** Consider how this connects to systems you've worked on. Where have you seen similar patterns — or missed opportunities to apply them?
+
 ## Summary
 
 A notification system is deceptively complex. The core is straightforward: receive a notification request, check preferences, queue by priority, deliver through the appropriate channel. The difficulty is in the edge cases: deduplication, retries, permanent failures, quiet hours, frequency caps, and tracking.
 
 The key architectural decisions: a gateway that centralizes cross-cutting concerns, priority queues that ensure urgent notifications beat marketing emails, two-layer deduplication for correctness, and a state machine that tracks every notification from creation to delivery.
+
+### 🤔 Reflection Prompt
+
+Which edge case in the notification system would you have missed if you had not read about it here -- deduplication, quiet hours, permanent failures, or something else? What does that tell you about your default assumptions when designing async systems?
 
 This pattern scales from TicketPulse (thousands of notifications per day) to Slack-scale (billions per month) by adjusting the queue infrastructure (Redis sorted sets to Kafka topics) and the number of channel workers.
 
@@ -560,3 +571,9 @@ This pattern scales from TicketPulse (thousands of notifications per day) to Sla
 | **Deduplication** | The process of detecting and discarding duplicate messages to prevent redundant notifications. |
 | **Delivery tracking** | Recording whether a notification was successfully delivered, opened, or failed for each recipient. |
 | **Channel** | A medium through which notifications are sent, such as email, SMS, push, or in-app. |
+
+---
+
+## What's Next
+
+Next up: **[L3-M70: Recommendation Engine](L3-M70-recommendation-engine.md)** -- you will build the "Events you might like" feature using collaborative filtering, content-based matching, and vector embeddings.

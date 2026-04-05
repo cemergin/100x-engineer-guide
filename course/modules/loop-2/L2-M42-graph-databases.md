@@ -26,6 +26,8 @@ docker compose ps
 
 ---
 
+> **Before you continue:** How many SQL JOINs would you need to find "friends-of-friends who attended the same events as me"? Write down your estimate before seeing the comparison.
+
 ## Part 1: Why Graphs? (5 min)
 
 ### The Relationship Problem
@@ -121,6 +123,21 @@ You'll see an interactive query interface where you can write Cypher queries and
 
 ### 🛠️ Build: Create the Graph Schema
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Start with uniqueness constraints on node IDs (User.id, Event.id, Artist.id, Venue.id). These also create indexes for fast lookups.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Add indexes on properties you search by frequently (User.name, Event.name). Constraints prevent duplicate nodes if you accidentally run the creation script twice.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Use CREATE CONSTRAINT ... IF NOT EXISTS for idempotency and CREATE INDEX ... IF NOT EXISTS for the name lookups. Create the schema before loading data.
+</details>
+
 In the Neo4j browser (or via `cypher-shell`), create TicketPulse's social graph:
 
 ```cypher
@@ -134,7 +151,39 @@ CREATE INDEX user_name IF NOT EXISTS FOR (u:User) ON (u.name);
 CREATE INDEX event_name IF NOT EXISTS FOR (e:Event) ON (e.name);
 ```
 
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+A graph schema defines node labels (User, Event, Artist) and relationship types (FRIENDS, ATTENDING, PERFORMED_AT). Nodes have properties; relationships can too.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Create uniqueness constraints on node IDs first: `CREATE CONSTRAINT FOR (u:User) REQUIRE u.id IS UNIQUE`. This also creates an index for fast lookups.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Use `MERGE` instead of `CREATE` when populating to avoid duplicates: `MERGE (u:User {id: 1}) SET u.name = 'Alice'`. Relationships use the same pattern: `MATCH (u1:User {id: 1}), (u2:User {id: 2}) MERGE (u1)-[:FRIENDS]-(u2)`.
+</details>
+
 ### 🛠️ Build: Populate the Graph
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the graph pattern you need: which nodes and relationships are involved? Start from the known node and traverse outward.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Use MATCH with a pattern like (a)-[:REL]->(b) and add WHERE clauses to filter. Use collect() and count() for aggregation.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
 
 ```cypher
 // Create users
@@ -227,6 +276,21 @@ This visual representation is one of graph databases' superpowers — you can li
 
 The most requested social feature: when a user views an event, show which of their friends are going.
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The Cypher pattern is: (me)-[:FRIENDS]-(friend)-[:ATTENDING]->(event). This traverses from a user through friendship to attendance at a specific event.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Use pattern matching with properties to filter: {name: 'Alice'} for the user and {name: 'Taylor Swift NYC'} for the event.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The result shows direct friends only. For friends-of-friends, use variable-length paths: [:FRIENDS*1..2] and add WHERE friend <> alice to exclude self-matches.
+</details>
+
 ```cypher
 // Friends of Alice attending "Taylor Swift NYC"
 MATCH (me:User {name: "Alice"})-[:FRIENDS]-(friend)-[:ATTENDING]->(event:Event {name: "Taylor Swift NYC"})
@@ -236,6 +300,22 @@ RETURN friend.name AS friend_name, event.name AS event_name
 Run this in Neo4j browser. You should see Bob and Dave (Alice's direct friends who are attending).
 
 ### 🛠️ Build: "Events Your Friends Are Attending"
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the graph pattern you need: which nodes and relationships are involved? Start from the known node and traverse outward.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Use MATCH with a pattern like (a)-[:REL]->(b) and add WHERE clauses to filter. Use collect() and count() for aggregation.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
 
 ```cypher
 // All events that Alice's friends are attending (that Alice is NOT attending)
@@ -251,6 +331,22 @@ ORDER BY friend_count DESC
 This returns events ranked by how many of Alice's friends are attending. It's a natural recommendation: "2 friends are going to Kendrick Lamar LA" is more compelling than "1 friend is going to Norah Jones Denver."
 
 ### 🛠️ Build: "Artists Similar to Ones You've Seen"
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the graph pattern you need: which nodes and relationships are involved? Start from the known node and traverse outward.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Use MATCH with a pattern like (a)-[:REL]->(b) and add WHERE clauses to filter. Use collect() and count() for aggregation.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
 
 Recommendation via shared attendees: if people who went to Event A also went to Event B, the artists at those events are "similar."
 
@@ -411,6 +507,22 @@ Which is clearer to you? Which would be easier to modify if the requirements cha
 
 ### 📐 Design: TicketPulse's Hybrid Architecture
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the graph pattern you need: which nodes and relationships are involved? Start from the known node and traverse outward.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Use MATCH with a pattern like (a)-[:REL]->(b) and add WHERE clauses to filter. Use collect() and count() for aggregation.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                     TicketPulse Architecture                  │
@@ -457,7 +569,39 @@ Think about this before revealing the answer:
 
 </details>
 
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Not everything belongs in the graph. CRUD operations (creating events, processing payments) stay in Postgres. Only relationship-heavy queries (recommendations, social features) use Neo4j.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Postgres is the source of truth. Neo4j is a read-optimized projection. Sync data from Postgres to Neo4j via Kafka CDC — when a user buys a ticket, a Kafka consumer creates the ATTENDING relationship in Neo4j.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The architecture is: Postgres (writes) -> Kafka CDC -> Neo4j consumer -> Neo4j (reads). The API checks Neo4j for "friends attending" and "recommendations" but calls Postgres for everything else. Accept eventual consistency — social features can be seconds behind.
+</details>
+
 ### 🛠️ Build: Kafka CDC to Neo4j
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the graph pattern you need: which nodes and relationships are involved? Start from the known node and traverse outward.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Use MATCH with a pattern like (a)-[:REL]->(b) and add WHERE clauses to filter. Use collect() and count() for aggregation.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
 
 Keep Neo4j in sync with Postgres changes via Kafka:
 
@@ -644,6 +788,8 @@ For each of these potential TicketPulse features, think about where you'd implem
 </details>
 
 ---
+
+> **What did you notice?** When you visualized the graph in Neo4j's browser, did the relationship patterns become more intuitive than looking at SQL tables? Did the Cypher queries feel easier to read than the equivalent multi-JOIN SQL?
 
 ## 🏁 Module Summary
 

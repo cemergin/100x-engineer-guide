@@ -63,6 +63,16 @@ Choose three regions for TicketPulse's initial global deployment. For each regio
 - Which venues (and their ticket inventory) live here?
 - What is the latency improvement for the primary user population?
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about where the biggest concentration of events AND users overlap. Start with the three broadest geographic clusters.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Map major concert cities to cloud provider regions. The Americas, Europe, and Asia-Pacific are the standard three -- but which specific region within each matters for latency.
+</details>
+
 **Reference Selection (compare with yours):**
 
 | Region | Cloud Region | Primary Users | Primary Venues |
@@ -108,6 +118,16 @@ This means: cross-region purchases are inherently slower. A London user buying a
 ### 📐 Design Exercise: Draw Both
 
 Before reading the comparison, draw both architectures for TicketPulse. Label the data flows, the replication directions, and where writes happen.
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The key difference is where writes are accepted. In one model, writes go to one place. In the other, writes happen locally in each region.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+For active-passive, draw a single primary with DNS failover. For active-active, draw each region with its own database and cross-region replication arrows. Label which data each region "owns."
+</details>
 
 ### Active-Passive
 
@@ -189,6 +209,17 @@ Before reading the comparison, draw both architectures for TicketPulse. Label th
 
 ### 📐 Design Decision: Which Is Better for TicketPulse?
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 Consider these facts:
 - TicketPulse has clear data locality (events belong to venues, venues are in regions).
 - Ticket purchases require strong consistency (no overselling).
@@ -254,6 +285,17 @@ Routing rules:
 
 ### 📐 Design Exercise: Request Routing
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 Trace the complete request path for these scenarios:
 
 1. **User in Paris browses events in Paris.** Which region handles this? How many network hops?
@@ -304,7 +346,13 @@ Between regions, you use asynchronous replication:
 - Replication lag: typically 100ms-2s depending on distance and load.
 - Conflict resolution: last-write-wins for user profiles, no conflicts for append-only data (orders, ledger entries).
 
-### 💡 Insight: How Google Spanner Solved This
+### 🤔 Prediction Prompt
+
+Before reading about Spanner below, ask yourself: if you needed globally consistent reads across three continents, what would you need from the clock system? What trade-off would you pay on every write?
+
+> **The bigger picture:** The consistency model you choose per data type is the single most consequential architecture decision in a multi-region system. Get it wrong and you either oversell tickets or add 200ms to every request for no reason.
+
+### How Google Spanner Solved This
 
 Google Spanner achieved externally consistent (linearizable) reads and writes across globally distributed data. How?
 
@@ -319,6 +367,17 @@ Google Spanner achieved externally consistent (linearizable) reads and writes ac
 ## 5. Data Replication Design (10 minutes)
 
 ### 📐 Design Exercise: Replication Topology
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Design the replication topology for TicketPulse's three regions. For each data type, specify:
 - Where the primary (writable) copy lives.
@@ -453,6 +512,9 @@ After this module, you should have:
 - [ ] Answers to all reflect questions
 
 ---
+
+
+> **What did you notice?** Consider how this connects to systems you've worked on. Where have you seen similar patterns — or missed opportunities to apply them?
 
 ## Module Summary
 
@@ -693,7 +755,17 @@ You are adding a 4th region (AP-Southeast — Singapore) to serve Southeast Asia
 
 ---
 
-> **Want the deep theory?** See Ch 19 of the 100x Engineer Guide: "Distributed Systems Fundamentals" — covers CAP, PACELC, consensus algorithms, and replication strategies with mathematical grounding.
+### 🤔 Reflection Prompt
+
+Look back at your initial data classification from the start of this module. What changed? Where did you underestimate the complexity of cross-region writes, and where did you overestimate the need for strong consistency?
+
+> **Ecosystem note:** See Ch 19 of the 100x Engineer Guide: "Distributed Systems Fundamentals" -- covers CAP, PACELC, consensus algorithms, and replication strategies with mathematical grounding.
+
+---
+
+## What's Next
+
+Next up: **[L3-M62: Cloud Provider Deep Dive](L3-M62-cloud-provider-deep-dive.md)** -- you will take these multi-region designs and deploy them on real cloud infrastructure (AWS or GCP), hitting live endpoints and understanding the cost reality.
 
 ---
 

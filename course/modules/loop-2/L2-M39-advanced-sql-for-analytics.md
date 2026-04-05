@@ -120,6 +120,22 @@ ANALYZE;
 
 ### 🛠️ Build: Query 1 — Revenue by Venue with Rolling Window
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about what this query needs to compute. What SQL pattern (window function, CTE, LATERAL, aggregation) fits the requirement?
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the query into named steps using CTEs, then apply the appropriate window function or join pattern on top.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the code example that follows -- the query structure matches the pattern described above, with specific columns and filters for this use case.
+</details>
+
+
 ```sql
 -- Revenue by venue with a 30-day rolling sum
 WITH daily_venue_revenue AS (
@@ -171,6 +187,9 @@ Run the query. You should see each venue's daily revenue alongside its 30-day ro
 
 ---
 
+> **Before you continue:** The product team wants a rolling 30-day revenue total per venue. Could you compute this with GROUP BY alone? What SQL feature lets you compute aggregates across rows without collapsing them?
+
+
 ## Part 2: Top Events by Conversion Rate — CTEs (8 min)
 
 ### The Dashboard Requirement
@@ -178,6 +197,22 @@ Run the query. You should see each venue's daily revenue alongside its 30-day ro
 "Show the top 10 events by conversion rate (tickets sold / tickets available)."
 
 ### 🛠️ Build: Query 2 — Conversion Rate with CTE
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about what this query needs to compute. What SQL pattern (window function, CTE, LATERAL, aggregation) fits the requirement?
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the query into named steps using CTEs, then apply the appropriate window function or join pattern on top.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the code example that follows -- the query structure matches the pattern described above, with specific columns and filters for this use case.
+</details>
+
 
 ```sql
 WITH ticket_stats AS (
@@ -220,7 +255,7 @@ JOIN events e ON ...
 JOIN venues v ON ...
 ```
 
-> **Note**: In PostgreSQL 12+, the planner can inline CTEs (optimize them as subqueries). In older versions, CTEs are **optimization fences** — the CTE is materialized before the outer query runs. If you need the old behavior, use `WITH ticket_stats AS MATERIALIZED (...)`.
+> **Ecosystem note:** In PostgreSQL 12+, the planner can inline CTEs (optimize them as subqueries). In older versions, CTEs are **optimization fences** — the CTE is materialized before the outer query runs. If you need the old behavior, use `WITH ticket_stats AS MATERIALIZED (...)`.
 
 ---
 
@@ -231,6 +266,22 @@ JOIN venues v ON ...
 "Show daily revenue with the day-over-day change and percentage change."
 
 ### 🛠️ Build: Query 3 — LAG for Trend Analysis
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about what this query needs to compute. What SQL pattern (window function, CTE, LATERAL, aggregation) fits the requirement?
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the query into named steps using CTEs, then apply the appropriate window function or join pattern on top.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the code example that follows -- the query structure matches the pattern described above, with specific columns and filters for this use case.
+</details>
+
 
 ```sql
 WITH daily_revenue AS (
@@ -281,6 +332,22 @@ The first row's LAG is NULL because there's no previous row. Handle this with `C
 
 ### 🛠️ Build: Query 4 — NTILE for Distribution Analysis
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about what this query needs to compute. What SQL pattern (window function, CTE, LATERAL, aggregation) fits the requirement?
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the query into named steps using CTEs, then apply the appropriate window function or join pattern on top.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the code example that follows -- the query structure matches the pattern described above, with specific columns and filters for this use case.
+</details>
+
+
 ```sql
 WITH event_revenue AS (
     SELECT
@@ -321,6 +388,22 @@ ORDER BY category, revenue_quartile, total_revenue DESC;
 "Of the customers who placed their first order in month X, what percentage placed another order in the following months?"
 
 ### 🛠️ Build: Query 5 — Cohort Retention Analysis
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about what this query needs to compute. What SQL pattern (window function, CTE, LATERAL, aggregation) fits the requirement?
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the query into named steps using CTEs, then apply the appropriate window function or join pattern on top.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the code example that follows -- the query structure matches the pattern described above, with specific columns and filters for this use case.
+</details>
+
 
 ```sql
 -- Step 1: Identify each customer's cohort (month of first purchase)
@@ -398,6 +481,22 @@ Month 0 is always 100% (that's when they joined). The drop-off in subsequent mon
 
 ### 🛠️ Build: Query 6 — JSON Aggregation
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about what this query needs to compute. What SQL pattern (window function, CTE, LATERAL, aggregation) fits the requirement?
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the query into named steps using CTEs, then apply the appropriate window function or join pattern on top.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the code example that follows -- the query structure matches the pattern described above, with specific columns and filters for this use case.
+</details>
+
+
 ```sql
 SELECT json_build_object(
     'event', json_build_object(
@@ -469,6 +568,22 @@ One query, zero application-level data assembly. Your API handler becomes a thin
 
 ### 🛠️ Build: LATERAL JOIN
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about what this query needs to compute. What SQL pattern (window function, CTE, LATERAL, aggregation) fits the requirement?
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the query into named steps using CTEs, then apply the appropriate window function or join pattern on top.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the code example that follows -- the query structure matches the pattern described above, with specific columns and filters for this use case.
+</details>
+
+
 ```sql
 SELECT v.name AS venue_name, top_events.*
 FROM venues v
@@ -526,6 +641,22 @@ These analytics queries are expensive. Running them on every dashboard page load
 
 ### 🛠️ Build: Create a Materialized View
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about what this query needs to compute. What SQL pattern (window function, CTE, LATERAL, aggregation) fits the requirement?
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the query into named steps using CTEs, then apply the appropriate window function or join pattern on top.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the code example that follows -- the query structure matches the pattern described above, with specific columns and filters for this use case.
+</details>
+
+
 ```sql
 -- Create the materialized view (runs the query once, stores the result)
 CREATE MATERIALIZED VIEW dashboard_daily_stats AS
@@ -575,6 +706,22 @@ The materialized view query should be dramatically faster — it's reading from 
 
 ### 🛠️ Build: Automated Refresh with pg_cron
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about what this query needs to compute. What SQL pattern (window function, CTE, LATERAL, aggregation) fits the requirement?
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the query into named steps using CTEs, then apply the appropriate window function or join pattern on top.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the code example that follows -- the query structure matches the pattern described above, with specific columns and filters for this use case.
+</details>
+
+
 ```sql
 -- Install pg_cron extension (must be in shared_preload_libraries)
 CREATE EXTENSION IF NOT EXISTS pg_cron;
@@ -607,6 +754,8 @@ SELECT * FROM cron.job_run_details ORDER BY start_time DESC LIMIT 10;
 For TicketPulse's analytics dashboard, a materialized view refreshed every 5 minutes is the right trade-off. The dashboard doesn't need real-time accuracy — seeing revenue from 5 minutes ago is fine.
 
 ---
+
+> **What did you notice?** The cohort retention query uses four CTEs that build on each other like pipeline stages. Compare this to how you would have computed the same thing in application code. Which is more maintainable?
 
 ## 🏁 Module Summary
 

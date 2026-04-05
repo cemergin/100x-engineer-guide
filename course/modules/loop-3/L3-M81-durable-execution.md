@@ -671,3 +671,8 @@ You have:
 | **Deterministic replay** | The technique of re-executing workflow code using recorded results to recover state after a failure. |
 | **Temporal** | An open-source durable execution platform that manages workflow state, retries, and timeouts. |
 | **Activity** | A single unit of work within a durable workflow that performs a side effect (e.g., API call, database write). |
+---
+
+## What's Next
+
+In **Event Sourcing at Scale** (L3-M82), you'll build on what you learned here and take it further.

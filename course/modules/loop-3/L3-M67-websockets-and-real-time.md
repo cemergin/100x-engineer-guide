@@ -64,6 +64,10 @@ The overhead difference is dramatic. An HTTP request carries ~800 bytes of heade
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before building the WebSocket server, think about horizontal scaling. If you have 3 server instances behind a load balancer, and a user connected to server A buys a ticket, how do users connected to servers B and C find out?
+
 ## 2. Build: WebSocket Server for TicketPulse
 
 ### The Goal
@@ -607,13 +611,24 @@ Before moving on, verify:
 
 ---
 
+
+> **What did you notice?** Consider how this connects to systems you've worked on. Where have you seen similar patterns — or missed opportunities to apply them?
+
 ## Summary
 
 WebSocket gives TicketPulse real-time superpowers. A single ticket purchase propagates to every watcher in milliseconds. But WebSocket connections are stateful, which complicates horizontal scaling. Redis Pub/Sub solves this by acting as a broadcast backbone across servers. Heartbeats detect dead connections, and exponential backoff with jitter prevents thundering herds on reconnection.
 
 The pattern you built here -- event rooms, pub/sub backbone, heartbeat, reconnection -- is the foundation for every real-time feature: live chat, collaborative editing, real-time dashboards, multiplayer games. The protocol details change, but the architecture is the same.
 
-Next module: we stress-test this system. What happens when 50K users all try to buy 500 tickets at the same instant?
+### 🤔 Reflection Prompt
+
+What surprised you about the complexity gap between "make a WebSocket connection work" and "make WebSocket connections work at scale"? Where does stateful connection management change your architectural thinking?
+
+---
+
+## What's Next
+
+Next up: **[L3-M68: The Ticket Rush Problem](L3-M68-the-ticket-rush-problem.md)** -- we stress-test this system. What happens when 50K users all try to buy 500 tickets at the same instant?
 
 ## Key Terms
 

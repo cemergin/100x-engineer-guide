@@ -143,7 +143,25 @@ ticketpulse/
 
 3. **No circular dependencies.** If ticketing depends on events, events cannot depend on ticketing. Use events (domain events, not the module) to decouple.
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Exercise: Enforce Boundaries with a Lint Rule
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the overall approach before diving into implementation details.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the problem into smaller steps. What needs to happen first?
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the concepts from this section. The solution follows the same patterns demonstrated above.
+</details>
+
 
 You can enforce module boundaries at build time. With ESLint and `eslint-plugin-import`:
 
@@ -179,7 +197,7 @@ module.exports = {
 
 Run the linter and it catches boundary violations at build time. This is the cheap version of microservice boundaries — same benefits for team independence, without the operational complexity of network calls.
 
-### 💡 Insight: Shopify's Modular Monolith
+> **Pro tip:** Shopify's Modular Monolith
 
 Shopify is one of the largest Ruby on Rails monoliths in the world. They did not break it into microservices. Instead, they created **component boundaries** within the monolith using a tool called Packwerk. Each component:
 - Has a declared public API
@@ -306,7 +324,7 @@ Most successful companies follow this path:
 
 The mistake companies make: jumping to microservices at step 1. They spend months building infrastructure (service mesh, container orchestration, distributed tracing) before they have validated the business. Many startups have died building microservices for a product nobody wanted.
 
-### 💡 Insight: Segment's "Goodbye Microservices"
+> **Pro tip:** Segment's "Goodbye Microservices"
 
 Segment (now part of Twilio) famously went from monolith to microservices and back again. They had 140+ microservices, each with its own deployment pipeline, database, and monitoring. The operational overhead was crushing their small team. They consolidated back into a modular architecture and their development velocity tripled.
 
@@ -351,6 +369,22 @@ Each team owns their services end-to-end: code, database, deployment, and on-cal
 ## 7. Design Exercise: TicketPulse at 100x Scale (10 minutes)
 
 ### 📐 Exercise
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the overall approach before diving into implementation details.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the problem into smaller steps. What needs to happen first?
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the concepts from this section. The solution follows the same patterns demonstrated above.
+</details>
+
 
 TicketPulse currently handles 100 requests per second. Imagine it needs to handle 10,000 requests per second (100x growth). The event is a Taylor Swift concert and tickets go on sale in 5 minutes.
 
@@ -618,3 +652,8 @@ After this module, you should understand:
 - [MonolithFirst by Martin Fowler](https://martinfowler.com/bliki/MonolithFirst.html) — Start monolith, split later
 - Chapter 3 of the 100x Engineer Guide: Section 1 (Architectural Styles)
 - Sam Newman, *Building Microservices*, Chapter 1 (What Are Microservices?)
+---
+
+## What's Next
+
+In **Domain-Driven Design Basics** (L1-M20), you'll build on what you learned here and take it further.

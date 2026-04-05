@@ -4,6 +4,8 @@
 >
 > **Source:** Chapters 3, 22, 25, 32, 13 of the 100x Engineer Guide
 
+> **Before you continue:** TicketPulse reads events for the homepage thousands of times per second but writes new events maybe once a day. Should the read path and write path use the same data model and infrastructure? What if you could optimize each independently?
+
 ---
 
 ## The Goal
@@ -612,6 +614,14 @@ The meta-lesson: **always start simple**. Add CQRS when you have measured eviden
 | **Read model** | A data representation optimized for queries, often denormalized for fast lookups. |
 | **Write model** | A data representation optimized for processing commands, enforcing business rules and consistency. |
 | **Projection** | The process of transforming events or commands into a read-optimized view of the data. |
+
+---
+
+## What's Next
+
+In **Composition over Inheritance — FP vs OOP** (L2-M51a), you'll explore two fundamental paradigms for structuring code and learn when each one shines.
+
+---
 
 ## Further Reading
 

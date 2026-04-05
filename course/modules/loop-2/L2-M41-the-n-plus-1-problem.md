@@ -25,9 +25,26 @@ docker compose ps
 
 ---
 
+> **Before you continue:** The events list endpoint loads 100 events with their venue name and ticket count. How many database queries do you think it makes? Write down a number before enabling query logging.
+
 ## Part 1: See the Problem (10 min)
 
 ### 🐛 Debug: Enable Query Logging
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Set log_statement='all' and log_min_duration_statement=0 in Postgres to see every query with its duration.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Hit the events list endpoint and watch the Postgres logs. Count the number of SELECT statements -- you should see 1 + N + N queries for N events.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Look for repetitive query patterns: the same query structure with different parameter values is the hallmark of N+1. For 100 events, expect 201 queries: 1 for events + 100 for venues + 100 for ticket counts.
+</details>
 
 First, let's see every query Postgres executes. Enable query logging:
 
@@ -48,7 +65,39 @@ Now every query hits the Postgres log. Watch it:
 docker compose logs -f postgres
 ```
 
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Enable `log_statement = 'all'` in Postgres to see every query. Then load the events page and count the individual SELECT statements in the log output.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+The pattern you are looking for: one SELECT for events, then one SELECT per event for the venue, then one SELECT per event for the ticket count. That is 1 + N + N = 2N + 1 queries.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+With 100 events, you should see 201 queries: 1 for the event list, 100 for venue lookups, 100 for ticket counts. The fix is to replace the loop with a JOIN or batch query that fetches all venues and counts in 1-2 queries total.
+</details>
+
 ### 🐛 Debug: Load the Events Page
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider the trade-offs between different approaches before choosing one.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Refer back to the patterns introduced earlier in this module.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
 
 Now hit the TicketPulse events list endpoint — the page that shows all events with their venue name and ticket count:
 
@@ -149,6 +198,21 @@ Instead of 201 queries, write ONE query that fetches everything at once:
 
 ### 🛠️ Build: Single Query with JOINs
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Replace the N+1 pattern with a single query that JOINs events, venues, and tickets with GROUP BY and COUNT FILTER.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Use LEFT JOIN for tickets to handle events with no tickets. Apply FILTER (WHERE status = 'available') inside COUNT for available ticket counts.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The query: SELECT e.*, v.name AS venue_name, COUNT(t.id) FILTER (WHERE t.status = 'available') AS available_tickets FROM events e JOIN venues v ON e.venue_id = v.id LEFT JOIN tickets t ON t.event_id = e.id GROUP BY e.id, v.name ORDER BY e.event_date LIMIT 100.
+</details>
+
 ```javascript
 async function getEventsOptimized() {
   // ONE query that gets events + venues + ticket counts
@@ -173,6 +237,22 @@ async function getEventsOptimized() {
   return result.rows;
 }
 ```
+
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Replace the N individual venue lookups with a single JOIN in the original events query. Add a subquery or LEFT JOIN for ticket counts.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Use `SELECT e.*, v.name as venue_name, COUNT(t.id) as ticket_count FROM events e JOIN venues v ON e.venue_id = v.id LEFT JOIN tickets t ON ...` to get everything in one query.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Be careful with the GROUP BY — when you JOIN tickets for the count, you need to group by all event and venue columns. Alternatively, use a correlated subquery: `(SELECT COUNT(*) FROM tickets WHERE event_id = e.id) as ticket_count` which avoids the GROUP BY complexity.
+</details>
 
 ### 📊 Observe: Measure the Improvement
 
@@ -223,6 +303,22 @@ Do:
 ```
 
 ### 🛠️ Build: Batch Loading
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider the trade-offs between different approaches before choosing one.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Refer back to the patterns introduced earlier in this module.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
 
 ```javascript
 async function getEventsWithBatchLoading() {
@@ -307,6 +403,22 @@ DataLoader:
 | No complex SQL (just IN queries) | Requires collecting IDs first |
 | Works great with GraphQL resolvers | Slight overhead from DataLoader batching logic |
 | Avoids over-fetching | Application-level join (assembling results in code) |
+
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Instead of fetching venues one by one, collect all unique venue IDs from the events and fetch them in a single `WHERE id IN (...)` query. This is the DataLoader pattern.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+After fetching events, extract `venueIds = [...new Set(events.map(e => e.venue_id))]`, then `SELECT * FROM venues WHERE id = ANY($1)` with the array. Build a Map for O(1) lookup when attaching venue data to events.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The DataLoader pattern batches and deduplicates: even if 50 events reference venue ID 1, it fetches venue 1 only once. In Node.js, use the `dataloader` package. For ORMs like Prisma, use `include` or `findMany` with relations to trigger eager loading.
+</details>
 
 ---
 
@@ -454,6 +566,8 @@ test('events list should not have N+1', async () => {
 | **ORM includes** | 1-3 (ORM decides) | Low (config) | When using an ORM with good N+1 support |
 
 ---
+
+> **What did you notice?** The N+1 fix reduced queries from 201 to 1 and response time by 16x. How easy was it to spot the problem before enabling query logging? What does this say about making query visibility a default part of your development workflow?
 
 ## 🏁 Module Summary
 

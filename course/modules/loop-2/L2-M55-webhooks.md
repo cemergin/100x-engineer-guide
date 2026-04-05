@@ -4,6 +4,8 @@
 >
 > **Source:** Chapters 3, 22, 25, 32, 13 of the 100x Engineer Guide
 
+> **Before you continue:** External partners want to be notified in real time when a TicketPulse event sells out. You could have them poll your API, but that is wasteful. What is the reverse pattern — where your system pushes data to theirs?
+
 ---
 
 ## The Goal
@@ -640,6 +642,14 @@ git add -A && git commit -m "feat: add webhook system with HMAC signing, retry, 
 | **Retry** | The automatic re-delivery of a webhook payload when the initial delivery fails. |
 | **Dead letter queue** | A storage location for webhook payloads that have failed delivery after all retry attempts are exhausted. |
 | **Idempotency key** | A unique identifier ensuring that processing the same webhook payload more than once has no additional effect. |
+
+---
+
+## What's Next
+
+In **GitHub Actions Mastery** (L2-M55a), you'll go beyond basic CI/CD and build advanced workflows with matrix builds, reusable workflows, and deployment pipelines.
+
+---
 
 ## Further Reading
 

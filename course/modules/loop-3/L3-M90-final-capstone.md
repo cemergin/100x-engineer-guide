@@ -651,3 +651,8 @@ This module draws on all chapters of the 100x Engineer Guide, but these are most
 | **Architecture review** | A structured examination of a system's design with the goal of identifying risks, failure modes, and improvement opportunities. |
 | **Failure mode analysis** | The practice of systematically identifying what happens when each component of a system fails. |
 | **Review finding** | A documented observation from an architecture or code review, including severity, description, and recommendation. |
+---
+
+## What's Next
+
+The main course is complete. But if you want to go further, the **Beast Mode** series (L3-M91) will test your operational readiness with simulated first-day-on-the-job scenarios.

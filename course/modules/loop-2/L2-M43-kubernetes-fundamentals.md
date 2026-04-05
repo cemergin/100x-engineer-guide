@@ -461,6 +461,8 @@ curl -s http://localhost:3000/health | jq .
 
 ---
 
+> **Before you continue:** If you set an impossibly low memory limit (10Mi) on a pod, what Kubernetes status will you see? How is this different from a code bug that crashes the container?
+
 ## 6. Debug: Intentional Failures
 
 You need to recognize common failures by sight. Let us cause them on purpose.
@@ -742,6 +744,8 @@ Now the API gateway can reach the event service at `http://event-service:3001` -
 
 ## 11. Reflect
 
+> **What did you notice?** Which Kubernetes failure mode (ImagePullBackOff, OOMKilled, CrashLoopBackOff) was easiest to diagnose? Which would be hardest to debug in production without `kubectl describe`?
+
 Think about these questions before moving on:
 
 > **"What does Kubernetes give us that docker compose does not?"**
@@ -796,3 +800,9 @@ After this module, your TicketPulse setup should have:
 | **OOMKilled** | Out Of Memory Killed. The container exceeded its memory limit and was terminated by the kernel. |
 | **ImagePullBackOff** | Kubernetes cannot pull the container image. Usually a wrong tag, missing registry credentials, or typo. |
 | **CrashLoopBackOff** | The container keeps crashing on startup. K8s backs off on restart attempts exponentially. |
+
+---
+
+## What's Next
+
+In **Terraform and IaC** (L2-M44), you'll define TicketPulse's infrastructure as code so environments are reproducible, version-controlled, and peer-reviewed.

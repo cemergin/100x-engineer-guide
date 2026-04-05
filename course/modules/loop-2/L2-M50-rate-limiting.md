@@ -34,6 +34,8 @@ If your database connection pool is 20, requests 21-100 queue up. Response times
 
 ---
 
+> **Before you continue:** If TicketPulse runs 4 replicas and each has an in-memory rate limiter set to 100 req/s, what is the actual system-wide limit? Why does this need Redis?
+
 ## 1. Build: Token Bucket with Redis (15 minutes)
 
 The token bucket algorithm: imagine a bucket that holds tokens. Tokens are added at a fixed rate. Each request consumes one token. If the bucket is empty, the request is rejected.
@@ -565,6 +567,14 @@ git add -A && git commit -m "feat: add Redis-backed rate limiting with per-user 
 | **Sliding window** | A rate-limiting algorithm that tracks requests in a continuously moving time window for smoother enforcement. |
 | **429** | The HTTP status code (Too Many Requests) returned when a client exceeds the allowed request rate. |
 | **Retry-After** | An HTTP response header that tells the client how long to wait before making another request. |
+
+---
+
+## What's Next
+
+In **CQRS in Practice** (L2-M51), you'll separate TicketPulse's read and write paths so each can be optimized independently.
+
+---
 
 ## Further Reading
 

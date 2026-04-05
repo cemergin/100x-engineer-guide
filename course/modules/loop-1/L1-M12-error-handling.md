@@ -625,3 +625,8 @@ After this module, TicketPulse should have:
 | **Validation error** | A 400-level error indicating the client sent invalid data. Should include details about every invalid field. |
 | **Stack trace** | The call stack at the point of an error. Contains file paths, line numbers, and function names. Never expose to clients in production. |
 | **Error code** | A machine-readable string (like `VALIDATION_ERROR`) that clients use to handle errors programmatically. More stable than HTTP status codes or messages. |
+---
+
+## What's Next
+
+In **Authentication & Authorization** (L1-M13), you'll build on what you learned here and take it further.

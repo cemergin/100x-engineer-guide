@@ -20,7 +20,7 @@ Last week, someone updated the Docker build step in the order-service workflow b
 
 This is what happens when CI/CD does not scale with the platform. The workflow files that were "good enough" at 3 services become a liability at 12. The GitHub-hosted runners that were fast enough at 50 builds/day are now queuing at 300 builds/day. The manual deployment approvals that one person handled are now a bottleneck across 3 time zones.
 
-> 💡 **Insight**: "Shopify has 400+ engineers committing to a monorepo with 40,000+ CI minutes per day. Their investment in custom actions, self-hosted runners, and CI observability is what makes that possible. You do not need to be Shopify to feel the pain -- it starts around 10 services and 100 builds/day."
+> **Pro tip:** "Shopify has 400+ engineers committing to a monorepo with 40,000+ CI minutes per day. Their investment in custom actions, self-hosted runners, and CI observability is what makes that possible. You do not need to be Shopify to feel the pain -- it starts around 10 services and 100 builds/day."
 
 ---
 
@@ -1183,3 +1183,8 @@ Total: commit → all regions: ~60-90 min
 - **"Accelerate" by Nicole Forsgren, Jez Humble, Gene Kim**: the research behind DORA metrics and high-performing teams
 - **GitHub Blog: "How we use GitHub Actions at GitHub"**: engineering.github.com -- lessons from running Actions at massive scale
 - **Shopify Engineering: "CI at Scale"**: how Shopify manages 40,000+ CI minutes/day with custom tooling
+---
+
+## What's Next
+
+In **Durable Execution** (L3-M81), you'll build on what you learned here and take it further.

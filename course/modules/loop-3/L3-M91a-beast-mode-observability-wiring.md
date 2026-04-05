@@ -19,7 +19,7 @@ The engineer who knows where to look beats the engineer who knows the code. Your
 
 You have built the monitoring stack in L2-M45 and L2-M46. You wired up Prometheus, Grafana, and OpenTelemetry. Now you learn to USE it like someone who has been on the TicketPulse team for months — someone who can feel that something is wrong before the alerts even fire.
 
-> 💡 **Insight**: "The best on-call engineers are not the ones who respond fastest to pages. They are the ones who notice problems before the page fires — because they have internalized what 'normal' looks like, and anything that deviates from normal triggers their attention immediately."
+> **Pro tip:** "The best on-call engineers are not the ones who respond fastest to pages. They are the ones who notice problems before the page fires — because they have internalized what 'normal' looks like, and anything that deviates from normal triggers their attention immediately."
 
 ---
 
@@ -107,7 +107,20 @@ Daily traffic shape:
 
 ## Phase 2: Build Your Beast Mode Hotlinks Page (~30 min)
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Your One-Page Incident Reference
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 When you get paged at 2 AM, you will not remember URLs. You will not remember the exact Loki query syntax for filtering order-service errors. You will not remember which Grafana dashboard has the database connection pool panel. You need a single page that gives you everything, organized for speed.
 
@@ -405,3 +418,8 @@ I found and filled an alerting gap  │
 - L2-M46: Distributed Tracing with OpenTelemetry — the traces that validate your mental model
 - L2-M47: Alerting & On-Call — the alerting rules you audited in Phase 3
 - L3-M73: Incident Response Simulation — putting your wired-in observability to the test
+---
+
+## What's Next
+
+In **Beast Mode — Incident Response Dry Run** (L3-M91b), you'll build on what you learned here and take it further.

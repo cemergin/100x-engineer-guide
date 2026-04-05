@@ -534,6 +534,9 @@ The `-v` flag removes the named volumes, so your database will be fresh next tim
 
 ---
 
+
+> **What did you notice?** Look back at what you just built. What surprised you? What felt harder than expected? That's where the real learning happened.
+
 ## Module Summary
 
 - **TicketPulse** is your companion for this entire course — a concert ticketing app built with Node.js, Postgres, and Redis

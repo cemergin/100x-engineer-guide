@@ -544,3 +544,8 @@ After this module, TicketPulse should have:
 | **Cache** | Saved state (node_modules, Docker layers) reused between pipeline runs to save time. |
 
 > **Going deeper:** In Loop 2, **L2-M55a (GitHub Actions Mastery)** takes everything here to the next level: reusable workflows across multiple services, matrix strategies, OIDC federation (no more stored secrets), monorepo path filtering, and supply-chain security hardening.
+---
+
+## What's Next
+
+In **Testing Fundamentals** (L1-M16), you'll build on what you learned here and take it further.

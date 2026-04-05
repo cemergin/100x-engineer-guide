@@ -20,7 +20,7 @@ A new engineer joins the team. They spend 2 days getting the local environment r
 
 At 5 engineers, this was fine. Everyone knew how everything worked. At 20, it does not scale. At 50, it would be fatal.
 
-> 💡 **Insight**: "Spotify built Backstage because they had 2,000+ microservices and engineers spent 40% of their time on infrastructure. After Backstage, it dropped to below 10%. You do not need 2,000 microservices to feel this pain -- it starts around 10 services and 15 engineers."
+> **Pro tip:** "Spotify built Backstage because they had 2,000+ microservices and engineers spent 40% of their time on infrastructure. After Backstage, it dropped to below 10%. You do not need 2,000 microservices to feel this pain -- it starts around 10 services and 15 engineers."
 
 ---
 
@@ -142,7 +142,20 @@ For a team of 100: paved road + strong guardrails.
 For a team of 500+: full internal platform with self-service.
 ```
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Service Template
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Create a service template that a new service can be scaffolded from in 30 seconds.
 
@@ -187,6 +200,17 @@ ticketpulse-service-template/
 ```
 
 ### 🛠️ Build: The create-service Script
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 ```bash
 #!/bin/bash
@@ -323,6 +347,17 @@ database instead" (which creates coupling).
 
 ### 📐 Design: Self-Service Capabilities
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 What can engineers provision without filing a ticket?
 
 ```
@@ -355,6 +390,17 @@ Tier 3: Requires Approval (human review, 1 business day SLA)
 ## Part 4: The Internal Developer Platform
 
 ### 📐 Design: What Would TicketPulse's Platform Look Like?
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 At 20 engineers, you do not need Backstage. But you need the kernel of what Backstage provides.
 
@@ -536,3 +582,8 @@ The answers drive the roadmap. Not the tools you think are cool. Not what other 
 - **"Team Topologies" by Matthew Skelton & Manuel Pais**: platform teams, stream-aligned teams, and the interaction modes between them
 - **Humanitec Platform Maturity Model**: a framework for evaluating where your platform is on the maturity curve
 - **"An Elegant Puzzle" by Will Larson**: engineering management, including platform team sizing and investment
+---
+
+## What's Next
+
+In **GitHub Actions at Scale** (L3-M80a), you'll build on what you learned here and take it further.

@@ -796,3 +796,8 @@ You have:
 | **Projection** | A read-model derived by replaying events, optimized for specific query patterns. |
 | **Snapshot** | A periodic capture of aggregate state used to avoid replaying the entire event history from the beginning. |
 | **Upcasting** | The process of transforming old event schemas into the current schema during replay to handle schema evolution. |
+---
+
+## What's Next
+
+In **Advanced Kubernetes** (L3-M83), you'll build on what you learned here and take it further.

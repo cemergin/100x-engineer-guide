@@ -863,6 +863,8 @@ Three services, each with identical operational characteristics, defined in 15 l
 
 ## 6. Debug: Infrastructure Drift
 
+> **Before you continue:** If someone manually scales a deployment from 3 to 5 replicas outside of Terraform, what will `terraform plan` show? Will Terraform try to scale it back down?
+
 Drift happens when someone changes infrastructure outside of Terraform. Let us cause it.
 
 ```bash
@@ -940,7 +942,7 @@ terraform plan -var-file=dev.tfvars
 # No changes. Your infrastructure matches the configuration.
 ```
 
-> **Tip:** `terraform import` only updates the state file. You still need to write the matching config in `.tf` files. If the config does not match the real resource, the next `plan` will show changes.
+> **Pro tip:** `terraform import` only updates the state file. You still need to write the matching config in `.tf` files. If the config does not match the real resource, the next `plan` will show changes.
 
 ---
 
@@ -962,6 +964,8 @@ The key principle: **nobody runs `terraform apply` from their laptop in producti
 ---
 
 ## 9. Reflect
+
+> **What did you notice?** When Terraform detected the manual drift (5 replicas instead of 3), did it feel reassuring or concerning that it wanted to change it back? How does this change your workflow around manual infrastructure changes?
 
 > **"What happens if the state file is deleted?"**
 >
@@ -1016,3 +1020,9 @@ After this module, your TicketPulse Terraform setup should have:
 | **Remote Backend** | Storing Terraform state in a shared location (S3, GCS, Terraform Cloud) with locking for team use. |
 | **terraform import** | A command that brings existing infrastructure under Terraform management by adding it to the state file. |
 | **Sensitive Variable** | A variable marked `sensitive = true`. Its value is redacted from plan output and logs. |
+
+---
+
+## What's Next
+
+In **Policy and IaC Scanning** (L2-M44a), you'll add automated security and compliance scanning to your Terraform code before it ever reaches production.

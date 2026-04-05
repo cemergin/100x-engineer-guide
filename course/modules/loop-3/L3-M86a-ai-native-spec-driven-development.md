@@ -22,7 +22,7 @@ This changes what "engineering skill" means. The bottleneck is no longer typing 
 
 The spec is the product. The code is the artifact.
 
-> 💡 **Insight**: "The best prompt is a spec. The best spec is a prompt. Once you internalize this, the entire AI-assisted development workflow clicks into place."
+> **Pro tip:** "The best prompt is a spec. The best spec is a prompt. Once you internalize this, the entire AI-assisted development workflow clicks into place."
 
 ---
 
@@ -279,6 +279,9 @@ This is crucial. Without it, the AI agent invents its own patterns. With it, the
 ```markdown
 # Feature Spec: Venue Capacity Tracking
 
+
+> **What did you notice?** Consider how this connects to systems you've worked on. Where have you seen similar patterns — or missed opportunities to apply them?
+
 ## Summary
 Add real-time capacity tracking to venues so the API can report
 available tickets, utilization percentage, and sell-out status.
@@ -474,7 +477,7 @@ BREAKS DOWN:
 
 The pattern: AI agents excel at the *what* when you are precise about it. They struggle with the *why* and the *how much*.
 
-> 💡 **Insight**: "The workflow does not replace engineering judgment. It relocates it. Instead of spending judgment on writing code, you spend it on writing specs and reviewing output. The total judgment required is the same. The total typing required drops dramatically."
+> **Pro tip:** "The workflow does not replace engineering judgment. It relocates it. Instead of spending judgment on writing code, you spend it on writing specs and reviewing output. The total judgment required is the same. The total typing required drops dramatically."
 
 ---
 
@@ -834,3 +837,8 @@ Before moving on, confirm you have completed:
 - **AsyncAPI Specification**: asyncapi.com -- the standard for event-driven API specifications
 - **Gherkin Reference**: cucumber.io/docs/gherkin/reference/ -- behavior-driven development scenario syntax
 - **"Specification by Example" by Gojko Adzic**: the book that predicted specs and tests would converge
+---
+
+## What's Next
+
+In **Mobile Backend Patterns** (L3-M87), you'll build on what you learned here and take it further.

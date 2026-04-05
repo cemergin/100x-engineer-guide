@@ -309,13 +309,47 @@ Document the breaking sequence. Common findings for a TicketPulse-like system:
 
 Your numbers will differ. The important thing is identifying the sequence and understanding why each failure happens.
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🐛 Debug: Find the First Bottleneck
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider the trade-offs between different approaches before choosing one.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Refer back to the patterns introduced earlier in this module.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
 
 Using the observability skills from L2-M58, identify:
 
 1. **What component fails first?** (Database connections? CPU? Memory? External dependency?)
 2. **At what load level?** (This is your current capacity ceiling.)
 3. **What would you change to increase capacity by 2x?** (The cheapest fix for the tightest bottleneck.)
+
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Start with the end-to-end latency measurement. Use distributed tracing to identify which service contributes the most time to the critical path.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Run a load test with gradually increasing concurrency. Monitor response times, error rates, and resource utilization (CPU, memory, connections) across all services. The first service to degrade is your bottleneck.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Common bottlenecks in order of likelihood: (1) database connection pool exhaustion, (2) a slow SQL query that was not visible at low traffic, (3) a synchronous call to an external service without a timeout, (4) insufficient container CPU/memory limits in Kubernetes.
+</details>
 
 ---
 
@@ -639,3 +673,9 @@ See you in Loop 3.
 | **Architecture review** | A structured evaluation of a system's design to identify risks, bottlenecks, and improvement opportunities. |
 | **Postmortem** | A blameless review conducted after an incident to document findings and prevent recurrence. |
 | **Service mesh** | An infrastructure layer that manages service-to-service communication with built-in observability and resilience features. |
+
+---
+
+## What's Next
+
+You've completed Loop 2. In **Loop 3**, you'll tackle Loop 3, where you'll scale TicketPulse to handle millions of users with advanced patterns like multi-region deployment, ML-powered recommendations, and platform engineering.

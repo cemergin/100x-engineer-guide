@@ -1097,7 +1097,7 @@ OrderReader / OrderWriter / OrderReporter / OrderAdmin
 
 Be honest. For a small project with one developer, some of this is overhead. SRP and DIP almost always pay off because they enable testing. OCP pays off when you see the third variation. ISP and LSP are more about preventing future bugs in larger teams.
 
-> **Common Mistake:** Applying SOLID to everything. A 10-line utility function does not need dependency injection. A script with two if/else branches does not need Strategy pattern. Principles are tools, not commandments. Use them when the complexity warrants it.
+> **Pro tip:** Applying SOLID to everything. A 10-line utility function does not need dependency injection. A script with two if/else branches does not need Strategy pattern. Principles are tools, not commandments. Use them when the complexity warrants it.
 
 ---
 

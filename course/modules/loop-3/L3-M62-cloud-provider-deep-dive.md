@@ -98,6 +98,16 @@ Walk through the ECS "Getting Started" wizard. It creates a Fargate cluster, tas
 
 📐 **Design Exercise:** Before using any wizard or template, write down the resources you think you need. Draw the network diagram. Then compare with what the wizard creates.
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think in layers: public internet -> load balancer -> compute -> data stores. Each layer needs its own network boundary.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+You need at minimum: a VPC with public and private subnets, an ALB in the public subnet, ECS tasks in private subnets, and RDS/ElastiCache in private subnets with no public access.
+</details>
+
 **The minimum viable architecture:**
 
 ```
@@ -301,7 +311,22 @@ Open the Google Cloud Console:
 
 ## 3. Compare the Platforms (10 minutes)
 
+### 🤔 Prediction Prompt
+
+Before filling in this comparison, predict: which platform will have more resources created for the same deployment? By how much? What is the hidden cost you expect to be surprised by?
+
 ### 📐 Design Exercise: Side-by-Side Comparison
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Now that you have deployed (or walked through deploying) on at least one platform, fill in this comparison based on your experience:
 
@@ -327,7 +352,9 @@ Now that you have deployed (or walked through deploying) on at least one platfor
 | **Custom domains + TLS** | You configure ACM certificate + ALB listener | Automatic with `gcloud run domain-mappings` |
 | **Price transparency** | Complex (Fargate vCPU-hr + memory-hr + ALB + NAT Gateway + data transfer) | Simpler (per request + CPU time + memory time) |
 
-### 🤔 Reflect
+### 🤔 Reflection Prompt
+
+Compare your predictions from before the side-by-side exercise with what you found. Where did the gap between expectation and reality surprise you most -- resource count, networking complexity, or cost?
 
 "AWS has more services. GCP is often simpler. Which matters more for your team?"
 
@@ -340,6 +367,17 @@ The best cloud is the one your team knows. Switching costs are enormous.
 ## 4. Cost Estimation (15 minutes)
 
 ### 📐 Design Exercise: What Would TicketPulse Cost at 1M Users/Month?
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Estimate the monthly AWS cost for TicketPulse with these assumptions:
 - 1M monthly active users
@@ -387,6 +425,8 @@ Estimate the monthly AWS cost for TicketPulse with these assumptions:
 - AWS's NAT Gateway ($0.045/GB + $0.045/hr) is a notorious hidden cost. Many teams are surprised by their first NAT Gateway bill.
 - At higher scale (steady-state traffic, reserved instances), AWS pricing improves significantly. Reserved RDS and Fargate Savings Plans can cut costs 30-60%.
 - These estimates exclude: domain registration, SSL certificate (free on both), developer time, and the cost of learning the platform.
+
+> **Pro tip:** The NAT Gateway on AWS ($0.045/GB + $0.045/hr) is the single most common source of billing surprises. Budget for it explicitly or use VPC endpoints to avoid it.
 
 ### ⚠️ Common Mistake: Leaving Resources Running
 
@@ -655,6 +695,9 @@ After this module, you should have:
 
 ---
 
+
+> **What did you notice?** Consider how this connects to systems you've worked on. Where have you seen similar patterns — or missed opportunities to apply them?
+
 ## Module Summary
 
 | Concept | Key Takeaway |
@@ -680,6 +723,12 @@ After this module, you should have:
 | **ElastiCache** | AWS managed caching service supporting Redis and Memcached. |
 
 ---
+
+---
+
+## What's Next
+
+Next up: **[L3-M63: Database at Scale](L3-M63-database-at-scale.md)** -- now that you have cloud infrastructure running, you will tackle the database scaling challenges that appear as TicketPulse grows from thousands to millions of users.
 
 ---
 

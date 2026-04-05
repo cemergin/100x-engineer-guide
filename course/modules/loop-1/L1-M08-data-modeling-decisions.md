@@ -14,7 +14,7 @@
 ## Why This Matters
 Schema design is the single highest-leverage decision in any application. A bad schema creates problems that no amount of indexing, caching, or hardware can fix. A good schema makes queries simple, fast, and correct. You will redesign schemas many times in your career — learning to reason about trade-offs now saves you from painful migrations later.
 
-💡 **Insight:** Instagram's most critical optimization was not code — it was denormalizing their feed to avoid expensive JOINs at read time. Facebook, Twitter, and Uber have all made similar schema-level decisions that dwarfed any code optimization.
+> **Pro tip:** Instagram's most critical optimization was not code — it was denormalizing their feed to avoid expensive JOINs at read time. Facebook, Twitter, and Uber have all made similar schema-level decisions that dwarfed any code optimization.
 
 ## Prereq Check
 
@@ -290,6 +290,22 @@ ORDER BY es.revenue DESC;
 
 ### 📐 Design Challenge
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the overall approach before diving into implementation details.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the problem into smaller steps. What needs to happen first?
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the concepts from this section. The solution follows the same patterns demonstrated above.
+</details>
+
+
 TicketPulse wants to add user reviews for events. Requirements:
 
 1. Users can write a review for any event they attended (have a confirmed order for)
@@ -298,6 +314,8 @@ TicketPulse wants to add user reviews for events. Requirements:
 4. The event detail page must show: average rating, total reviews, and the most recent 10 reviews
 5. Users can edit their review but not delete it (soft delete only)
 6. Each user can only review an event once
+
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
 
 ### 🛠️ Your Turn
 
@@ -514,6 +532,9 @@ Copy the Mermaid block above and paste it into:
 ```
 
 ---
+
+
+> **What did you notice?** Look back at what you just built. What surprised you? What felt harder than expected? That's where the real learning happened.
 
 ## Part 5: Schema Design Principles Summary (5 min)
 

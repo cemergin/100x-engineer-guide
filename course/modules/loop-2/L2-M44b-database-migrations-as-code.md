@@ -44,6 +44,8 @@ migrate --version
 # Should show: 4.17.0 or similar
 ```
 
+> **Before you continue:** Application code has version control, code review, and CI/CD. How do your database schema changes currently get deployed? If something goes wrong with a schema migration, how do you roll back?
+
 ---
 
 ## 1. Why Migrations, Not Ad-Hoc SQL
@@ -806,3 +808,9 @@ After this module, your TicketPulse migration setup should have:
 | **Online DDL** | Techniques for altering table structure without locking the entire table. Tools: pg_repack, gh-ost. |
 | **FOR UPDATE SKIP LOCKED** | A PostgreSQL locking hint that skips rows already locked by other transactions, enabling concurrent batch processing. |
 | **Declarative migration** | Defining the desired end-state schema and letting the tool compute the required ALTER statements. Opposite of versioned/imperative migrations. |
+
+---
+
+## What's Next
+
+In **Monitoring with Prometheus & Grafana** (L2-M45), you'll add metrics collection and dashboards so you can see what TicketPulse is doing in real time.

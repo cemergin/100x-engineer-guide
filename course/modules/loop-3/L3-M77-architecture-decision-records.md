@@ -19,9 +19,13 @@ Six months from now, a new engineer joins the team. They look at the architectur
 
 ADRs are cheap to write and expensive to lack.
 
-> 💡 **Insight**: "At Spotify, ADRs are stored alongside code in the repo. When an engineer asks 'why do we use gRPC instead of REST for service X?', the answer is in docs/adr/0012-grpc-for-internal-services.md. This eliminates repeated debates and 'I was not here when that was decided' syndrome."
+> **Pro tip:** "At Spotify, ADRs are stored alongside code in the repo. When an engineer asks 'why do we use gRPC instead of REST for service X?', the answer is in docs/adr/0012-grpc-for-internal-services.md. This eliminates repeated debates and 'I was not here when that was decided' syndrome."
 
 ---
+
+### 🤔 Prediction Prompt
+
+Before reading the ADR format, think about the last architectural decision your team made. Could a new engineer joining 6 months from now reconstruct the reasoning? If not, what information is missing?
 
 ## The ADR Format
 
@@ -87,7 +91,20 @@ DO NOT WRITE AN ADR WHEN:
 
 ---
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ## 🛠️ Build: 5 ADRs for TicketPulse
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Write each of these ADRs. Spend about 8-10 minutes on each. The goal is not perfection -- it is practice articulating decisions with structure and honesty.
 
@@ -836,4 +853,13 @@ The best ADRs include their own expiration conditions. A decision that was right
 - **"Design Docs at Google"**: how Google documents design decisions at scale
 - **Joel Parker Henderson's ADR collection**: github.com/joelparkerhenderson/architecture-decision-record
 
+### 🤔 Reflection Prompt
+
+After writing ADRs for TicketPulse, which decision was hardest to articulate? When the "consequences" section forced you to name trade-offs explicitly, did it change your confidence in the decision?
+
 > **Going deeper:** **L3-M86a (AI-Native Spec-Driven Development)** extends ADRs into the AI era — CLAUDE.md as behavioral specification, the "spec stack" (CLAUDE.md + RFC + OpenAPI + Gherkin), and using specs as the interface between human intent and AI execution.
+---
+
+## What's Next
+
+In **Package Principles & Architecture Fitness Functions** (L3-M77a), you'll build on what you learned here and take it further.

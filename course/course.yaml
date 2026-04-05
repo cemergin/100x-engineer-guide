@@ -33,6 +33,10 @@ course:
       modules: "L2-M31 through L2-M60"
     - name: "Mastery — Design for the Real World"
       modules: "L3-M61 through L3-M90"
+  tutoring_defaults:
+    foundation: adaptive    # Loop 1 — warm, patient, detailed guidance
+    practice: adaptive      # Loop 2 — energetic, collaborative, moderate guidance
+    mastery: socratic       # Loop 3 — confident, learner-driven, questions over answers
 
 # =============================================================================
 # LOOP 1: FOUNDATION — BUILD THE MENTAL MODEL (Modules 01-30)

@@ -4,6 +4,8 @@
 >
 > **Source:** Chapters 3, 22, 25, 32, 13 of the 100x Engineer Guide
 
+> **Before you continue:** TicketPulse stores ticket sales in Postgres, search data in Elasticsearch, and events in Kafka. The analytics team wants all of this in a data warehouse for reporting. How would you move data from multiple operational systems into a single analytics store reliably?
+
 ---
 
 ## The Goal
@@ -575,6 +577,14 @@ The same principle applies at TicketPulse's scale. Without CDC, adding analytics
 | **ETL** | Extract, Transform, Load; a traditional data integration pattern that moves data between systems. |
 | **Stream processing** | The continuous, real-time processing of data records as they arrive, rather than in batches. |
 | **Connector** | A component that integrates an external system (database, API, file) with a data pipeline or event platform. |
+
+---
+
+## What's Next
+
+In **Feature Flags** (L2-M53), you'll ship code to production without releasing it to users — and control rollouts with fine-grained targeting.
+
+---
 
 ## Further Reading
 

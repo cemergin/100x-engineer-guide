@@ -86,6 +86,8 @@ The goal is NOT to cause an outage. The goal is to disprove your hypothesis. If 
 
 ---
 
+> **Before you continue:** When the payment service is killed, will purchase requests fail immediately (0ms), fail slowly (30s timeout), or succeed with degraded behavior? Write down your prediction before injecting the failure.
+
 ## 3. Experiment 1: Kill the Payment Service
 
 ### Steady state
@@ -504,6 +506,8 @@ For TicketPulse (and most teams starting out): begin with scheduled game days in
 
 ## 9. Reflect
 
+> **What did you notice?** Which chaos experiment produced the most surprising result? Did your predictions match reality, or did you discover resilience gaps you did not expect?
+
 > **"What was the most surprising result from your experiments?"**
 >
 > Write down what surprised you. The surprises are the value of chaos engineering. If nothing surprised you, your mental model is accurate -- which is also valuable information.
@@ -551,3 +555,9 @@ After this module, you should have:
 | **Cascading Failure** | When a failure in one component causes failures in dependent components, which cause failures in their dependents, and so on. |
 | **Graceful Degradation** | The ability of a system to maintain partial functionality when a component fails, rather than failing completely. |
 | **Circuit Breaker** | A resilience pattern that stops calling a failing service after a threshold of failures, allowing it to recover. Tested in this module's experiments. |
+
+---
+
+## What's Next
+
+In **Circuit Breakers and Resilience** (L2-M49), you'll add circuit breakers, retries, and bulkheads so TicketPulse degrades gracefully instead of cascading into total failure.

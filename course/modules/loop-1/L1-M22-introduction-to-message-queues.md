@@ -103,7 +103,25 @@ Producer                    RabbitMQ                     Consumer
 
 ## 2. Build: The Message Publisher (15 minutes)
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: RabbitMQ Connection and Publisher
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the overall approach before diving into implementation details.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the problem into smaller steps. What needs to happen first?
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the concepts from this section. The solution follows the same patterns demonstrated above.
+</details>
+
 
 ```typescript
 // src/messaging/rabbitmq.ts
@@ -333,6 +351,22 @@ The consumer is a **separate process.** It does not run inside the API server. I
 
 ### 🛠️ Build: Consumer Process
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the overall approach before diving into implementation details.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the problem into smaller steps. What needs to happen first?
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the concepts from this section. The solution follows the same patterns demonstrated above.
+</details>
+
+
 ```typescript
 // src/consumers/emailConsumer.ts
 
@@ -505,6 +539,22 @@ The API never waited for the email. The email consumer never slowed down the API
 ## 5. Debug: Kill the Consumer, Queue Up Messages (10 minutes)
 
 ### 🐛 The Experiment
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the overall approach before diving into implementation details.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the problem into smaller steps. What needs to happen first?
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the concepts from this section. The solution follows the same patterns demonstrated above.
+</details>
+
 
 ```bash
 # Terminal 1: TicketPulse API is running
@@ -693,6 +743,9 @@ After this module, TicketPulse should have:
 
 ---
 
+
+> **What did you notice?** Look back at what you just built. What surprised you? What felt harder than expected? That's where the real learning happened.
+
 ## Module Summary
 
 | Concept | Key Takeaway |
@@ -735,3 +788,8 @@ After this module, TicketPulse should have:
 - Chapter 3 of the 100x Engineer Guide: Section 2 (Asynchronous Communication Patterns)
 - Martin Kleppmann, *Designing Data-Intensive Applications*, Chapter 11 (Stream Processing)
 - [Redis Streams](https://redis.io/docs/data-types/streams/) — An alternative to RabbitMQ using Redis (lighter weight, less feature-rich)
+---
+
+## What's Next
+
+In **OWASP Top 10 -- Finding Vulnerabilities** (L1-M23), you'll build on what you learned here and take it further.

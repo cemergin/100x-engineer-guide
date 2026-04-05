@@ -22,7 +22,7 @@ You have been building TicketPulse for months. You know where things are. But no
 
 This matters because you will change teams. You will switch companies. You will inherit systems built by engineers who left before you arrived. The speed at which you become dangerous — not dangerous in a reckless sense, but dangerous in the sense that you can find problems, trace failures, and ship fixes — determines your first-month impact. Engineers who take three weeks to "ramp up" are not slower learners; they lack a systematic approach.
 
-> 💡 **Insight**: "The best engineers I've ever hired were productive within 48 hours. Not because they were geniuses, but because they had a repeatable process for understanding a new system — verify access, read the infrastructure, trace the critical path. They didn't wait for someone to explain the architecture; they read the code that defines it."
+> **Pro tip:** "The best engineers I've ever hired were productive within 48 hours. Not because they were geniuses, but because they had a repeatable process for understanding a new system — verify access, read the infrastructure, trace the critical path. They didn't wait for someone to explain the architecture; they read the code that defines it."
 
 ---
 
@@ -38,7 +38,20 @@ Your goal over the next 75 minutes: become operational. Not an expert. Operation
 
 ## Phase 1: Access Verification Sweep (~25 min)
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Your Access Checklist
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Before you can debug anything, you need to confirm you can reach everything. An engineer who cannot access the monitoring dashboard during an incident is useless. An engineer who discovers their VPN is broken while the CEO is asking for a status update is worse than useless.
 
@@ -145,6 +158,17 @@ grep -r "secrets\." .github/workflows/
 ## Phase 2: Architecture from Infrastructure (~25 min)
 
 ### 📐 Design: Draw the System from Code
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Here is the rule: **you are not allowed to read any documentation, README, or architecture diagram.** You will reverse-engineer TicketPulse's architecture from the infrastructure code alone. This simulates what happens when documentation is outdated (it usually is).
 
@@ -398,3 +422,8 @@ I could respond to a 2AM page │
 - L2-M47: Alerting & On-Call — the monitoring stack you verified in Phase 1
 - L3-M73: Incident Response Simulation — what happens when the system you just mapped breaks
 - L3-M83a: Observability & GitOps as Code — why the infra code you read is version-controlled
+---
+
+## What's Next
+
+In **Beast Mode — Observability & Dashboard Wiring** (L3-M91a), you'll build on what you learned here and take it further.

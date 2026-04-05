@@ -177,7 +177,25 @@ Purchase Flow                    Event Bus                    Listeners
 └──────────────┘  listeners)
 ```
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: The Event Emitter
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the overall approach before diving into implementation details.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the problem into smaller steps. What needs to happen first?
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the concepts from this section. The solution follows the same patterns demonstrated above.
+</details>
+
 
 ```typescript
 // src/events/eventBus.ts
@@ -447,6 +465,22 @@ real    0m0.250s
 
 ### 🐛 Debug: Simulate a Listener Failure
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the overall approach before diving into implementation details.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the problem into smaller steps. What needs to happen first?
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the concepts from this section. The solution follows the same patterns demonstrated above.
+</details>
+
+
 Add a failing listener:
 
 ```typescript
@@ -482,7 +516,7 @@ But there is a problem: **the analytics event was lost.** Nobody will retry it. 
 
 This is the limitation of an in-process event emitter. Events live in memory. If a listener fails, the event is gone. If the process crashes, all pending async work is lost.
 
-### 💡 Insight: This Is Why Message Queues Exist
+> **Pro tip:** This Is Why Message Queues Exist
 
 An in-process event emitter is a stepping stone. It decouples the code, but it does not decouple the process. For real durability:
 - Events should be persisted (so they survive process crashes)
@@ -601,3 +635,8 @@ After this module, TicketPulse should have:
 - Chapter 3 of the 100x Engineer Guide: Section 5 (Event-Driven Patterns)
 - Node.js built-in `EventEmitter` documentation (our EventBus is a simplified version of this pattern)
 - Udi Dahan, [Domain Events Salvation](https://udidahan.com/2009/06/14/domain-events-salvation/) — The original blog post on domain events
+---
+
+## What's Next
+
+In **Introduction to Message Queues** (L1-M22), you'll build on what you learned here and take it further.

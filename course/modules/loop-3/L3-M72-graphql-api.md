@@ -32,6 +32,10 @@ This module covers how to add GraphQL to TicketPulse correctly.
 
 GraphQL is schema-first. The schema defines every type, query, mutation, and subscription your API supports. It is the contract between backend and frontend.
 
+### 🤔 Prediction Prompt
+
+Before reading the reference schema, sketch your own GraphQL types for TicketPulse. What would the Event type look like? What mutations does the purchase flow need? Where would you use subscriptions?
+
 ### Design: TicketPulse GraphQL Schema
 
 Stop and design the schema yourself first. What types does TicketPulse need? What queries? What mutations?
@@ -703,6 +707,9 @@ Before moving on, verify:
 
 ---
 
+
+> **What did you notice?** Consider how this connects to systems you've worked on. Where have you seen similar patterns — or missed opportunities to apply them?
+
 ## Summary
 
 GraphQL gives TicketPulse's clients the power to request exactly what they need. The mobile app gets a minimal event list in one query. The web app gets a rich event detail page in one query. Both use the same endpoint.
@@ -710,6 +717,10 @@ GraphQL gives TicketPulse's clients the power to request exactly what they need.
 The cost of this flexibility: you must solve the N+1 problem (DataLoader), implement pagination properly (Relay connections), and secure against malicious queries (depth limiting, complexity analysis). These are not optional. Without them, a GraphQL API is slower and less secure than the REST API it replaced.
 
 The pragmatic approach: GraphQL for client-facing queries where flexibility drives developer velocity. REST for webhooks, internal services, and public APIs where simplicity and cacheability matter more. They are complementary tools, not competitors.
+
+### 🤔 Reflection Prompt
+
+Has this module changed your opinion on when GraphQL is worth the complexity? What is the threshold in your own projects where the REST "add another endpoint" pattern breaks down?
 
 ## Key Terms
 
@@ -721,3 +732,9 @@ The pragmatic approach: GraphQL for client-facing queries where flexibility driv
 | **DataLoader** | A utility that batches and caches data-fetching calls within a single GraphQL request to prevent N+1 queries. |
 | **Subscription** | A GraphQL operation that maintains a real-time connection and pushes updates to the client when data changes. |
 | **Federation** | An architecture that composes multiple GraphQL services into a single unified API graph. |
+
+---
+
+## What's Next
+
+Next up: **[L3-M73: Incident Response Simulation](L3-M73-incident-response-simulation.md)** -- you will run a full incident response drill, from the first alert to the blameless postmortem, practicing the skills that separate a 15-minute incident from a 4-hour one.

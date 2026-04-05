@@ -49,6 +49,22 @@ And that's before counting the actual data in shared_buffers.
 
 ### 🐛 Debug: Reproduce Connection Exhaustion
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider the trade-offs between different approaches before choosing one.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Refer back to the patterns introduced earlier in this module.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
+
 Let's see this fail in real time. First, set a low connection limit:
 
 ```sql
@@ -98,6 +114,22 @@ FATAL: sorry, too many clients already
 Error: Connection terminated unexpectedly
 ```
 
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Set `max_connections = 20` in Postgres, then fire 50 concurrent requests. Watch for `FATAL: too many connections` errors in the service logs.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Check `pg_stat_activity` to see all active connections grouped by `datname`, `usename`, and `state`. Most connections will be `idle` — hoarding connections they are not using.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The core insight: services hold connections "just in case" and Postgres maintains a process for each one. Query `pg_stat_activity` for the count of idle vs active connections. The ratio will show massive waste — most connections do nothing most of the time.
+</details>
+
 ### 📊 Observe: Current Connection Usage
 
 ```sql
@@ -125,6 +157,9 @@ Most of those connections are **idle**. The service opened them but isn't active
 
 ---
 
+> **Before you continue:** TicketPulse has 5 microservices, each with 4 replicas, each opening 20 database connections. How many total connections is that? What is Postgres's default max? Do you see the problem?
+
+
 ## Part 2: PgBouncer to the Rescue (20 min)
 
 ### What PgBouncer Does
@@ -143,6 +178,22 @@ TicketPulse Services               PgBouncer              PostgreSQL
 ```
 
 ### 🛠️ Build: Add PgBouncer to Docker Compose
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider the trade-offs between different approaches before choosing one.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Refer back to the patterns introduced earlier in this module.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
 
 Add PgBouncer to your `docker-compose.yml`:
 
@@ -204,7 +255,39 @@ And `pgbouncer/userlist.txt`:
 "ticketpulse" "ticketpulse"
 ```
 
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+PgBouncer sits between your services and Postgres, multiplexing many client connections onto a small pool. Key settings: `pool_mode = transaction`, `default_pool_size = 20`, `max_client_conn = 500`.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Add PgBouncer as a Docker Compose service with `DATABASE_URL` pointing to Postgres. Then change ALL service `DATABASE_URL` values to point to PgBouncer (port 6432) instead of Postgres (port 5432).
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Use `POOL_MODE: transaction` for web apps (connection returned after each COMMIT). Set `SERVER_RESET_QUERY: DISCARD ALL` to clean session state. After setup, run `SHOW POOLS` in PgBouncer's admin console to verify multiplexing is working.
+</details>
+
 ### 🛠️ Build: Point Services at PgBouncer
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider the trade-offs between different approaches before choosing one.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Refer back to the patterns introduced earlier in this module.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
 
 Update your service environment variables to connect through PgBouncer instead of directly to Postgres:
 
@@ -401,6 +484,22 @@ WHERE backend_type = 'client backend';
 
 ### 🐛 Debug Checklist: "Too Many Connections"
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider the trade-offs between different approaches before choosing one.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Refer back to the patterns introduced earlier in this module.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
+
 When you see connection errors, work through this:
 
 1. **Check `pg_stat_activity`** — who is consuming connections?
@@ -419,6 +518,22 @@ PgBouncer pool (20 connections)
 ```
 
 The app pool is wasteful — it's holding connections to PgBouncer (cheap) but preventing PgBouncer from efficiently sharing its server connections. Set the app pool to a **small number** (2-5 per instance) and let PgBouncer handle the rest.
+
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Start by checking `pg_stat_activity` to see who is consuming connections. Look specifically for `idle in transaction` states — these hold connections without doing work.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Check five things in order: (1) who is consuming connections, (2) idle-in-transaction sessions, (3) connection leaks in app code, (4) PgBouncer pool config, (5) app-level pool sizes (reduce to 2-5 per instance when using PgBouncer).
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Set `idle_in_transaction_session_timeout = '5min'` in Postgres and `transaction_timeout = 60` in PgBouncer. Watch for "double pooling" — if your app has its own pool of 20 connections AND PgBouncer has a pool, the app pool is wasteful. Reduce app pool to 2-5 per instance.
+</details>
 
 ---
 
@@ -679,6 +794,8 @@ The peak TPS is your optimal pool size. In this example, 20 connections beats 10
 Run this benchmark against your actual database instance type (RDS r6g.2xlarge has different characteristics than a local MacBook). The formula gives you a starting point; the benchmark confirms it.
 
 ---
+
+> **What did you notice?** With PgBouncer, 200 client connections are multiplexed onto 20 server connections — and throughput actually improved. Why does *fewer* database connections lead to *better* performance?
 
 ## 🏁 Module Summary
 

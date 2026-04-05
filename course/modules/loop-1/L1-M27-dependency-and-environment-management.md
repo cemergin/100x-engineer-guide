@@ -496,6 +496,22 @@ Two commands. Done. A new developer is shipping on day one instead of debugging 
 
 ### 📐 Exercise: Onboarding Time Trial
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the overall approach before diving into implementation details.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the problem into smaller steps. What needs to happen first?
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the concepts from this section. The solution follows the same patterns demonstrated above.
+</details>
+
+
 If you have access to a clean machine (or a colleague who just joined):
 
 1. Clone the repo fresh (no existing node_modules or .env)

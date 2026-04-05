@@ -618,3 +618,8 @@ You have:
 | **Five-layer deepening** | A method for transforming vague brag document entries into specific, quantified, context-rich narratives. |
 | **Anchor** | In negotiation, the first specific number stated, which disproportionately shapes the final outcome. |
 | **Walk-away number** | Your minimum acceptable outcome in a negotiation, determined before the conversation begins. |
+---
+
+## What's Next
+
+In **The 100x Engineer Retrospective** (L3-M90), you'll build on what you learned here and take it further.

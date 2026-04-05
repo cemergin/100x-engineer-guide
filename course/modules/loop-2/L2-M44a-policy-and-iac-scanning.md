@@ -58,6 +58,8 @@ kubectl get pods -n kyverno
 # You should see kyverno-admission-controller, kyverno-background-controller, etc.
 ```
 
+> **Before you continue:** Your Terraform code creates resources, but does it create *secure* resources? What kind of mistakes might slip through code review that an automated scanner could catch?
+
 ---
 
 ## 1. The Layered Approach to Policy
@@ -1174,3 +1176,9 @@ After this module, your TicketPulse setup should have:
 | **Static Analysis** | Examining code without executing it. Checkov scans `.tf` files; it does not run `terraform plan`. |
 | **Plan Validation** | Evaluating the output of `terraform plan` (which includes computed and dynamic values) against policies. |
 | **`validationFailureAction`** | Kyverno setting: `Enforce` blocks non-compliant resources; `Audit` logs violations without blocking. |
+
+---
+
+## What's Next
+
+In **Database Migrations as Code** (L2-M44b), you'll treat database schema changes with the same rigor as application code — versioned, reviewed, and safely deployed.

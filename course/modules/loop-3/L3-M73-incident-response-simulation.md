@@ -20,7 +20,7 @@ TicketPulse is a global ticketing platform. When purchases fail, users lose acce
 
 **From the guide:** Chapter 26 tells the story of the Cloudflare regex that took down 10% of the internet in 2019. A single WAF rule deployed to every edge server simultaneously — no canary, no CPU isolation, no rollback path that wasn't itself degraded. The whole incident lasted 27 minutes. What's striking in the postmortem isn't the technical failure; it's the response friction. Engineers were trying to diagnose a fire using tools that were being consumed by the same fire. The incident you're about to run has that same shape: your Kafka consumer lag is building, your purchase success rate is at 85%, and the Grafana dashboard you'd normally reach for is throwing 502s because the service backing it is overloaded. Remember the Cloudflare story as you work through this — the parallels are not accidental. And remember Knight Capital: a $440 million loss in 45 minutes because nobody had a kill switch and nobody had practiced using it. You'll have both today.
 
-> 💡 **Insight**: "Google's SRE teams run Disaster Recovery Testing (DiRT) exercises annually. They intentionally break production systems to practice their response. The chaos is planned; the learning is real."
+> **The bigger picture:** Google's SRE teams run Disaster Recovery Testing (DiRT) exercises annually. They intentionally break production systems to practice their response. The chaos is planned; the learning is real.
 
 ---
 
@@ -80,7 +80,21 @@ Alert 3: Kafka consumer lag at 45,000
 └── Something downstream of order creation is backed up
 ```
 
+### 🤔 Prediction Prompt
+
+Before investigating, form a hypothesis: given the symptoms (purchase success rate at 85%, Kafka consumer lag building, order service latency high), what is the most likely root cause category -- a bad deploy, a traffic spike, or an external dependency failure?
+
 ### 📐 Design: Your Detection Checklist
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Start with the timeline. What changed around 3:55 PM? Correlate the symptom onset with deployments, traffic patterns, and external dependency health.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Check the deploy log first. If nothing deployed at 3:55 PM, look at traffic graphs. If traffic is normal, check external dependencies (database, Kafka, payment provider). The answer is usually in the correlation between timing and changes.
+</details>
 
 Before opening any dashboard, write down what you know and what you need to find out.
 
@@ -98,7 +112,20 @@ UNKNOWN:
 - Where in the purchase flow is the failure occurring?
 ```
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: First Grafana Investigation
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Open the purchase success rate dashboard. You see:
 
@@ -200,6 +227,17 @@ SEV-4: Cosmetic or low-impact issue
 **Declare SEV-2.** Not all purchases are failing, but 15% failure rate with revenue impact and public visibility (Twitter) qualifies.
 
 ### 🛠️ Build: First Status Page Update
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Write this NOW. Do not wait until you know the root cause.
 
@@ -320,6 +358,17 @@ ROOT CAUSE: Missing index on transactions table
 
 ### 🛠️ Build: The Investigation Timeline
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 Write the timeline as you go. This becomes part of the postmortem.
 
 ```
@@ -381,6 +430,17 @@ Option D: Rollback + apply index in parallel
 
 ### 📐 Design: Choose Your Mitigation
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 **The right answer is D: rollback immediately, apply index concurrently.**
 
 Reasoning:
@@ -402,6 +462,17 @@ SQL
 ```
 
 ### 🛠️ Build: Status Page Updates During Mitigation
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 **Update 2: Identified**
 
@@ -484,6 +555,17 @@ Beyond the status page, you need to communicate internally.
 
 ### 🛠️ Build: Resolution Status Page Update
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 ```markdown
 ## Purchase Failures - Resolved
 **Status: Resolved**
@@ -561,6 +643,17 @@ DEPLOY CHECKLIST (before re-deploy)
 
 ### 🛠️ Build: The Blameless Postmortem
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 Write the complete postmortem document. This is the most important artifact from the incident.
 
 ```markdown
@@ -571,6 +664,9 @@ Write the complete postmortem document. This is the most important artifact from
 **Severity:** SEV-2
 **Author:** [Your name]
 **Status:** Action items in progress
+
+
+> **What did you notice?** Consider how this connects to systems you've worked on. Where have you seen similar patterns — or missed opportunities to apply them?
 
 ## Summary
 
@@ -749,6 +845,10 @@ Total                  75 min
 
 5. **Would you have handled this differently if it were 2 AM instead of 4 PM Friday?** If yes, what does that tell you about your team's incident readiness?
 
+### 🤔 Reflection Prompt
+
+Compare your initial hypothesis from the detection phase with the actual root cause. How many investigation steps did it take to get from symptom to cause? What would have shortened that path?
+
 ---
 
 ## Key Terms
@@ -768,3 +868,9 @@ Total                  75 min
 - **Google's SRE Book, Chapter 15**: "Postmortem Culture: Learning from Failure"
 - **PagerDuty's Incident Response Guide**: https://response.pagerduty.com/
 - **Etsy's Debriefing Facilitation Guide**: how to run effective postmortem meetings
+
+---
+
+## What's Next
+
+Next up: **[L3-M74: War Stories Analysis](L3-M74-war-stories-analysis.md)** -- you will dissect real-world outages from Cloudflare, GitHub, and Knight Capital, extracting engineering lessons and building a vulnerability checklist for TicketPulse.

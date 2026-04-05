@@ -14,7 +14,7 @@ A CDN (Content Delivery Network) caches your content at edge locations worldwide
 
 Edge computing goes further: instead of just caching static files, you run code at the edge. Auth token validation, feature flag resolution, geo-based recommendations — all without hitting your origin server.
 
-> 💡 **Chapter 21 of the 100x Engineer Guide** covers the networking fundamentals that make CDNs work: BGP routing, anycast, TLS termination, and the physics of network latency. Understanding those mechanics gives you intuition for when CDNs help (latency-dominated workloads) and when they do not (compute-dominated workloads). This module is the applied companion: you will configure Cache-Control headers, set up a CDN, measure the improvement, and design an edge compute strategy.
+> **Ecosystem note:** Chapter 21 of the 100x Engineer Guide covers the networking fundamentals that make CDNs work: BGP routing, anycast, TLS termination, and the physics of network latency. Understanding those mechanics gives you intuition for when CDNs help (latency-dominated workloads) and when they do not (compute-dominated workloads). This module is the applied companion: you will configure Cache-Control headers, set up a CDN, measure the improvement, and design an edge compute strategy.
 
 **By the end of this module, your TicketPulse assets will be served from the edge, and you will have a design for what logic should run there.**
 
@@ -82,7 +82,24 @@ Understanding this matters because "adding a CDN" is often presented as a single
 
 ## 1. Put TicketPulse Behind a CDN (20 minutes)
 
+### 🤔 Prediction Prompt
+
+Before reading the caching strategy table, write down your own Cache-Control header for each asset type: hashed JS bundles, HTML pages, API responses, and user-specific data. Then compare with the reference.
+
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Configure Cache-Control Headers
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Before setting up a CDN, your origin server must tell the CDN what to cache and for how long. This is done via the `Cache-Control` HTTP header.
 
@@ -137,6 +154,17 @@ app.use((req, res, next) => {
 ```
 
 ### 🛠️ Build: Set Up Cloudflare (Free Tier)
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 ```
 1. Sign up at cloudflare.com (free)
@@ -238,6 +266,17 @@ Timeline:
 
 ### 📐 Caching Strategy Workshop
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 For each TicketPulse resource, choose the right caching strategy and justify it:
 
 | Resource | Description | Staleness Tolerance | Your Cache-Control |
@@ -315,6 +354,17 @@ Cons: Only works for assets where you control the URL. Does not work for API res
 
 ### 📐 Design: TicketPulse Invalidation Strategy
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 ```
 ┌────────────────────┐
 │ Event Service      │
@@ -346,6 +396,16 @@ For TicketPulse, combine strategies:
 - **User-specific data:** Never cached on CDN (`private, no-store`).
 
 ### 🛠️ Build: The Cache Invalidation Worker
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The worker should listen for domain events (like EventUpdated) and translate them into CDN purge API calls for all affected URLs.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Use a Kafka consumer (or SQS/Pub/Sub) that subscribes to "events.updated" topics. For each event, construct the list of URLs to purge: the API endpoint, the HTML page, and the ticket availability endpoint.
+</details>
 
 ```typescript
 // workers/cache-invalidation.ts
@@ -400,6 +460,17 @@ await consumer.run({
 
 ### 📐 Cache Invalidation Scenario Workshop
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 Work through these scenarios. For each one, decide the right invalidation strategy and any edge cases to handle:
 
 **Scenario A:** An event organizer changes the event description from "Doors open at 7pm" to "Doors open at 8pm." The event page is cached at the CDN with `s-maxage=60`.
@@ -445,6 +516,17 @@ Edge compute platforms run your code at CDN edge locations. Instead of caching r
 | **Vercel Edge Functions** | Vercel | V8 isolates | 0ms |
 
 ### 📐 Design Exercise: What Should Run at the Edge?
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Evaluate each of these TicketPulse operations. Should it run at the edge, at the origin, or both?
 
@@ -512,6 +594,16 @@ export default {
 This rejects 100% of invalid tokens at the edge. Your origin server never sees them. During a credential stuffing attack, the edge absorbs the load instead of your backend.
 
 ### 🛠️ Build: Rate Limiting at the Edge
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Combine bot detection, rate limiting (using a KV counter per IP), and JWT validation in a single edge function that runs before any request reaches your origin.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Use Cloudflare KV (or equivalent) with TTL-based expiry for rate limit counters. Check the bot score first (cheapest check), then rate limit, then JWT -- fail fast at each layer.
+</details>
 
 Here is a more complete Cloudflare Worker that combines JWT validation, rate limiting, and bot detection:
 
@@ -598,6 +690,10 @@ The economic implication: your origin needs to be sized for 20% of expected traf
 
 5. **You have a TicketPulse event page with `s-maxage=60`. During a Taylor Swift flash sale, 50,000 requests/second hit the CDN for that event page. How many of those requests reach your origin server?** (Hint: think about cache hit rate after the first requests warm the cache.)
 
+### 🤔 Reflection Prompt
+
+Before this module, what percentage of web traffic did you think could be served without hitting origin? Has the "80% at the edge" number changed how you think about infrastructure sizing?
+
 ---
 
 ## 6. Checkpoint
@@ -615,6 +711,9 @@ After this module, you should have:
 - [ ] Understanding that ~80% of typical web traffic can be served from the edge
 
 ---
+
+
+> **What did you notice?** Consider how this connects to systems you've worked on. Where have you seen similar patterns — or missed opportunities to apply them?
 
 ## Module Summary
 
@@ -654,3 +753,9 @@ After this module, you should have:
 - Jake Archibald, ["Caching best practices"](https://jakearchibald.com/2016/caching-best-practices/) — practical caching patterns, especially on the `immutable` directive
 - **Chapter 21 of the 100x Engineer Guide**: Networking fundamentals — BGP, anycast, TLS, and the physics of latency
 - [Cloudflare Blog: "How Cloudflare's Global Network Works"](https://blog.cloudflare.com/) — the engineering behind one of the world's largest CDNs
+
+---
+
+## What's Next
+
+Next up: **[L3-M65: Consistent Hashing & Distributed Cache](L3-M65-consistent-hashing-and-distributed-cache.md)** -- you will go deeper into the cache layer, implementing consistent hashing rings and designing a multi-layer cache architecture for TicketPulse.

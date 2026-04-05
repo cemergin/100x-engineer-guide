@@ -166,6 +166,22 @@ Bounded contexts are not isolated islands. They communicate. The **context map**
 
 ### 📐 Design: TicketPulse Context Map
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the overall approach before diving into implementation details.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the problem into smaller steps. What needs to happen first?
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the concepts from this section. The solution follows the same patterns demonstrated above.
+</details>
+
+
 ```
   ┌─────────────────┐         ┌─────────────────┐
   │     Event        │         │    Ticketing     │
@@ -278,7 +294,25 @@ order.addTicket(eventId, tier, quantity);
 // 4. Enforces max 10 tickets per order
 ```
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Order Aggregate
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the overall approach before diving into implementation details.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the problem into smaller steps. What needs to happen first?
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the concepts from this section. The solution follows the same patterns demonstrated above.
+</details>
+
 
 ```typescript
 // src/modules/ticketing/domain/order.ts
@@ -628,3 +662,8 @@ After this module, you should have:
 - Vaughn Vernon, *Implementing Domain-Driven Design*, Chapter 10 (Aggregates)
 - [Martin Fowler on Bounded Contexts](https://martinfowler.com/bliki/BoundedContext.html)
 - Chapter 3 of the 100x Engineer Guide: Section 4 (Domain-Driven Design)
+---
+
+## What's Next
+
+In **Event-Driven Thinking** (L1-M21), you'll build on what you learned here and take it further.

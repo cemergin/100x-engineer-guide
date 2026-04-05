@@ -287,6 +287,8 @@ export function getPaymentCircuitState() {
 
 ---
 
+> **Before you continue:** After 5 consecutive failures, the circuit opens. How long will requests take when the circuit is open compared to when it was closed and failing? What is the benefit of fast failure?
+
 ## 2. Try It: Watch the Circuit Open (5 minutes)
 
 Write a test script that hammers the payment service and watches the circuit state change:
@@ -770,6 +772,8 @@ git add -A && git commit -m "feat: add circuit breaker, retry, bulkhead, and fal
 
 ## Reflect
 
+> **What did you notice?** When the circuit breaker opened and requests started failing in 0ms instead of waiting for a timeout, how significant was the difference? Did the fallback queue change how you think about user experience during partial outages?
+
 **The resilience stack in order of importance:**
 
 1. **Timeouts** -- the most basic and most important. Without timeouts, everything else is moot.
@@ -792,6 +796,14 @@ git add -A && git commit -m "feat: add circuit breaker, retry, bulkhead, and fal
 | **Backoff** | A strategy of progressively increasing the wait time between retry attempts to reduce load on a failing system. |
 | **Jitter** | Random variation added to backoff intervals to prevent many clients from retrying simultaneously. |
 | **Timeout** | A maximum duration allowed for an operation to complete before it is aborted and treated as a failure. |
+
+---
+
+## What's Next
+
+In **Rate Limiting** (L2-M50), you'll protect TicketPulse's APIs from abuse and overload with token buckets, sliding windows, and distributed rate limiting.
+
+---
 
 ## Further Reading
 

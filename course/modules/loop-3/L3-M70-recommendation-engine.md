@@ -41,6 +41,10 @@ Each has strengths and weaknesses. Think:
 - Which works for a brand-new event with no attendees?
 - Which captures subtle preferences (a user who likes "intimate jazz venues" not just "jazz")?
 
+### 🤔 Prediction Prompt
+
+Before reading the implementations, think: which strategy works for a brand-new user with zero history? Which works for a brand-new event with zero attendees? Your answers determine which strategies you combine.
+
 Write down your initial design, then continue.
 
 ---
@@ -600,13 +604,20 @@ Before moving on, verify:
 
 ---
 
+
+> **What did you notice?** Consider how this connects to systems you've worked on. Where have you seen similar patterns — or missed opportunities to apply them?
+
 ## Summary
 
 TicketPulse now has "Events you might like." Three strategies cover different scenarios: collaborative filtering leverages crowd wisdom, content-based filtering works for new events, and embedding-based filtering captures semantic nuance. The hybrid approach combines all three with tunable weights.
 
 The cold start problem is handled with fallbacks. Quality is measured with click-through and conversion rates. A/B testing determines optimal weights.
 
-The recommendation engine is a perfect example of "start simple, iterate with data." A co-occurrence matrix in SQL gets you 80% of the way. Embeddings add the remaining nuance. The hardest part is not the algorithm -- it is building the feedback loop that tells you whether the recommendations are actually good.
+The recommendation engine is a perfect example of "start simple, iterate with data." A co-occurrence matrix in SQL gets you 80% of the way. Embeddings add the remaining nuance. ### 🤔 Reflection Prompt
+
+Did the "start simple, iterate with data" approach change how you think about building ML-adjacent features? Where in your own work have you over-engineered a solution that a simple SQL query would have handled?
+
+The hardest part is not the algorithm -- it is building the feedback loop that tells you whether the recommendations are actually good.
 
 ## Key Terms
 
@@ -617,3 +628,9 @@ The recommendation engine is a perfect example of "start simple, iterate with da
 | **Embedding** | A dense numerical vector representation of an item or user in a continuous space, capturing semantic similarity. |
 | **Cold start** | The challenge of generating recommendations for new users or items with little or no interaction data. |
 | **pgvector** | A PostgreSQL extension that adds vector data types and similarity-search indexes for embedding-based queries. |
+
+---
+
+## What's Next
+
+Next up: **[L3-M71: AI-Powered Features](L3-M71-ai-powered-features.md)** -- you will integrate LLMs and AI capabilities into TicketPulse, from semantic search to natural-language event descriptions.

@@ -23,7 +23,7 @@ And here is the secret: as a newcomer, you have a temporary superpower. Things t
 
 You see all of this. But the superpower fades. Within a few weeks, you will normalize these gaps too. Use it before it fades.
 
-> 💡 **Insight**: "The best engineers do not just learn fast — they make everyone around them faster. The highest-leverage thing a new engineer can do is not to ship a feature. It is to fix the documentation so the next new engineer onboards in half the time."
+> **Pro tip:** "The best engineers do not just learn fast — they make everyone around them faster. The highest-leverage thing a new engineer can do is not to ship a feature. It is to fix the documentation so the next new engineer onboards in half the time."
 
 ---
 
@@ -237,7 +237,20 @@ On-Call Eng.  │                                     │
 
 ## Phase 3: The Fresh Eyes Audit (~20 min)
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Documenting What Confuses You
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 This is the highest-leverage exercise in the entire Beast Mode series. You are going to walk through TicketPulse's documentation as if you are seeing it for the very first time — and you are going to write down every single point of confusion, missing context, or outdated information.
 
@@ -321,6 +334,9 @@ TOP 3 FIXES
 **Step 4 — Write a one-paragraph summary of the documentation health.** This is what you would share with the team — a brief, constructive assessment of where the docs stand and what would help most.
 
 ```markdown
+
+> **What did you notice?** Consider how this connects to systems you've worked on. Where have you seen similar patterns — or missed opportunities to apply them?
+
 ## Documentation Health Summary
 
 **Overall assessment:** [Good / Acceptable / Needs Work / Critical Gaps]
@@ -385,3 +401,8 @@ I make the team faster, not just myself           │
 - L3-M73: Incident Response Simulation — the postmortems you mined in Phase 1
 - L3-M74: Postmortem Writing — the artifacts that fed your archaeology
 - L3-M88: Architecture Review — the ADRs that capture decision context
+---
+
+## What's Next
+
+You've completed the entire 100x Engineer Course. There is no next module — there's only the work ahead of you. Go build something extraordinary.

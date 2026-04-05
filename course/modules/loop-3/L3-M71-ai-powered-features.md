@@ -24,6 +24,10 @@ The challenge is doing this responsibly. LLM calls are expensive ($0.01-$0.10 pe
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before reading the RAG implementation, think: if a user searches "fun outdoor things this weekend near me," how would you bridge the gap between that fuzzy query and structured event data? What would you embed, and what would you filter?
+
 ## 1. RAG for Natural Language Search
 
 ### The Problem
@@ -621,6 +625,9 @@ Before moving on, verify:
 
 ---
 
+
+> **What did you notice?** Consider how this connects to systems you've worked on. Where have you seen similar patterns — or missed opportunities to apply them?
+
 ## Summary
 
 AI features in TicketPulse solve real problems. Semantic search understands "chill date night vibes" in a way keyword search never could. Generated descriptions save organizer time. The chatbot provides a conversational interface for imprecise queries.
@@ -628,6 +635,10 @@ AI features in TicketPulse solve real problems. Semantic search understands "chi
 But AI is not free. Every LLM call costs money, adds latency, and introduces nondeterminism. The engineering discipline is: cache aggressively, use the cheapest model that works, ground every response in real data, and verify outputs before showing them to users.
 
 The most important AI feature is the one the user never notices: embeddings powering better search and recommendations behind the scenes. The flashiest AI feature (the chatbot) is often the least valuable. Build for substance, not spectacle.
+
+### 🤔 Reflection Prompt
+
+Which of the AI features in this module would you actually ship first, and why? Where is the line between "AI adds genuine value" and "AI adds complexity for marketing purposes" in your own work?
 
 ## Key Terms
 
@@ -640,3 +651,9 @@ The most important AI feature is the one the user never notices: embeddings powe
 | **Prompt** | The input text or instruction given to an LLM to guide its response. |
 | **Grounding** | The technique of anchoring LLM outputs to verified, retrieved facts to reduce hallucination. |
 | **Guardrail** | A check or filter applied to LLM inputs or outputs to enforce safety, accuracy, or policy constraints. |
+
+---
+
+## What's Next
+
+Next up: **[L3-M72: GraphQL API](L3-M72-graphql-api.md)** -- you will add a flexible query layer to TicketPulse that lets mobile and web clients request exactly the data they need in a single request.

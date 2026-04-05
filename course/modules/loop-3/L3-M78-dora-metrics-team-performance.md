@@ -20,7 +20,7 @@
 
 The DORA research program (DevOps Research and Assessment), led by Dr. Nicole Forsgren, Jez Humble, and Gene Kim, studied thousands of engineering organizations over 7 years and identified 4 metrics that predict both software delivery performance AND organizational performance. These are not vanity metrics. The Accelerate book proved statistically that high DORA scores correlate with business outcomes: profitability, market share, and productivity.
 
-> 💡 **Chapter 9 of the 100x Engineer Guide** covers engineering leadership holistically — hiring, culture, technical debt management, and measurement. This module focuses on the measurement layer and gives you the practical skills to instrument, track, and act on DORA metrics without falling into the traps that destroy their value.
+> **Ecosystem note:** Chapter 9 of the 100x Engineer Guide covers engineering leadership holistically — hiring, culture, technical debt management, and measurement. This module focuses on the measurement layer and gives you the practical skills to instrument, track, and act on DORA metrics without falling into the traps that destroy their value.
 
 ---
 
@@ -170,7 +170,20 @@ TicketPulse scores Elite across the board. This is partly because the team inves
 
 ---
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ## 🛠️ Build: A DORA Measurement Dashboard
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 You do not need expensive tools to track DORA. A script querying git and your CI system is enough to start. Let us build one.
 
@@ -262,6 +275,17 @@ Panel 4: Change Failure Rate (gauge)
 
 ### 📐 Exercise: Calculate Your Real Numbers
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 Before reading further, go calculate TicketPulse's actual DORA numbers:
 
 ```bash
@@ -345,6 +369,17 @@ The goal: Elite DORA + healthy SPACE = sustainable high performance.
 ```
 
 ### 📐 Exercise: SPACE Survey
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Send this survey to your team (3 minutes per person):
 
@@ -437,6 +472,17 @@ SAFE METRIC PRACTICES
 
 ## 📐 Design: Moving from High to Elite
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 If TicketPulse were scoring "High" instead of "Elite," what would you change?
 
 ```
@@ -469,6 +515,17 @@ Change Failure Rate: 20% → <10%
 ```
 
 ### 🛠️ Hands-On: Reduce Lead Time by 30%
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Lead time has four components. Let us measure and attack each:
 
@@ -556,6 +613,17 @@ Fix: CFR should be paired with deployment frequency. Low CFR + low
 
 ## 📐 Exercise: DORA Scenario Analysis
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 Work through these three scenarios. For each one, identify the DORA anti-pattern and prescribe the fix.
 
 **Scenario A:** The engineering manager sends a weekly email celebrating the team that had the most deployments last week. One team deploys config changes (environment variable tweaks) multiple times a day to boost their score.
@@ -604,3 +672,8 @@ Work through these three scenarios. For each one, identify the DORA anti-pattern
 - **DORA annual report**: dora.dev — updated benchmarks every year
 - **"Measuring Developer Productivity"** by Abi Noda (DX.dev) — practical guidance on avoiding Goodhart's Law
 - **GitHub Engineering blog**: "How we use DORA metrics at GitHub" — a real implementation story
+---
+
+## What's Next
+
+In **Data Privacy & GDPR** (L3-M79), you'll build on what you learned here and take it further.

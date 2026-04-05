@@ -452,6 +452,8 @@ Week 3: Charlie (primary), Alice (secondary)
 >
 > Monitoring is observing: collecting metrics, building dashboards, understanding system behavior. Alerting is acting: automatically notifying humans when metrics indicate a problem. You monitor everything; you alert on the small subset that requires immediate human intervention. Too many alerts means you are not monitoring well enough to set good thresholds.
 
+> **What did you notice?** After following the runbook step by step, how long did it take to identify the problem? What would you add to the runbook to make the next response faster?
+
 ---
 
 ## 7. Checkpoint
@@ -470,6 +472,8 @@ After this module, you should have:
 **Next up:** L2-M48 where we intentionally break TicketPulse with chaos engineering and see if our monitoring and alerting catches the problems.
 
 ---
+
+> **Before you continue:** If you inject a 15% error rate into the event service, how long do you predict it will take for the HighErrorRate_Critical alert to fire? Consider the `for: 2m` clause and the multi-window evaluation.
 
 ## 8. Hands-On Walkthrough: Trigger and Respond to an Alert (20 min)
 
@@ -629,3 +633,9 @@ Your colleague says: "Disk at 85% is critical — we should page on it." You say
 | **Flapping** | An alert that rapidly toggles between firing and resolved, creating noise. Prevented by `for` durations and multi-window rules. |
 | **Escalation** | The process of notifying additional people when the primary on-call does not acknowledge or cannot resolve an alert. |
 | **Postmortem** | A blameless review after an incident, documenting what happened, why, and what will be done to prevent recurrence. |
+
+---
+
+## What's Next
+
+In **Chaos Engineering** (L2-M48), you'll deliberately break TicketPulse in controlled ways to discover weaknesses before your users do.

@@ -1165,3 +1165,8 @@ Before moving on, verify you can answer "yes" to each:
 - [ ] You wrote catalog-info.yaml entries for all three TicketPulse services
 - [ ] You can explain when to choose Crossplane vs Terraform
 - [ ] You can explain the golden path from Backstage template to running infrastructure
+---
+
+## What's Next
+
+In **Nix & Reproducible Builds** (L3-M84), you'll build on what you learned here and take it further.

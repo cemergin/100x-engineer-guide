@@ -4,6 +4,8 @@
 >
 > **Source:** Chapters 3, 22, 25, 32, 13 of the 100x Engineer Guide
 
+> **Before you continue:** You need to rename a database column that three services depend on. If you deploy the schema change and the code change at the same time, there is a window where the old code runs against the new schema. How do you avoid that gap?
+
 ---
 
 ## The Goal
@@ -687,6 +689,14 @@ The key insight: **every migration is a multi-step process with application depl
 | **Dual-write** | A migration phase where application code writes to both the old and new columns simultaneously to maintain consistency. |
 | **Rollback window** | The time period after a migration during which rolling back is safe; shrinks as new data accumulates in the new schema. |
 | **Schema compatibility** | The property that application code can operate correctly against both the pre-migration and post-migration schema. |
+
+---
+
+## What's Next
+
+In **Webhooks** (L2-M55), you'll build a webhook system that lets external services subscribe to TicketPulse events with reliable delivery.
+
+---
 
 ## Further Reading
 

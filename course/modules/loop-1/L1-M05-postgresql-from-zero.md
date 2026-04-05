@@ -83,7 +83,7 @@ SELECT version();
 SELECT current_database();
 ```
 
-💡 **Insight:** The `\` commands (like `\l`, `\dt`, `\d`) are `psql` meta-commands — they are shortcuts built into the terminal client, not SQL. You'll use them constantly.
+> **Pro tip:** The `\` commands (like `\l`, `\dt`, `\d`) are `psql` meta-commands — they are shortcuts built into the terminal client, not SQL. You'll use them constantly.
 
 ---
 
@@ -131,7 +131,25 @@ Reading this:
 
 ## Part 3: Build the Schema (20 min)
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Your Turn
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the overall approach before diving into implementation details.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the problem into smaller steps. What needs to happen first?
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the concepts from this section. The solution follows the same patterns demonstrated above.
+</details>
+
 
 Try creating the tables yourself first. Here are the rules:
 - Every table needs an `id` column (use `BIGSERIAL PRIMARY KEY`)
@@ -248,7 +266,7 @@ Copy and paste the entire schema into your `psql` session. Then verify:
 
 You should see 7 tables: `venues`, `artists`, `events`, `event_artists`, `tickets`, `orders`, `order_items`.
 
-### 💡 Insight: Design Decisions Explained
+> **Pro tip:** Design Decisions Explained
 
 | Decision | Why |
 |----------|-----|
@@ -576,6 +594,9 @@ Want to practice these queries without Docker? Load the schema and data at **htt
 This gives you a scratchpad to experiment with SQL freely.
 
 ---
+
+
+> **What did you notice?** Look back at what you just built. What surprised you? What felt harder than expected? That's where the real learning happened.
 
 ## 🏁 Module Summary
 

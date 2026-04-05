@@ -69,6 +69,9 @@ To find documents containing "jazz," the search engine looks up the single entry
 
 ---
 
+> **Before you continue:** If you run `SELECT * FROM events WHERE name ILIKE '%jazz%'` on 1 million rows, what kind of scan does the database perform? Why can't a B-tree index help with leading wildcards?
+
+
 ## Part 2: Deploy Elasticsearch (10 min)
 
 ### 🚀 Deploy: Add Elasticsearch to Docker Compose
@@ -129,6 +132,22 @@ Open http://localhost:5601 in your browser. Navigate to Dev Tools (the wrench ic
 ## Part 3: Index TicketPulse Events (15 min)
 
 ### 🛠️ Build: Define the Index Mapping
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider the trade-offs between different approaches before choosing one.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Refer back to the patterns introduced earlier in this module.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
 
 A mapping defines the schema for your search index — which fields exist, their types, and how they should be analyzed.
 
@@ -224,6 +243,22 @@ A field can have **multi-fields** (the `fields` block): `name` is analyzed as `t
 
 ### 🛠️ Build: Bulk Index Events from Postgres
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider the trade-offs between different approaches before choosing one.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Refer back to the patterns introduced earlier in this module.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
+
 Create a script to sync events from Postgres to Elasticsearch:
 
 ```javascript
@@ -306,6 +341,22 @@ curl "http://localhost:9200/ticketpulse-events/_count"
 ## Part 4: Build the Search API (15 min)
 
 ### 🛠️ Build: Full-Text Search with Filters
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider the trade-offs between different approaches before choosing one.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Refer back to the patterns introduced earlier in this module.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
 
 ```javascript
 // src/services/event-service/routes/search.js
@@ -445,6 +496,22 @@ The `_explanation` field in the response breaks down exactly why each document s
 ## Part 5: Autocomplete — Search as You Type (10 min)
 
 ### 🛠️ Build: Suggest Endpoint with Edge N-Grams
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider the trade-offs between different approaches before choosing one.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Refer back to the patterns introduced earlier in this module.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The solution uses the same technique shown in the examples above, adapted to this specific scenario.
+</details>
+
 
 We already configured the `autocomplete_analyzer` in our mapping. Here's how edge n-grams work:
 
@@ -662,6 +729,8 @@ ORDER BY rank DESC;
 For TicketPulse, where search is a core user experience with autocomplete, filtering, and relevance ranking, Elasticsearch is the right choice. But if you're building an admin panel with a simple "find event by name" feature, Postgres tsvector is perfectly adequate.
 
 ---
+
+> **What did you notice?** An inverted index turns a full-table scan into an O(1) lookup. But now you have two data stores to keep in sync. When is the operational overhead of Elasticsearch worth it versus just using Postgres tsvector?
 
 ## 🏁 Module Summary
 

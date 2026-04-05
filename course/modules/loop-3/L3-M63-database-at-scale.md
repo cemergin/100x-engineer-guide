@@ -12,7 +12,7 @@ Every application eventually outgrows its single database. The symptoms are alwa
 
 The instinct is to reach for the biggest instance type, or jump straight to sharding. Both are expensive mistakes. The real skill is knowing which scaling strategy to apply first, in what order, and at what thresholds — because each step adds complexity, and complexity is where bugs live.
 
-> 💡 **Chapter 24 of the 100x Engineer Guide** goes deep on PostgreSQL internals: MVCC, WAL, the query planner, and vacuum mechanics. This module is the applied companion — you will read about those mechanisms and then use them to make real scaling decisions for TicketPulse.
+> **Ecosystem note:** Chapter 24 of the 100x Engineer Guide goes deep on PostgreSQL internals: MVCC, WAL, the query planner, and vacuum mechanics. This module is the applied companion — you will read about those mechanisms and then use them to make real scaling decisions for TicketPulse.
 
 ---
 
@@ -81,6 +81,17 @@ Write your hypotheses before reading. The act of guessing before you know forces
 All writes go to the primary. Reads can be distributed across replicas. This effectively multiplies your read capacity by the number of replicas.
 
 ### 📐 Design Exercise: Query Routing
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Classify these TicketPulse queries. Which MUST hit the primary? Which can safely go to a replica?
 
@@ -162,7 +173,24 @@ SELECT
   ROUND(EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp()))::numeric, 2) AS lag_seconds;
 ```
 
+### 🤔 Prediction Prompt
+
+Before looking at the lag-aware pool implementation, sketch out what data you would need to make routing decisions. How would you detect a lagging replica without adding latency to every request?
+
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Lag-Aware Connection Pool
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Here is a TypeScript sketch of lag-aware routing logic. This wraps your database client and automatically routes reads away from lagging replicas:
 
@@ -296,6 +324,17 @@ Use `transaction` mode for TicketPulse. Each request gets a server connection on
 
 ### 📐 Tuning Exercise: Right-Size the Pool
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 Given:
 - 3 app pods, each with 10 concurrent workers
 - 1 PostgreSQL primary
@@ -328,6 +367,16 @@ The tickets table has 50 million rows. Even with indexes, certain operations suf
 Partitioning splits one logical table into multiple physical tables (partitions). Each partition is an independent table with its own indexes and storage. PostgreSQL routes queries to the relevant partition(s) automatically.
 
 ### 🛠️ Build: Partition the Tickets Table
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about which column appears in almost every query's WHERE clause AND has a natural ordering that separates hot data from cold data.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Range partition by event_date using quarterly boundaries. Create a DEFAULT partition as a safety net for any rows that fall outside defined ranges.
+</details>
 
 The tickets table has a natural partitioning dimension: time. Events happen on specific dates. Old events (and their tickets) are rarely queried. Current and upcoming events are hot.
 
@@ -493,6 +542,17 @@ DELETE FROM tickets WHERE event_date < '2025-04-01';
 
 ### 🛠️ Hands-On: Verify Autovacuum Improvements
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 After partitioning, check that autovacuum is running on individual partitions rather than the whole table:
 
 ```sql
@@ -537,6 +597,17 @@ Sharding splits data across multiple independent database servers. Each shard is
 ```
 
 ### 📐 Design Exercise: Choose a Shard Key
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 This is the most important decision in sharding. The shard key determines which shard stores each row. A bad shard key creates hotspots, expensive cross-shard queries, and operational nightmares.
 
@@ -650,13 +721,26 @@ If you do need sharding:
 - **Vitess (MySQL):** Created by YouTube for scaling MySQL. Handles connection pooling, query routing, and resharding. Used by Slack, Square, and GitHub.
 - **Application-level sharding:** You write the routing logic. Maximum control, maximum complexity. Used by many large companies with unique requirements.
 
-### 💡 Insight: How Figma Shards
+> **The bigger picture:** The shard key decision is effectively permanent. Changing it later means migrating every row in your database. Spend the time upfront to get it right.
+
+### How Figma Shards
 
 Figma shards their database by `file_id`. Every Figma design file is a shard key. All operations on a file — loading, editing, commenting, version history — hit a single shard. This gives perfect query locality for the most common operation (working on a file).
 
 Cross-shard queries (list all files for a user) use a secondary index. This trade-off makes sense because users work on one file at a time (hot path) but list their files occasionally (warm path).
 
 ### 🛠️ Build: Application-Level Shard Router
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 If you implement application-level sharding, here is a simple router pattern:
 
@@ -741,6 +825,10 @@ LONG-TERM (Month 3+): Only if primary CPU > 70% peak after above steps
 
 5. **Replication lag spikes to 45 seconds during your nightly analytics job. The analytics query cannot be moved — it was added by the finance team and queries the primary directly. What are your options?**
 
+### 🤔 Reflection Prompt
+
+Look back at your initial hypotheses from Section 0. Which scaling technique addressed which symptom? Did anything surprise you about the order of the scaling ladder?
+
 ---
 
 ## 7. Checkpoint
@@ -760,6 +848,9 @@ After this module, you should have:
 - [ ] Understanding of when partitioning is sufficient vs when sharding is necessary
 
 ---
+
+
+> **What did you notice?** Consider how this connects to systems you've worked on. Where have you seen similar patterns — or missed opportunities to apply them?
 
 ## Module Summary
 
@@ -802,3 +893,9 @@ After this module, you should have:
 - [Figma's Database Scaling Story](https://www.figma.com/blog/how-figma-scaled-to-multiple-databases/) — practical sharding decisions
 - [Citus Documentation](https://docs.citusdata.com/) — distributed PostgreSQL
 - [PgBouncer Documentation](https://www.pgbouncer.org/config.html) — connection pooling configuration reference
+
+---
+
+## What's Next
+
+Next up: **[L3-M64: CDN & Edge Computing](L3-M64-cdn-and-edge-computing.md)** -- you will push TicketPulse's content and logic to the network edge, learning to serve 80% of traffic without hitting your origin servers.

@@ -130,7 +130,25 @@ Error budget = 0.1% of 1,000,000 = 1,000 errors allowed
 
 If you have used 800 of your 1,000 error budget, you have 200 errors left for the rest of the month. This number drives real engineering decisions.
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Workshop: Error Budget Calculation
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the overall approach before diving into implementation details.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the problem into smaller steps. What needs to happen first?
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the concepts from this section. The solution follows the same patterns demonstrated above.
+</details>
+
 
 Work through these calculations yourself before reading the answers. Use a calculator.
 
@@ -542,6 +560,22 @@ Gradual burn (3d window): error rate > 1x normal → ticket for investigation
 ```
 
 ### 🛠️ Build: Burn Rate Alert Implementation
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about the overall approach before diving into implementation details.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Break the problem into smaller steps. What needs to happen first?
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Review the concepts from this section. The solution follows the same patterns demonstrated above.
+</details>
+
 
 Here is how you would implement this in Prometheus/Alertmanager:
 

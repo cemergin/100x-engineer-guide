@@ -14,7 +14,7 @@
 ## Why This Matters
 Most engineers learn SELECT, JOIN, and GROUP BY and stop there. They then write application code to do things SQL can handle natively — ranking, running totals, percentage calculations, time-series analysis. This is slower, harder to maintain, and scales worse. The patterns in this module eliminate 80% of the cases where you'd reach for application code.
 
-💡 **Insight:** Window functions were added to the SQL standard in 2003, but most engineers never learn them. They are supported by every major database — Postgres, MySQL 8+, SQLite 3.25+, SQL Server, Oracle. Learn them once, use them everywhere.
+> **Pro tip:** Window functions were added to the SQL standard in 2003, but most engineers never learn them. They are supported by every major database — Postgres, MySQL 8+, SQLite 3.25+, SQL Server, Oracle. Learn them once, use them everywhere.
 
 ## Prereq Check
 
@@ -390,6 +390,8 @@ ORDER BY venue NULLS LAST, ticket_status NULLS LAST;
 
 Now it's your turn. Write these 5 queries against the TicketPulse database. Each one uses concepts from this module. Try writing them yourself before checking the solution.
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Your Turn
 
 **Query 1: "Event Revenue Leaderboard"**
@@ -565,6 +567,9 @@ ORDER BY revenue DESC;
 </details>
 
 ---
+
+
+> **What did you notice?** Look back at what you just built. What surprised you? What felt harder than expected? That's where the real learning happened.
 
 ## 🏁 Module Summary
 

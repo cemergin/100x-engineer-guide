@@ -657,3 +657,8 @@ After this module, TicketPulse should have:
 | **Refresh token** | Longer-lived token (days/weeks). Used only to get new access tokens. Can be revoked. |
 | **RBAC** | Role-Based Access Control. Users have roles, roles have permissions. Simple and effective for most apps. |
 | **401 vs 403** | 401 = "I don't know who you are" (not authenticated). 403 = "I know who you are, but you can't do this" (not authorized). |
+---
+
+## What's Next
+
+In **Your First Deployment** (L1-M14), you'll build on what you learned here and take it further.

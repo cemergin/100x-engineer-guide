@@ -678,3 +678,8 @@ You have:
 | **narHash** | The cryptographic hash of a Nix Archive (NAR), used to verify that a downloaded input has not changed since the lockfile was created. |
 | **shellHook** | A Nix attribute that runs shell commands when entering a `nix develop` shell, used to set environment variables and aliases. |
 | **Selective pinning** | The practice of using different nixpkgs channels for different packages to balance freshness and stability. |
+---
+
+## What's Next
+
+In **Open Source Your Work** (L3-M85), you'll build on what you learned here and take it further.

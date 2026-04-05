@@ -18,7 +18,7 @@ TicketPulse stores personal data: names, email addresses, payment information, p
 
 This is not a legal problem. It is an engineering problem. The law says "delete all user data." The engineering reality is: data is spread across 5 services, replicated to Elasticsearch and Neo4j, immutably stored in Kafka events, included in database backups, and scattered through log files. "Just delete it" is a 6-month project if you did not design for it from the start.
 
-> 💡 **Insight**: "Privacy is not a feature you add at the end. It is an architectural constraint you design for from the beginning. The companies that treat GDPR as a legal checkbox end up with the most expensive and painful compliance projects."
+> **Pro tip:** "Privacy is not a feature you add at the end. It is an architectural constraint you design for from the beginning. The companies that treat GDPR as a legal checkbox end up with the most expensive and painful compliance projects."
 
 ---
 
@@ -67,6 +67,17 @@ WHERE USER DATA LIVES
 
 ### 📐 Design: Data Export Architecture
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 ```
 USER DATA EXPORT FLOW
 ═════════════════════
@@ -88,7 +99,20 @@ Data Export Service:
   7. Delete the export file after 7 days
 ```
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Data Export Endpoint
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 Each service implements an internal export endpoint:
 
@@ -239,6 +263,17 @@ WHY DELETION IS HARD IN DISTRIBUTED SYSTEMS
 
 ### 📐 Design: Deletion Architecture
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 ```
 USER DELETION FLOW
 ══════════════════
@@ -273,6 +308,17 @@ Phase 3: VERIFICATION
 ```
 
 ### 🛠️ Build: Crypto-Shredding for Kafka Events
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 You cannot delete Kafka messages. But you CAN make them unreadable.
 
@@ -341,6 +387,17 @@ async function shredUserData(userId: string): Promise<void> {
 
 ### 🛠️ Build: Post-Backup-Restore Deletion Cleanup
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 ```typescript
 // Run after EVERY database restore from backup
 async function reapplyDeletions(): Promise<void> {
@@ -365,6 +422,17 @@ async function reapplyDeletions(): Promise<void> {
 ## Part 3: Consent Management
 
 ### 📐 Design: Granular Consent Records
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 GDPR requires that you track consent: what the user consented to, when, and under which version of the privacy policy.
 
@@ -444,6 +512,17 @@ COMMON PII LEAKS IN LOGS
 
 ### 🛠️ Build: PII Scrubbing Middleware
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
+
 ```typescript
 // PII scrubbing for structured logs
 const PII_PATTERNS: Array<{ pattern: RegExp; replacement: string }> = [
@@ -509,6 +588,17 @@ logger.info("User alice@example.com logged in from 192.168.1.1");
 ---
 
 ## 📐 Design: The Compliance Audit
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+What constraints matter most here? Start from the requirements, not the implementation.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+</details>
+
 
 ### 🤔 Reflect: If a Regulator Audited TicketPulse Tomorrow
 
@@ -589,3 +679,8 @@ YOUR BIGGEST GAP: _____________________________________________
 - **Crypto-shredding paper**: "Forgetting in Event-Sourced Systems" by Martin Kleppmann
 - **CCPA (California)**: similar to GDPR, applies to California residents
 - **HIPAA (Healthcare)**: stricter than GDPR for health data -- relevant if TicketPulse adds health-related events
+---
+
+## What's Next
+
+In **Building Your Platform** (L3-M80), you'll build on what you learned here and take it further.

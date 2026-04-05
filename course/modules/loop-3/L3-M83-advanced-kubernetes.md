@@ -676,3 +676,8 @@ Your HPA scales the order-processor based on Kafka consumer lag. But if the Kafk
 | **SecurityContext** | A Kubernetes setting that defines privilege and access-control options for a pod or container. |
 | **HPA** | Horizontal Pod Autoscaler; a Kubernetes controller that automatically scales the number of pod replicas based on observed metrics. |
 | **Resource quota** | A Kubernetes mechanism that limits the total amount of CPU, memory, or other resources a namespace can consume. |
+---
+
+## What's Next
+
+In **Observability & GitOps as Code** (L3-M83a), you'll build on what you learned here and take it further.

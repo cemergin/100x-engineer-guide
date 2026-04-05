@@ -26,6 +26,8 @@ You should have completed L2-M59 (Technical Writing). You wrote an RFC there -- 
 
 You will need Node.js 18+ and npm installed. Several CLI tools will be installed via npx.
 
+> **Before you continue:** Most APIs are built code-first: write the handler, then document it later (if ever). What if you wrote the API specification first and generated code, docs, and tests from it? What would that change about your development workflow?
+
 ---
 
 ## Part 1: Contract-First API Design with OpenAPI
@@ -1418,6 +1420,14 @@ Before moving on, verify:
 | **Executable specification** | A specification that can be run as a test. Gherkin scenarios connected to step definitions are executable specs: they verify the system matches the specification. |
 | **Code generation** | Automatically producing source code (types, clients, validators) from a machine-readable specification. Eliminates drift between spec and implementation. |
 | **Contract testing** | Automated tests that verify an API implementation conforms to its specification. Catches mismatches between what the spec promises and what the code delivers. |
+
+---
+
+## What's Next
+
+In **Loop 2 Capstone** (L2-M60), you'll bring everything together in the Loop 2 capstone — a comprehensive project that tests your mastery of distributed systems.
+
+---
 
 ## Further Reading
 
