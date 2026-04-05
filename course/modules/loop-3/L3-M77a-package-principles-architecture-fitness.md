@@ -24,6 +24,10 @@ Package principles and fitness functions are the guardrails that prevent this er
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before reading the principles, think about your own monorepo or project. Can you change one module without worrying about breaking another? If not, where are the hidden couplings?
+
 ## Part 1: The 6 Package Principles
 
 Robert C. Martin defined 6 principles for organizing packages, split into two groups: **cohesion** (what goes together) and **coupling** (how packages relate).
@@ -803,6 +807,10 @@ How do you explain it in a way that builds understanding rather than frustration
 > Then: "What were you trying to do? Let us find a way to do it that respects the boundary — maybe through an event emitted by orders that analytics consumes, or by extracting the shared logic into a shared package."
 
 ---
+
+### 🤔 Reflection Prompt
+
+After running dependency-cruiser on TicketPulse, what surprised you about the actual dependency graph vs what you expected? How many boundary violations existed before you added enforcement rules?
 
 > **Want the deep theory?** See Ch 32 of the 100x Engineer Guide: "Package & Module Design Principles" — the full theoretical foundation including coupling metrics, zone of pain/uselessness, and the Main Sequence.
 

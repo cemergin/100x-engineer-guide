@@ -91,7 +91,7 @@ If step N fails, execute compensating actions for steps N-1, N-2, ..., 1 in reve
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Think about what happens at each step of the purchase flow. What data does each step need from previous steps? What needs to be undone if this step fails?
 </details>
 
 <details>
@@ -171,7 +171,7 @@ Notification failure should NOT trigger compensation — it is best-effort. If c
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Think about what happens at each step of the purchase flow. What data does each step need from previous steps? What needs to be undone if this step fails?
 </details>
 
 <details>
@@ -253,7 +253,7 @@ Use the saga ID as the payment's `orderId` for idempotency. The notification ste
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Think about what happens at each step of the purchase flow. What data does each step need from previous steps? What needs to be undone if this step fails?
 </details>
 
 <details>
@@ -582,7 +582,7 @@ app.get('/api/sagas/:sagaId', (req, res) => {
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Think about what happens at each step of the purchase flow. What data does each step need from previous steps? What needs to be undone if this step fails?
 </details>
 
 <details>
@@ -690,7 +690,7 @@ The system is consistent. The customer was not charged. The seat is available. N
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Consider the trade-offs between different approaches before choosing one.
+Think about what happens at each step of the purchase flow. What data does each step need from previous steps? What needs to be undone if this step fails?
 </details>
 
 <details>
