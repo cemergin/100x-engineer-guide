@@ -966,3 +966,20 @@ All these patterns, and you still need to pick one. Here's the distillation:
 The engineers who make the best architecture decisions are the ones who've learned to ask "what would need to be true for this pattern to be the right choice?" before adopting it — rather than reaching for the pattern they've heard most about.
 
 Build what you need. Extract when you're actually in pain. Invest in the foundations (observability, testing, clean interfaces) that make any architecture change possible. And always, always talk to domain experts before you draw service boundaries.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L1-M19: Architecture Patterns Overview](../course/modules/loop-1/L1-M19-architecture-patterns-overview.md)** — Survey the full pattern landscape and apply it to TicketPulse's evolving architecture
+- **[L2-M31: The Strangler Fig — Extracting Your First Service](../course/modules/loop-2/L2-M31-the-strangler-fig-extracting-your-first-service.md)** — Hands-on strangler fig migration: pull the checkout flow out of the TicketPulse monolith without a big-bang rewrite
+- **[L2-M32: Service Communication — REST vs. gRPC vs. Events](../course/modules/loop-2/L2-M32-service-communication-rest-vs-grpc-vs-events.md)** — Compare synchronous and asynchronous communication patterns by building real inter-service calls
+- **[L3-M88: Architecture Review](../course/modules/loop-3/L3-M88-architecture-review.md)** — Run a structured architecture review of TicketPulse and produce a written recommendation document
+
+### Quick Exercises
+
+1. **Classify your codebase's current architecture pattern** — is it a monolith, modular monolith, or microservices? Write one paragraph describing the evidence for your classification and one paragraph on what the next evolutionary step would be.
+2. **Identify the tightest coupling point in your system** — find two components where a change to one forces a change in the other. Draw out the dependency and describe what it would take to decouple them.
+3. **Write a one-page ADR for a recent architectural decision** — pick something your team decided in the last 6 months. Document the context, the options considered, the decision made, and the consequences. Use the format from this chapter.

@@ -1800,3 +1800,19 @@ A condensed guide to which tool to reach for in each situation.
 - Google SRE Book — (incident management, postmortems, reliability engineering)
 - "Debugging Teams" — Fitzpatrick & Collins-Sussman (practical team dynamics)
 - Diataxis documentation framework — Daniele Procida (diataxis.fr)
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L3-M77: Architecture Decision Records](../course/modules/loop-3/L3-M77-architecture-decision-records.md)** — Write ADRs for TicketPulse's most significant past decisions and build a living record that new team members can onboard from
+- **[L3-M78: DORA Metrics & Team Performance](../course/modules/loop-3/L3-M78-dora-metrics-team-performance.md)** — Instrument TicketPulse's CI/CD pipeline to collect the four DORA metrics and build a team performance dashboard
+- **[L3-M89: Career Engineering Plan](../course/modules/loop-3/L3-M89-career-engineering-plan.md)** — Build a personal engineering career plan: identify your growth edges, design your learning roadmap, and write the narrative for your next level
+
+### Quick Exercises
+
+1. **Write an ADR for the most recent significant decision your team made** — it doesn't need to be perfect. Use the context/decision/consequences format. Share it in a PR for team review. The act of writing forces clarity that the original discussion often didn't have.
+2. **Calculate your team's deployment frequency this month** — count how many times code was deployed to production in the last 30 days. Compare it to the DORA benchmarks: elite teams deploy multiple times per day. What's the biggest bottleneck to increasing your frequency?
+3. **Draft a one-page RFC for something you want to change** — pick a process, architecture, or tooling decision you've been wanting to push for. Write it up: problem statement, proposed solution, alternatives considered, success metrics. Share it with one trusted colleague for feedback before posting it widely.

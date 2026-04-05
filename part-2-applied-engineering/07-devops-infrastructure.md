@@ -851,3 +851,20 @@ That stack didn't exist five years ago in this form. It exists now, it's achieva
 ---
 
 *Next: Chapter 8 — Data Engineering & Databases. Because all that infrastructure needs to store and serve data reliably.*
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L1-M14: First Deployment](../course/modules/loop-1/L1-M14-first-deployment.md)** — Ship TicketPulse to a real cloud environment for the first time: Docker, CI pipeline, and zero-downtime deploys
+- **[L2-M43: Kubernetes Fundamentals](../course/modules/loop-2/L2-M43-kubernetes-fundamentals.md)** — Deploy TicketPulse on Kubernetes with Deployments, Services, ConfigMaps, and HPA autoscaling
+- **[L2-M44: Terraform and IaC](../course/modules/loop-2/L2-M44-terraform-and-iac.md)** — Declare TicketPulse's entire cloud infrastructure in Terraform and practice the plan/apply/review workflow
+- **[L3-M83: Advanced Kubernetes](../course/modules/loop-3/L3-M83-advanced-kubernetes.md)** — Tackle multi-cluster deployments, GitOps with Argo CD, and progressive delivery for TicketPulse's production environment
+
+### Quick Exercises
+
+1. **Dockerize one service in your project if it isn't already** — write a `Dockerfile`, build it locally, run it with `docker run`, and verify the service starts correctly. Bonus: add a `.dockerignore` and make sure the image is as small as possible.
+2. **Write a health check endpoint** — add a `/healthz` or `/health` route to one of your services that returns HTTP 200 with a JSON body confirming the service is healthy and its dependencies (database, cache) are reachable. Wire it to your load balancer or readiness probe.
+3. **Review your CI pipeline and time each step** — look at your last successful CI run and record how long each stage takes. Identify the single slowest step and research one concrete optimization (caching, parallelism, test splitting) that would reduce it.

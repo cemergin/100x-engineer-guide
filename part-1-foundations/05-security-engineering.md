@@ -893,3 +893,20 @@ That's what security engineering is: building systems that work correctly even w
 ---
 
 *Next up: [Ch 7: Infrastructure Security] goes deep on cloud security architecture, and [Ch 19: AWS IAM & Security] gets into the specifics of AWS permissions. If CI/CD security is your immediate concern, [Ch 15: CI/CD Security] covers securing your build and deployment pipelines.*
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L1-M13: Authentication & Authorization](../course/modules/loop-1/L1-M13-authentication-authorization.md)** — Implement JWT-based auth and RBAC for TicketPulse, including refresh token rotation and session management
+- **[L1-M23: OWASP Top 10 — Finding Vulnerabilities](../course/modules/loop-1/L1-M23-owasp-top-10-finding-vulnerabilities.md)** — Work through each OWASP Top 10 category against TicketPulse's codebase and fix the findings
+- **[L2-M56: Advanced Authentication — OAuth2 / OpenID Connect](../course/modules/loop-2/L2-M56-advanced-authentication.md)** — Add social login and third-party OAuth flows to TicketPulse using industry-standard protocols
+- **[L3-M79: Data Privacy & GDPR](../course/modules/loop-3/L3-M79-data-privacy-gdpr.md)** — Implement data subject rights, consent management, and retention policies for TicketPulse's user data
+
+### Quick Exercises
+
+1. **Run a dependency vulnerability scan on your project** — use `npm audit`, `pip-audit`, `trivy`, or `grype` on your codebase right now. Count the high and critical findings and triage the top three.
+2. **Check if your JWT tokens have appropriate expiry times** — find where your application issues JWTs and verify that access tokens expire in minutes-to-hours (not days), and that refresh tokens are properly rotated on use.
+3. **Review one API endpoint for IDOR vulnerabilities** — pick an endpoint that accepts a resource ID in the URL or body (e.g., `/orders/123`). Verify that the server-side code checks that the authenticated user actually owns resource 123, not just that the user is authenticated.

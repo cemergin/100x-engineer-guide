@@ -671,3 +671,20 @@ These six questions won't design your system for you. But they'll make sure you'
 The theory in this chapter is foundation, not abstraction. Every design decision you'll encounter in the rest of this guide traces back to trade-offs rooted here. When we talk about choosing a database in Ch 2, you'll be thinking about PACELC. When we design microservices in Ch 3, you'll be thinking about eventual consistency and Sagas. When we build reliability practices in Ch 4, you'll be thinking about fault tolerance and the philosophy of designing for failure.
 
 Carry these models with you. They're the tools that let you have opinions in architecture discussions instead of just nodding along.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L1-M19: Architecture Patterns Overview](../course/modules/loop-1/L1-M19-architecture-patterns-overview.md)** — Survey monolith, microservices, and event-driven architectures by evolving TicketPulse's initial design
+- **[L2-M33: Kafka Deep Dive](../course/modules/loop-2/L2-M33-kafka-deep-dive.md)** — Build a real event streaming backbone and see how event-driven systems handle consistency at scale
+- **[L3-M61: Multi-Region Design](../course/modules/loop-3/L3-M61-multi-region-design.md)** — Deploy TicketPulse across regions and work through the CAP trade-offs in a live system
+- **[L3-M76: System Design Interview Practice](../course/modules/loop-3/L3-M76-system-design-interview-practice.md)** — Apply the decision frameworks from this chapter to realistic whiteboard problems under time pressure
+
+### Quick Exercises
+
+1. **Draw your current system's architecture in boxes and arrows** — no tooling required, just pen and paper. Identify every external dependency, every database, and every async queue. If you can't draw it in 10 minutes, that's signal worth paying attention to.
+2. **Identify which consistency model each data store in your system uses** — is it linearizable, sequential, causal, or eventual? Check whether the code that reads from it actually tolerates the consistency level it provides.
+3. **Find one single point of failure** — a component whose outage would take down the whole system. Write down what would be needed to eliminate it and what the trade-off would be.

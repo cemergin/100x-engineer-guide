@@ -853,3 +853,19 @@ That's what testing and quality engineering actually look like when they're work
 ---
 
 *Next: Chapter 9 — API Design, where you'll learn how to design interfaces that are easy to test, easy to contract-test, and hard to misuse.*
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L1-M16: Testing Fundamentals](../course/modules/loop-1/L1-M16-testing-fundamentals.md)** — Build out TicketPulse's test suite from scratch: unit tests, integration tests, and a CI gate that blocks broken builds
+- **[L2-M53: Feature Flags](../course/modules/loop-2/L2-M53-feature-flags.md)** — Use feature flags to decouple deployment from release and safely test new behavior in production with a controlled rollout
+- **[L2-M56: Advanced Authentication — OAuth2 / OpenID Connect](../course/modules/loop-2/L2-M56-advanced-authentication.md)** — Write contract tests for TicketPulse's OAuth integration and validate behavior across token refresh and revocation flows
+
+### Quick Exercises
+
+1. **Write one property-based test for a function in your codebase** — pick a pure function with defined invariants (e.g., a discount calculator, a date formatter, a slug generator) and write a property-based test using fast-check, Hypothesis, or QuickCheck that generates hundreds of random inputs and verifies the invariant holds.
+2. **Run mutation testing on your most critical module** — use Stryker, mutmut, or PITest on your most business-critical module. Look at the mutation score. For every surviving mutant, decide: is this a gap in your tests, or an untestable implementation detail?
+3. **Add a contract test for one API endpoint** — pick one endpoint your service exposes and write a consumer-driven contract test (using Pact or a simple golden-file approach) that locks down the response schema. Run it in CI so schema breakage is caught before deployment.

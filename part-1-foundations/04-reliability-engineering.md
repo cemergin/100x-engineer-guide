@@ -600,3 +600,20 @@ Error budgets give you the language to talk about velocity vs. reliability trade
 The goal isn't a perfectly reliable system — that doesn't exist, and pursuing it would require you to stop changing the system entirely. The goal is a system that fails predictably, recovers quickly, gives you clear signal about what's wrong, and gets better over time.
 
 That's what it means to engineer for reliability.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L1-M26: SLOs and Error Budgets](../course/modules/loop-1/L1-M26-slos-and-error-budgets.md)** — Define TicketPulse's first SLOs, calculate error budgets, and wire them to the deployment policy
+- **[L2-M47: Alerting and On-Call](../course/modules/loop-2/L2-M47-alerting-and-on-call.md)** — Build an alerting stack from scratch and design a sustainable on-call rotation for TicketPulse
+- **[L2-M48: Chaos Engineering](../course/modules/loop-2/L2-M48-chaos-engineering.md)** — Run controlled failure experiments on TicketPulse using Chaos Monkey principles and validate your resilience patterns
+- **[L3-M73: Incident Response Simulation](../course/modules/loop-3/L3-M73-incident-response-simulation.md)** — Work through a realistic production incident end-to-end: detection, response, mitigation, and postmortem
+
+### Quick Exercises
+
+1. **Define one SLO for your most critical user-facing endpoint** — pick the endpoint users care about most, choose a latency or availability target, write it down precisely (e.g., "99.5% of requests complete under 300ms, measured over a 30-day window").
+2. **Calculate your current error budget** — take your target availability SLO and compute how many minutes of downtime you have left this month. Is it already burned? Is the team aware?
+3. **Identify one alert that should exist but doesn't** — look at the last production incident your team had. Was there a signal in the data before users reported it? Define the alert that would have caught it.

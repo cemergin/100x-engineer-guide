@@ -825,3 +825,19 @@ The final theme, and maybe the most important one: you don't have to use all of 
 Before reaching for the new paradigm, ask: what's the boring solution? The boring solution ships faster, is easier to debug, has more StackOverflow answers, and is often good enough. Reach for the emerging paradigm when you have a specific problem that the boring solution genuinely can't solve — not because the new thing is exciting (though it is).
 
 The engineers who consistently ship great systems have a high bar for novelty: they're excited about the frontier, they understand it deeply, and they reach for it deliberately when it's the right tool. That's the engineer this chapter is trying to help you become.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L3-M71: AI-Powered Features](../course/modules/loop-3/L3-M71-ai-powered-features.md)** — Add a RAG-based support assistant to TicketPulse: embed event descriptions, query with semantic search, and stream responses to users
+- **[L3-M81: Durable Execution](../course/modules/loop-3/L3-M81-durable-execution.md)** — Implement TicketPulse's ticket fulfillment workflow in Temporal: durable state, retries, timeouts, and saga compensation
+- **[L3-M82: Event Sourcing at Scale](../course/modules/loop-3/L3-M82-event-sourcing-at-scale.md)** — Rebuild TicketPulse's inventory system as an event-sourced aggregate with a full audit trail and projection rebuilding
+
+### Quick Exercises
+
+1. **Build a simple RAG pipeline over your project's documentation** — chunk your README and any design docs, embed them with a local or hosted embedding model, store in a vector database (pgvector is fine), and wire up a query interface that returns relevant snippets for a natural language question.
+2. **Try one durable execution framework on a workflow you own** — take an existing multi-step process in your codebase (onboarding flow, report generation, data sync) and rewrite it as a Temporal or Inngest workflow. Observe how retry logic, timeouts, and state persistence change the code structure.
+3. **Evaluate one CRDT use case in your product** — identify a feature where multiple users can edit the same data concurrently (collaborative editing, distributed counters, presence indicators). Research whether a CRDT would simplify the conflict resolution logic compared to your current approach.

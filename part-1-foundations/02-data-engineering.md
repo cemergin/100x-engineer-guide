@@ -978,3 +978,20 @@ After all of that, when you sit down to make a decision, here's the cheat sheet.
 The underlying principle threading through all of these decisions: **understand your access patterns before choosing your tools.** The best database is the one that efficiently serves the queries your application will actually run. The best caching strategy is the one that matches your staleness tolerance and write patterns. The best pipeline architecture is the one that delivers data within your latency budget without more complexity than you can maintain.
 
 Data engineering done well is invisible. Your queries are fast, your pipelines are reliable, your cache hit rates are high. The data just flows. That's the goal.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L1-M05: PostgreSQL from Zero](../course/modules/loop-1/L1-M05-postgresql-from-zero.md)** — Set up Postgres, write your first queries, and see ACID guarantees in action with TicketPulse's event data
+- **[L1-M08: Data Modeling Decisions](../course/modules/loop-1/L1-M08-data-modeling-decisions.md)** — Walk through 3NF, denormalization trade-offs, and the practical choices behind TicketPulse's schema design
+- **[L1-M09: NoSQL — When and Why](../course/modules/loop-1/L1-M09-nosql-when-and-why.md)** — Build the session store and explore when DynamoDB or Redis is the right call versus Postgres
+- **[L1-M10: Caching Strategies](../course/modules/loop-1/L1-M10-caching-strategies.md)** — Implement cache-aside, write-through, and TTL strategies for TicketPulse's high-read inventory data
+
+### Quick Exercises
+
+1. **Run `EXPLAIN ANALYZE` on your slowest query** — copy the actual query from your application logs, run it in a staging environment, and read the output. Identify the most expensive node in the plan.
+2. **Add an index and measure the difference** — pick a column you filter on frequently that lacks an index, add one, re-run `EXPLAIN ANALYZE`, and compare the estimated vs. actual row counts and cost.
+3. **Identify one N+1 query in your codebase** — search for a loop that makes a database call inside it, or enable query logging and look for repeated identical queries with different parameter values. Refactor it to use a batch query or join.

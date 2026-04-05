@@ -2009,3 +2009,20 @@ Problem reported
 Every tool in this chapter — from `git bisect` to flame graphs to Datadog APM to eBPF — exists to answer a question faster. The mystery is always solvable. The evidence is always there. Your job as the detective is to ask the right question, look in the right place, and trust the process when the answer is not immediately obvious.
 
 That is what makes debugging genuinely fun, once you stop treating it as an interruption and start treating it as the puzzle it actually is.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L2-M45: Monitoring — Prometheus & Grafana](../course/modules/loop-2/L2-M45-monitoring-prometheus-grafana.md)** — Instrument TicketPulse with Prometheus metrics, build Grafana dashboards, and set the golden signals as your operational baseline
+- **[L2-M46: Distributed Tracing — OpenTelemetry](../course/modules/loop-2/L2-M46-distributed-tracing-opentelemetry.md)** — Add OpenTelemetry traces to TicketPulse's full request path and debug a latency problem across service boundaries
+- **[L2-M58: Debugging in Production](../course/modules/loop-2/L2-M58-debugging-in-production.md)** — Work through a realistic production incident in TicketPulse using only observability tools — no SSH, no print statements
+- **[L3-M73: Incident Response Simulation](../course/modules/loop-3/L3-M73-incident-response-simulation.md)** — Run a full incident from PagerDuty alert through mitigation and postmortem using TicketPulse as the patient
+
+### Quick Exercises
+
+1. **Generate a flame graph for your slowest API endpoint** — use `py-spy`, `async-profiler`, `perf`, or your language's equivalent profiler. Run it against a staging environment under load and identify the top two CPU consumers in the call stack.
+2. **Add structured logging with correlation IDs to one request path** — pick one endpoint and ensure that every log line it emits (including logs from called services or database queries) includes the same `trace_id` field. Verify in your log aggregation tool that you can pull up all logs for a single request.
+3. **Set up one golden signals dashboard** — create a dashboard (Grafana, Datadog, or CloudWatch) for one service with four panels: request rate, error rate, latency (p50/p95/p99), and saturation (CPU or queue depth). Set alert thresholds on at least two of them.

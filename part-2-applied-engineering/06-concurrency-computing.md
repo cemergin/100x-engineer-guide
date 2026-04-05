@@ -732,3 +732,19 @@ Concurrency is one of those topics where you can go very deep and still find mor
 But here's the thing: once you have the mental model, the bugs stop feeling like random bad luck and start feeling like puzzles with known solutions. "This is a deadlock because of lock ordering." "This is a thundering herd — I need a single-flight pattern here." "This counter is being corrupted — I need an atomic, not a plain integer."
 
 That pattern recognition is worth more than memorizing any individual technique. Build the mental model, and the rest follows.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L1-M20: Domain-Driven Design Basics](../course/modules/loop-1/L1-M20-domain-driven-design-basics.md)** — Model TicketPulse's concurrent ticket reservation domain with aggregates that enforce invariants under contention
+- **[L2-M33: Kafka Deep Dive](../course/modules/loop-2/L2-M33-kafka-deep-dive.md)** — Build event-driven concurrent processing with Kafka consumer groups, partition assignment, and backpressure handling
+- **[L3-M67: WebSockets and Real-Time](../course/modules/loop-3/L3-M67-websockets-and-real-time.md)** — Implement real-time seat availability updates using WebSockets, managing concurrent connections and broadcast fan-out
+
+### Quick Exercises
+
+1. **Write a goroutine (or async function) that demonstrates a race condition, then fix it** — create a counter incremented by multiple concurrent workers without synchronization, observe the incorrect result under the race detector (`go test -race`), then fix it with a mutex or atomic operation.
+2. **Find one place in your codebase where concurrent access isn't properly guarded** — look for shared mutable state (caches, counters, maps) that's accessed from multiple goroutines, threads, or async handlers without explicit synchronization. Document the risk and propose a fix.
+3. **Trace one request through your system and identify every blocking operation** — pick a slow endpoint, add timing instrumentation, and map out where time is spent: database queries, external API calls, lock waits. Identify which of these could be parallelized.

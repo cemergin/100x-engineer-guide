@@ -1210,3 +1210,19 @@ Use this checklist to evaluate your own systems against the lessons from these i
 > Go read Ch 4 on SRE and chaos engineering. Run a disaster recovery drill. Test your backups. Check your terminal prompt colors. Delete some dead code.
 >
 > Build the systems that your future self — staring at red dashboards at 2 AM — will be grateful for.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L3-M73: Incident Response Simulation](../course/modules/loop-3/L3-M73-incident-response-simulation.md)** — Work through a scripted TicketPulse incident from first alert to customer communication to blameless postmortem
+- **[L3-M74: War Stories Analysis](../course/modules/loop-3/L3-M74-war-stories-analysis.md)** — Dissect real-world outages (including those in this chapter) and extract the systemic patterns that made each one inevitable
+- **[L3-M91b: Beast Mode — Incident Dry Run](../course/modules/loop-3/L3-M91b-beast-mode-incident-dry-run.md)** — Run a full-team incident simulation against the complete TicketPulse system under Beast Mode conditions: degraded tooling, time pressure, and cascading failures
+
+### Quick Exercises
+
+1. **Read your team's most recent postmortem and identify the contributing factors** — look for the difference between root causes and contributing factors. Were there missing alerts? An untested failover path? A single person who held critical knowledge? List every contributing factor, not just the proximate cause.
+2. **Write a blameless postmortem template** — create a one-page template your team can use for future incidents. Include sections for: timeline, impact, root cause, contributing factors, what went well, action items with owners and deadlines. Keep it short enough that people will actually fill it out at 2 AM.
+3. **Run a tabletop exercise with your team** — describe a failure scenario (e.g., "the primary database becomes unavailable for 10 minutes during peak traffic") and walk through it verbally as a team. Ask: how would we detect it? Who gets paged? What are the first three actions? Where are the runbooks? This takes 30 minutes and surfaces gaps that no amount of documentation review will find.
