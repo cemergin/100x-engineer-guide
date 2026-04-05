@@ -279,35 +279,35 @@ openssl rsa -in ticketpulse-key.pem -check -noout
 
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-Use `openssl` to generate a private key and a self-signed certificate. The key is the secret; the certificate is the public identity that clients verify.
+<summary>💡 Hint 1</summary>
+The certificate contains the public key and identity (subject, SANs). The private key file is the secret that proves you own the certificate. Never commit `key.pem` to version control -- add `*.pem` to `.gitignore`.
 </details>
 
 <details>
-<summary>💡 Hint 2: Approach</summary>
-Run `openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes`. The `-nodes` flag means no password on the key (fine for development, never for production).
+<summary>💡 Hint 2</summary>
+Inspect the generated certificate with `openssl x509 -in cert.pem -noout -text`. Look for: Subject (who the cert is for), Issuer (who signed it -- same as Subject for self-signed), Validity (Not Before / Not After dates), Subject Alternative Name (the domains this cert covers), and Public Key Algorithm (RSA 4096-bit).
 </details>
 
 <details>
-<summary>💡 Hint 3: Almost There</summary>
-Inspect the certificate with `openssl x509 -in cert.pem -text -noout`. You should see the subject, issuer (same as subject for self-signed), validity dates, and the public key. Browsers will warn about self-signed certs — that is expected.
+<summary>💡 Hint 3</summary>
+Test the certificate with curl: `curl -v --cacert cert.pem https://localhost:3000/api/health`. The `-v` flag shows the TLS handshake. The `--cacert` flag tells curl to trust your self-signed cert. Without it, curl rejects the connection because the cert is not signed by a CA in the system trust store.
 </details>
 
 ### 🛠️ Build: Configure HTTPS on the API Gateway
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-Trace the TLS 1.3 handshake message by message: ClientHello, ServerHello, certificate, key exchange. What information is exchanged at each step?
+<summary>💡 Hint 1</summary>
+Use `https.createServer({ key: fs.readFileSync('key.pem'), cert: fs.readFileSync('cert.pem'), minVersion: 'TLSv1.2' }, app)` in your Express server. The `minVersion: 'TLSv1.2'` rejects connections from clients that only support TLS 1.0/1.1 (which have known vulnerabilities). TLS 1.3 clients will negotiate 1.3 automatically.
 </details>
 
 <details>
-<summary>💡 Hint 2: Approach</summary>
-Use openssl s_client to watch the handshake live. For self-signed certs, use openssl req -x509 to generate them. For mTLS, both client and server need certificates.
+<summary>💡 Hint 2</summary>
+Add an HTTP-to-HTTPS redirect middleware: `if (!req.secure) res.redirect(301, 'https://' + req.headers.host + req.url)`. In production behind a load balancer, check `req.headers['x-forwarded-proto'] === 'https'` instead of `req.secure`, because the load balancer terminates TLS and forwards plain HTTP internally.
 </details>
 
 <details>
-<summary>💡 Hint 3: Almost There</summary>
-Configure HTTPS with the generated certificates. For Kubernetes, use cert-manager with Let's Encrypt for automatic certificate rotation. Validate the full certificate chain including intermediates.
+<summary>💡 Hint 3</summary>
+Add the HSTS header: `res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')`. This tells browsers to always use HTTPS for the next year, even if the user types `http://`. Verify the full certificate chain by connecting with `openssl s_client -connect localhost:3000 -servername localhost` and checking that `Verify return code: 0 (ok)` appears.
 </details>
 
 
@@ -339,18 +339,18 @@ if (process.env.NODE_ENV === 'production' || process.env.ENABLE_TLS === 'true') 
 
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-The gateway terminates TLS — it decrypts HTTPS from clients and forwards plain HTTP to internal services. This is called TLS termination.
+<summary>💡 Hint 1</summary>
+TLS termination at the gateway means internal services communicate over plain HTTP. The gateway decrypts incoming HTTPS, inspects headers (auth, rate limiting), and proxies to `http://event-service:3001`. This simplifies internal services but means internal traffic is unencrypted -- add mTLS (Part 4) if your threat model requires encryption inside the cluster.
 </details>
 
 <details>
-<summary>💡 Hint 2: Approach</summary>
-In the Express gateway, use `https.createServer({ key: fs.readFileSync('key.pem'), cert: fs.readFileSync('cert.pem') }, app)`. Redirect HTTP to HTTPS with a middleware that checks `req.secure`.
+<summary>💡 Hint 2</summary>
+Watch your own handshake: run `openssl s_client -connect localhost:3000 -servername localhost` and look for `Protocol: TLSv1.3`, `Cipher: TLS_AES_128_GCM_SHA256`, and `Verify return code`. If you see `Verify return code: 18 (self-signed certificate)` that is expected for dev. In production with a proper CA-signed cert, this should be `0 (ok)`.
 </details>
 
 <details>
-<summary>💡 Hint 3: Almost There</summary>
-Add security headers: `Strict-Transport-Security` (HSTS) tells browsers to always use HTTPS. Set `max-age=31536000; includeSubDomains`. In production, use Let's Encrypt with auto-renewal via certbot instead of self-signed certificates.
+<summary>💡 Hint 3</summary>
+For production, replace the self-signed cert with Let's Encrypt: `certbot certonly --standalone -d api.ticketpulse.com`. In Kubernetes, use cert-manager with a ClusterIssuer that points to Let's Encrypt. cert-manager automatically renews certificates 30 days before expiry and stores them as Kubernetes Secrets that your Ingress references.
 </details>
 
 ### 🔍 Try It: See Your TLS Handshake
@@ -408,18 +408,18 @@ This is used for:
 ### 🛠️ Build: Set Up mTLS for TicketPulse Services
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-Trace the TLS 1.3 handshake message by message: ClientHello, ServerHello, certificate, key exchange. What information is exchanged at each step?
+<summary>💡 Hint 1</summary>
+mTLS requires three certificate artifacts: (1) a CA certificate that both sides trust, (2) a server certificate signed by the CA (presented by event-service), and (3) a client certificate signed by the same CA (presented by payment-service). Create the CA first with `openssl req -x509 -newkey rsa:4096 -keyout ca-key.pem -out ca-cert.pem -days 3650 -nodes`.
 </details>
 
 <details>
-<summary>💡 Hint 2: Approach</summary>
-Use openssl s_client to watch the handshake live. For self-signed certs, use openssl req -x509 to generate them. For mTLS, both client and server need certificates.
+<summary>💡 Hint 2</summary>
+Generate the server cert: create a CSR with `openssl req -new -newkey rsa:4096 -keyout server-key.pem -out server.csr -nodes -subj "/CN=event-service.ticketpulse.local"`, then sign it with the CA: `openssl x509 -req -in server.csr -CA ca-cert.pem -CAkey ca-key.pem -CAcreateserial -out server-cert.pem -days 365 -extfile <(echo "subjectAltName=DNS:event-service.ticketpulse.local")`. Repeat for the client cert with a different CN.
 </details>
 
 <details>
-<summary>💡 Hint 3: Almost There</summary>
-Configure HTTPS with the generated certificates. For Kubernetes, use cert-manager with Let's Encrypt for automatic certificate rotation. Validate the full certificate chain including intermediates.
+<summary>💡 Hint 3</summary>
+Configure the Node.js HTTPS server with `requestCert: true, rejectUnauthorized: true, ca: [fs.readFileSync('ca-cert.pem')]`. This tells the server to demand a client certificate and verify it was signed by the trusted CA. Test with: `curl --cert client-cert.pem --key client-key.pem --cacert ca-cert.pem https://localhost:3001/api/health`. In production, use a service mesh (Istio/Linkerd) that handles mTLS automatically -- no application code changes needed.
 </details>
 
 

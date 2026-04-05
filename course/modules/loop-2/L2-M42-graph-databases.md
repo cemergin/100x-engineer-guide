@@ -334,17 +334,17 @@ This returns events ranked by how many of Alice's friends are attending. It's a 
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Think about the graph pattern you need: which nodes and relationships are involved? Start from the known node and traverse outward.
+This is collaborative filtering via graph traversal: find users who attended the same events as Alice, then find what other events (and artists) those users attended. The overlap reveals "similar taste."
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Use MATCH with a pattern like (a)-[:REL]->(b) and add WHERE clauses to filter. Use collect() and count() for aggregation.
+Three MATCH clauses chained with WITH: (1) collect Alice's known artists, (2) find other users who share events with Alice, (3) find what those users attended that Alice has not. Use `WHERE NOT recArtist IN myArtists` to exclude artists Alice already knows.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The Cypher query follows the MATCH/WHERE/RETURN pattern. Pay attention to the node labels, relationship types, and property filters specific to this use case.
+Rank by `count(DISTINCT other)` -- the number of users with shared taste who also attended the recommended artist. This is the "shared audience count." Higher means stronger signal. Use `ATTENDING|ATTENDED` (pipe = OR) to match both future and past events in the traversal.
 </details>
 
 
@@ -509,17 +509,17 @@ Which is clearer to you? Which would be easier to modify if the requirements cha
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Think about the graph pattern you need: which nodes and relationships are involved? Start from the known node and traverse outward.
+Not everything belongs in the graph. CRUD operations (creating events, buying tickets, processing payments) stay in Postgres where ACID transactions guarantee consistency. Only relationship-heavy queries go to Neo4j.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Use MATCH with a pattern like (a)-[:REL]->(b) and add WHERE clauses to filter. Use collect() and count() for aggregation.
+Postgres is the source of truth. Neo4j is a read-optimized projection. When a user buys a ticket in Postgres, a Kafka CDC consumer creates the `(user)-[:ATTENDING]->(event)` relationship in Neo4j. Accept eventual consistency -- social features can lag a few seconds.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The Cypher query follows the MATCH/WHERE/RETURN pattern. Pay attention to the node labels, relationship types, and property filters specific to this use case.
+The full architecture: Postgres (writes) -> Kafka CDC -> Neo4j consumer (creates/updates nodes and relationships). The API checks Neo4j for "friends attending" and "recommendations" but calls Postgres for ticket purchases, order creation, and revenue analytics (GROUP BY, SUM).
 </details>
 
 
@@ -589,17 +589,17 @@ The architecture is: Postgres (writes) -> Kafka CDC -> Neo4j consumer -> Neo4j (
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Think about the graph pattern you need: which nodes and relationships are involved? Start from the known node and traverse outward.
+Subscribe to CDC topics: `ticketpulse.public.users`, `ticketpulse.public.events`, `ticketpulse.public.ticket_purchases`, `ticketpulse.public.friendships`. Each message contains `op` (c=create, u=update, d=delete) and `before`/`after` snapshots.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Use MATCH with a pattern like (a)-[:REL]->(b) and add WHERE clauses to filter. Use collect() and count() for aggregation.
+Use `MERGE` for creates/updates (idempotent -- safe to replay) and `MATCH ... DETACH DELETE` for deletes. For ticket purchases, `MATCH (u:User {id: $userId}), (e:Event {id: $eventId}) MERGE (u)-[:ATTENDING]->(e)` creates the attendance relationship.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The Cypher query follows the MATCH/WHERE/RETURN pattern. Pay attention to the node labels, relationship types, and property filters specific to this use case.
+Create a separate Kafka consumer group (`neo4j-sync-group`) so it tracks offsets independently. Use the `neo4j-driver` package with `driver.session()` per message. Always close the session in a `finally` block. Route messages to handler functions by inspecting the topic name.
 </details>
 
 
