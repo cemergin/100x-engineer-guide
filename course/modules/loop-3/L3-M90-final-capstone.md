@@ -188,6 +188,11 @@ For each deep-dive, you should be able to:
 
 ## Part 2b: Architecture Review Exercise (30 minutes)
 
+<details>
+<summary>💡 Hint 1: Frame every design decision as a fitness function with a measurable threshold</summary>
+Instead of "we chose Kafka for reliability," say "our architecture fitness function is: order events must be delivered exactly once with p99 latency under 500ms at 10K events/second. Kafka meets this; Redis Streams did not at our projected scale." Quantified fitness functions make the review defensible.
+</details>
+
 A major TicketPulse event just went live — a Taylor Swift reunion concert selling 80,000 tickets. You are doing the post-launch architecture review. Use the prompts below to examine the system you built across the course.
 
 This is structured like a real architecture review board presentation. Work through each section as if you are presenting to a panel of Staff Engineers who have not seen TicketPulse before.

@@ -727,18 +727,18 @@ router.post('/auth/refresh', async (req, res) => {
 ### 🛠️ Build: The Complete Auth Module
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-Trace the OAuth2 flow step by step: the browser redirect to Google, the authorization code callback, the token exchange, and the id_token validation. Which step prevents token interception?
+<summary>💡 Hint 1</summary>
+The complete auth module needs three grant types: (1) Authorization Code + PKCE for user login via Google, (2) client_credentials for service-to-service calls (purchase-service calling event-service), and (3) refresh_token for renewing expired access tokens without re-login. Each grant type uses a different token endpoint payload.
 </details>
 
 <details>
-<summary>💡 Hint 2: Approach</summary>
-Generate a PKCE code_verifier and code_challenge before the redirect. Send the code_challenge to Google; send the code_verifier when exchanging the authorization code for tokens.
+<summary>💡 Hint 2</summary>
+For client_credentials (service-to-service), POST to the token endpoint with `grant_type=client_credentials`, `client_id`, and `client_secret`. The response has no `id_token` or `refresh_token` -- just an `access_token` with a short TTL. Store the service credentials in environment variables (or Kubernetes secrets), not in the codebase.
 </details>
 
 <details>
-<summary>💡 Hint 3: Almost There</summary>
-Store tokens in httpOnly cookies (not localStorage) to prevent XSS attacks. Use the client_credentials grant for service-to-service auth where no user is involved.
+<summary>💡 Hint 3</summary>
+Add the database migration for OAuth support: `ALTER TABLE users ADD COLUMN auth_provider VARCHAR(20) DEFAULT 'local', ADD COLUMN google_id VARCHAR(255) UNIQUE`. Create an index on `google_id` for fast lookup during login. Handle the edge case where a user registered with email/password and later tries "Login with Google" using the same email -- link the accounts by matching on `email` and setting `google_id`.
 </details>
 
 

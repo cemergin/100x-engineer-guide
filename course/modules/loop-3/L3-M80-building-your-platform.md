@@ -207,12 +207,12 @@ ticketpulse-service-template/
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+The script should: copy the template, replace placeholders (service name, port), initialize package.json, optionally create Kafka topics, and print clear "next steps" instructions. An internal developer platform API starts with scripts like this.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+Use `sed` to replace `{{SERVICE_NAME}}` across all template files. Generate a random port in the 3010-3099 range to avoid collisions. The output should tell the engineer exactly what to do next: `cp .env.example .env`, `docker-compose up -d`, `npm run dev`, `curl localhost:PORT/health`.
 </details>
 
 
@@ -353,12 +353,12 @@ database instead" (which creates coupling).
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+Tier your self-service menu: Tier 1 (no approval) for dev resources, Tier 2 (auto-approved) for production resources with cost alerts, Tier 3 (human review) for network/security changes. The goal is to eliminate "file a ticket and wait 3 days" for common operations.
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+At 20 engineers, Tier 1 should include: create service from template, create dev/staging database, create Kafka topics, add feature flags, view any service's logs/metrics/traces. Each of these should be a single command, not a multi-day approval process.
 </details>
 
 
@@ -397,12 +397,12 @@ Tier 3: Requires Approval (human review, 1 business day SLA)
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-What constraints matter most here? Start from the requirements, not the implementation.
+At 20 engineers, you need four things: a service catalog (YAML file listing services, owners, dashboards, runbooks), a template library (create-service scripts), a documentation hub (docs/ in the monorepo), and an observability portal (Grafana home dashboard with links).
 </details>
 
 <details>
 <summary>💡 Hint 2: If You're Stuck</summary>
-Revisit the architecture patterns from this module. The solution is a composition of techniques you already know.
+You do not need Backstage at 20 engineers. A YAML service catalog, a `create-service.sh` script, and a docs/ directory get you 80% of the value. Graduate to Backstage or an internal CLI (`tp create service`, `tp deploy`, `tp logs`) when you hit 50 engineers.
 </details>
 
 

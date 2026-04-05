@@ -198,6 +198,11 @@ Your bottom 3 are your gaps. You do not need to become an expert in all of them 
 
 ### Design: Your 6-Month Learning Roadmap
 
+<details>
+<summary>💡 Hint 1: Pick the gap that blocks your next role, not the one that is most interesting</summary>
+Look at your self-assessment. If you are aiming for Staff and your weakest area is system design communication, prioritize that over learning another database -- the bottleneck to promotion is almost never more technical depth, it is the ability to articulate and defend decisions.
+</details>
+
 For each of your bottom 3 gaps, define a concrete plan:
 
 ```

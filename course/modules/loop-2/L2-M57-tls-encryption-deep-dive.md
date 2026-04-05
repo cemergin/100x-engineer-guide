@@ -224,18 +224,18 @@ Data flows before the handshake completes. But there is a catch:
 ### 🛠️ Build: Generate a Self-Signed Certificate
 
 <details>
-<summary>💡 Hint 1: Direction</summary>
-Trace the TLS 1.3 handshake message by message: ClientHello, ServerHello, certificate, key exchange. What information is exchanged at each step?
+<summary>💡 Hint 1</summary>
+Use `openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes`. The `-x509` flag produces a self-signed certificate (not a CSR). The `-nodes` flag means no passphrase on the private key -- fine for development, never for production private keys.
 </details>
 
 <details>
-<summary>💡 Hint 2: Approach</summary>
-Use openssl s_client to watch the handshake live. For self-signed certs, use openssl req -x509 to generate them. For mTLS, both client and server need certificates.
+<summary>💡 Hint 2</summary>
+Add Subject Alternative Names (SANs) with `-addext "subjectAltName=DNS:localhost,DNS:*.ticketpulse.local,IP:127.0.0.1"`. Modern browsers and clients validate the domain against the SAN extension, not the CN field. Without SANs, your certificate will fail validation even if the CN matches.
 </details>
 
 <details>
-<summary>💡 Hint 3: Almost There</summary>
-Configure HTTPS with the generated certificates. For Kubernetes, use cert-manager with Let's Encrypt for automatic certificate rotation. Validate the full certificate chain including intermediates.
+<summary>💡 Hint 3</summary>
+Verify the certificate chain with `openssl x509 -in cert.pem -noout -text | head -30`. Check the SAN with `openssl x509 -in cert.pem -noout -ext subjectAltName`. For a self-signed cert, the issuer and subject are identical. Browsers will show a warning -- this is expected. In production, use Let's Encrypt with cert-manager in Kubernetes for automatic issuance and rotation.
 </details>
 
 

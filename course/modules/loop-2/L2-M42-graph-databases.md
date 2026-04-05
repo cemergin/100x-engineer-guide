@@ -171,17 +171,17 @@ Use `MERGE` instead of `CREATE` when populating to avoid duplicates: `MERGE (u:U
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Think about the graph pattern you need: which nodes and relationships are involved? Start from the known node and traverse outward.
+Use `CREATE` to build the initial dataset: Users, Venues, Artists, Events. Then add relationships: `(event)-[:AT]->(venue)`, `(event)-[:FEATURING]->(artist)`, `(user)-[:FRIENDS]->(user)`, `(user)-[:ATTENDING]->(event)`.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Use MATCH with a pattern like (a)-[:REL]->(b) and add WHERE clauses to filter. Use collect() and count() for aggregation.
+Use `MERGE` instead of `CREATE` when you might run the script twice -- MERGE is idempotent (creates only if the node does not exist). Relationships can carry properties too: `[:FRIENDS {since: date("2023-01-15")}]`.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The Cypher query follows the MATCH/WHERE/RETURN pattern. Pay attention to the node labels, relationship types, and property filters specific to this use case.
+Create enough data to make queries interesting: 8 users, 4 events, bidirectional friendships, and varied attendance. Include both `:ATTENDING` (future events) and `:ATTENDED` (past events) relationship types so recommendation queries have data to work with.
 </details>
 
 
@@ -303,17 +303,17 @@ Run this in Neo4j browser. You should see Bob and Dave (Alice's direct friends w
 
 <details>
 <summary>💡 Hint 1: Direction</summary>
-Think about the graph pattern you need: which nodes and relationships are involved? Start from the known node and traverse outward.
+The pattern is: `(me)-[:FRIENDS]-(friend)-[:ATTENDING]->(event)`. Add `WHERE NOT (me)-[:ATTENDING]->(event)` to exclude events Alice is already attending -- only show new recommendations.
 </details>
 
 <details>
 <summary>💡 Hint 2: Approach</summary>
-Use MATCH with a pattern like (a)-[:REL]->(b) and add WHERE clauses to filter. Use collect() and count() for aggregation.
+Use `collect(friend.name)` to aggregate all friends going to each event into a list, and `count(friend)` to sort by social proof. An event with 3 friends attending ranks higher than one with 1.
 </details>
 
 <details>
 <summary>💡 Hint 3: Almost There</summary>
-The Cypher query follows the MATCH/WHERE/RETURN pattern. Pay attention to the node labels, relationship types, and property filters specific to this use case.
+ORDER BY `friend_count DESC` to show the most socially compelling events first. This is a natural recommendation: "3 friends are going to Kendrick Lamar LA" is more compelling than a generic "popular event" ranking.
 </details>
 
 
