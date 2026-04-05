@@ -1024,6 +1024,38 @@ Walk through every failure mode:
 
 This table is the design output that matters. Every consistency choice has a cost. You've paid for strong consistency only where the business truly required it — the seat reservation — and gotten eventual consistency's performance benefits everywhere else.
 
+### Step 8: Observability for the On-Sale Event
+
+A Taylor Swift on-sale is also a war room event. Your engineering team is watching dashboards in real time as 500,000 users simultaneously hit the queue. You need to see problems before users escalate them.
+
+The key metrics to track:
+
+**Queue tier:**
+- Queue ingestion rate (users/second entering) — should spike sharply at onsale open and taper
+- Queue drain rate (users/second entering purchase flow) — should be steady at your controlled rate
+- Queue depth (total users waiting) — peak and trend
+- Errors from the G-Counter coordination layer — should be near zero
+
+**Seat reservation tier:**
+- CAS success rate (reservations succeeding on first try) — expect high contention early
+- CAS conflict rate (reservations failing because seat was taken) — indicates inventory pressure
+- Reservation commit latency p50, p95, p99 — your database's health
+- Seat reservation write throughput — are we saturating the shards?
+
+**Payment tier:**
+- Payment success rate — below expected? The payment gateway might be struggling.
+- Payment latency p99 — is the external payment processor slow?
+- Circuit breaker state — is the breaker open? (This is an alert, not a metric.)
+
+**End-to-end:**
+- Successful purchases per minute — the ultimate business metric
+- Error rate for users in the purchase flow — what fraction hit an error?
+- Correlation between queue position and purchase success — are users who waited longer more likely to find no inventory? (Tells you if you're draining the queue too fast.)
+
+Each of these metrics gets a distributed trace attached to the samples that are slow or erroring. When someone reports "I got stuck at the payment step," you search traces by their session ID, find the exact trace, and see: payment step called at 14:23:15.234, payment processor responded at 14:23:20.891 (5.6 seconds — above your timeout threshold), circuit breaker opened, user received error.
+
+The post-incident review writes itself.
+
 ### The Thread Through the Concepts
 
 Looking back at this design:
@@ -1034,6 +1066,11 @@ Looking back at this design:
 - **Circuit breakers and bulkheads** isolated failures in the payment tier from the seat reservation and queue tiers.
 - **Auto-scaling (scheduled + predictive)** absorbed the traffic spike before it could overwhelm the reservation layer.
 - **Graceful degradation** (the queue) meant that even at 1,000x normal load, users got a predictable waiting experience instead of errors.
+- **Observability** (golden signals per tier, distributed tracing, correlation IDs) meant the engineering team could diagnose problems in real time rather than guessing in the dark.
+
+**What's not in this design** is equally instructive: no Paxos-based global coordination for queue positions (unnecessary — CRDTs suffice and are faster), no cross-region linearizable transactions for seat reservations (unnecessary — single-region linearizability is sufficient if your users and data are co-located), no global cache invalidation protocol (unnecessary — TTL-based expiration is good enough for the catalog).
+
+Every architectural decision is a trade-off between something gained and something paid. Elite system designers know not just what to add, but what to deliberately *not* add — and why.
 
 This is what it means to design with the theory: you don't reach for these patterns because they're fashionable. You reach for them because each one solves a specific problem, and you know which problem you have.
 
@@ -1288,6 +1325,12 @@ These six questions won't design your system for you. But they'll make sure you'
 ---
 
 The theory in this chapter is foundation, not abstraction. Every design decision you'll encounter in the rest of this guide traces back to trade-offs rooted here. When we talk about choosing a database in Ch 2, you'll be thinking about PACELC. When we design microservices in Ch 3, you'll be thinking about eventual consistency and Sagas. When we build reliability practices in Ch 4, you'll be thinking about fault tolerance and the philosophy of designing for failure.
+
+A note on what mastery looks like in this domain: you know you've internalized this material when you stop asking "what should I use?" and start asking "what problem am I solving, and which property of this tool solves it?" Cassandra isn't good or bad — it's a specific set of trade-offs that are right for some problems and wrong for others. Raft isn't better than Paxos in the abstract — it's better for a team that needs to implement and maintain a consensus protocol and values understandability. The engineer who says "just use Kafka for everything" has memorized a tool. The engineer who understands why Kafka's at-least-once delivery and sequential offset model is the right abstraction for event streaming — and when it isn't — has understood the trade-offs.
+
+That understanding is what separates good engineers from great ones. The great ones can walk into a system they've never seen, read the architecture diagram, and immediately identify the load-bearing assumptions — the places where the design works *if and only if* certain properties hold. "This works at current scale, but range queries will create hot shards when you 10x." "This is correct as long as the clock skew stays below 50ms — do you monitor that?" "This Saga can leave the system in an inconsistent state if the orchestrator crashes between steps 2 and 3."
+
+That's the voice you want to have in architecture reviews. This chapter is how you build it.
 
 Carry these models with you. They're the tools that let you have opinions in architecture discussions instead of just nodding along.
 
