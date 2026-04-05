@@ -264,13 +264,79 @@ Observability is made up of three pillars, each giving you a different lens on t
 
 ### 2.2 The Three Pillars
 
+The three pillars of observability are logs, metrics, and traces. They're complementary, not redundant — each answers different questions and has different cost/query tradeoffs. Think of them as three lenses on the same system.
+
 **Pillar 1: Logs**
 
 Logs are discrete event records — a timestamped description of something that happened. They're the oldest and most widespread form of observability data.
 
 The transition from unstructured to **structured logging** (using JSON or a similar format) is one of the highest-ROI observability investments you can make. Unstructured logs are readable by humans in isolation but opaque to machines. Structured logs are queryable, filterable, and joinable — you can ask "show me all events where user_id=12345 and status_code=500 in the last hour" and get an answer instantly.
 
+Compare:
+
+```
+# Unstructured (hard to query programmatically)
+2026-03-15 14:23:11 ERROR PaymentProcessor: charge failed for user 12345, amount $49.99, reason: card_declined
+
+# Structured (queryable, filterable, joinable)
+{
+  "timestamp": "2026-03-15T14:23:11.234Z",
+  "level": "error",
+  "service": "payment-processor",
+  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "span_id": "00f067aa0ba902b7",
+  "user_id": 12345,
+  "amount_cents": 4999,
+  "currency": "USD",
+  "event": "charge_failed",
+  "reason": "card_declined",
+  "duration_ms": 342,
+  "payment_gateway": "stripe",
+  "attempt": 1
+}
+```
+
+With the structured version, you can query: "all card_declined events in the last hour, grouped by payment_gateway" — and get a table instantly. With the unstructured version, you're running regex over text.
+
 **Correlation IDs** are the other critical practice. Every request that enters your system gets assigned a unique ID at the edge (API gateway, load balancer, or first service in the chain). That ID propagates through every subsequent call — logged at every service boundary, database query, and event emission. When something goes wrong, you can trace the full execution path of a single request across dozens of services by filtering on one ID. Without correlation IDs, debugging distributed systems is like solving a jigsaw puzzle with pieces from different boxes.
+
+Implementing correlation IDs in a Python/FastAPI service:
+
+```python
+import uuid
+from fastapi import FastAPI, Request
+from contextvars import ContextVar
+
+app = FastAPI()
+trace_id_var: ContextVar[str] = ContextVar('trace_id', default='')
+
+@app.middleware("http")
+async def correlation_id_middleware(request: Request, call_next):
+    # Use incoming trace-id if present (from upstream caller), else generate
+    trace_id = (
+        request.headers.get("X-Trace-Id") or
+        request.headers.get("traceparent") or  # W3C TraceContext
+        str(uuid.uuid4())
+    )
+    trace_id_var.set(trace_id)
+
+    response = await call_next(request)
+    response.headers["X-Trace-Id"] = trace_id
+    return response
+
+# In any function, access the current trace ID for logging:
+import logging
+import structlog
+
+log = structlog.get_logger()
+
+def process_payment(user_id: int, amount: int):
+    log.info("payment.started",
+             user_id=user_id,
+             amount_cents=amount,
+             trace_id=trace_id_var.get())  # correlation ID flows through
+    # ...
+```
 
 What to log:
 - Request start and end (with duration)
@@ -284,6 +350,10 @@ What not to log:
 - High-frequency, low-information events (individual packet receipts, tight loop iterations)
 - Duplication of what metrics already capture well
 
+**Log aggregation and querying:** Raw logs on individual instances are nearly useless at scale. You need a centralized log aggregation system. The standard stack is: Fluent Bit (log collector, runs as DaemonSet on Kubernetes) → Elasticsearch or OpenSearch (storage and indexing) → Kibana or Grafana (querying and visualization). Alternatives: Datadog Logs, Splunk, Google Cloud Logging, Loki (Grafana's purpose-built log aggregation, cheaper than Elasticsearch for many use cases).
+
+**Log levels matter:** Don't log everything at ERROR. Reserve ERROR for things that require human attention. Use WARN for degraded states that are self-healing. Use INFO for significant business events. Use DEBUG for detailed diagnostic output (disabled by default in production). When everything is ERROR, nothing is.
+
 **Pillar 2: Metrics**
 
 Metrics are numeric measurements, typically aggregated over time. Unlike logs (one record per event), metrics are sampled or aggregated into time series. They're cheap to store and fast to query, which makes them ideal for alerting.
@@ -295,6 +365,68 @@ The three fundamental metric types:
 **Gauges** capture a point-in-time value that can go up or down. Current memory usage, current queue depth, number of active connections, current goroutine count. Gauge values at a point in time are meaningful on their own.
 
 **Histograms** record the distribution of values across configurable buckets. Request duration in the bucket 0-10ms: 500 requests. 10-50ms: 1200 requests. 50-100ms: 300 requests. 100ms+: 12 requests. From histograms you can calculate percentiles (p50, p95, p99) and spot the shape of your latency distribution — whether you have a bimodal distribution, heavy tail, or bounded spread.
+
+**Practical instrumentation with Prometheus (Python):**
+
+```python
+from prometheus_client import Counter, Histogram, Gauge, start_http_server
+import time
+
+# Define metrics
+REQUEST_COUNT = Counter(
+    'http_requests_total',
+    'Total HTTP requests',
+    ['method', 'endpoint', 'status_code']
+)
+
+REQUEST_DURATION = Histogram(
+    'http_request_duration_seconds',
+    'HTTP request duration in seconds',
+    ['method', 'endpoint'],
+    buckets=[0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0]
+)
+
+ACTIVE_CONNECTIONS = Gauge(
+    'db_connections_active',
+    'Active database connections'
+)
+
+# Use in request handler
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):
+    start = time.time()
+    response = await call_next(request)
+    duration = time.time() - start
+
+    REQUEST_COUNT.labels(
+        method=request.method,
+        endpoint=request.url.path,
+        status_code=response.status_code
+    ).inc()
+
+    REQUEST_DURATION.labels(
+        method=request.method,
+        endpoint=request.url.path
+    ).observe(duration)
+
+    return response
+```
+
+And the Prometheus queries to build your RED dashboard:
+
+```promql
+# Rate: requests per second (5-minute window)
+rate(http_requests_total[5m])
+
+# Errors: fraction of requests that are 5xx
+rate(http_requests_total{status_code=~"5.."}[5m])
+  / rate(http_requests_total[5m])
+
+# Duration: p50, p95, p99 latency
+histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))
+histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))
+histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))
+```
 
 **Two essential monitoring frameworks:**
 
@@ -312,19 +444,95 @@ The **USE method** is designed for resource utilization:
 
 Apply USE to: CPU, memory, disk, network interfaces, thread pools, connection pools. These are typically the bottlenecks in performance investigations.
 
+A practical investigation flow: SLO alert fires (symptom) → check RED metrics to confirm the service is sick → switch to USE metrics for each resource to find the bottleneck → use logs and traces to find the specific request or code path that's causing it.
+
 **Pillar 3: Traces**
 
 Traces follow a single request through all the systems it touches. A trace is composed of **spans** — one span per logical unit of work. Each span has: a service name, an operation name, a start time, a duration, status (success/error), and arbitrary metadata key-value pairs.
 
 The magic is in the parent-child relationships. When Service A calls Service B, Service B creates a child span of A's span. When you visualize this, you get a waterfall diagram: the entire request tree laid out on a time axis, showing you exactly where time was spent, which services called which, and where errors occurred.
 
+**A trace visualized:**
+
+```
+checkout-service [280ms total]
+├── auth-service.validate_token [12ms] ✓
+├── inventory-service.check_availability [45ms] ✓
+│   └── postgres.SELECT items [38ms] ✓
+├── pricing-service.calculate_total [8ms] ✓
+├── payment-service.charge [198ms] ✓  ← most of the time
+│   ├── fraud-service.check_risk [22ms] ✓
+│   └── stripe.create_charge [169ms] ✓  ← root bottleneck
+└── notification-service.send_confirmation [17ms] ✓
+```
+
+Without this trace, you'd know the checkout was slow (280ms) but you'd have no idea it was Stripe's API accounting for 60% of the latency. The trace makes it immediately obvious.
+
 Traces make two previously hard problems easy:
 1. **Latency attribution** — "the request took 2 seconds, but where?" With traces, you can see that 1.8 seconds was spent in a single downstream database call.
 2. **Service dependency mapping** — by aggregating traces, you can automatically discover your actual service topology (which often diverges from your architecture diagrams).
 
+**Implementing tracing with OpenTelemetry:**
+
+```python
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+
+# Configure tracer
+provider = TracerProvider()
+exporter = OTLPSpanExporter(endpoint="http://otel-collector:4317")
+provider.add_span_processor(BatchSpanProcessor(exporter))
+trace.set_tracer_provider(provider)
+
+# Auto-instrument: FastAPI, HTTPX, SQLAlchemy all get spans automatically
+FastAPIInstrumentor.instrument_app(app)
+HTTPXClientInstrumentor().instrument()
+SQLAlchemyInstrumentor().instrument(engine=engine)
+
+# Manual span for custom business logic
+tracer = trace.get_tracer(__name__)
+
+async def process_checkout(order_id: str, user_id: int):
+    with tracer.start_as_current_span("checkout.process") as span:
+        span.set_attribute("order.id", order_id)
+        span.set_attribute("user.id", user_id)
+
+        # This nested span is automatically a child of the parent
+        with tracer.start_as_current_span("checkout.validate_inventory"):
+            inventory_ok = await check_inventory(order_id)
+            span.set_attribute("inventory.available", inventory_ok)
+
+        if not inventory_ok:
+            span.set_status(trace.StatusCode.ERROR, "inventory_unavailable")
+            raise InsufficientInventoryError(order_id)
+```
+
 **OpenTelemetry** (OTel) is now the vendor-neutral standard for instrumentation. You instrument your code once with the OTel SDK, and then route the telemetry to whatever backend you want: Jaeger, Zipkin, Honeycomb, Datadog, Grafana Tempo. This avoids vendor lock-in at the instrumentation layer — switching from Datadog to Honeycomb doesn't require re-instrumenting all your code.
 
 The OTel SDK also handles trace context propagation automatically — injecting the trace ID into HTTP headers (W3C TraceContext standard), Kafka message headers, etc., so that traces flow across service boundaries without manual work.
+
+**The three pillars together in practice:**
+
+Here's how they work as a system during a real investigation:
+
+1. **Alert fires** (metrics): SLO burn rate alert. Error rate at 8% for the past 15 minutes.
+2. **Check the RED dashboard** (metrics): Rate is normal (no traffic spike), Errors are elevated, Duration has spiked to p99=4.2s (was 0.8s). The service is sick, not overwhelmed.
+3. **Sample some failed traces** (traces): Filter traces by `error=true`. The waterfall shows that 95% of failed requests are failing in the `payment-service` span, specifically on the `stripe.create_charge` child span, with status `connection_timeout`.
+4. **Drill into logs** (logs): Filter logs by `service=payment-service AND event=stripe_timeout`. The logs show: `stripe.api_timeout: connection timed out after 3000ms, attempt 1 of 3`. Stripe's API is responding slowly.
+5. **Confirm with metrics** (metrics): Check the `external_api_duration_seconds` metric for Stripe specifically. p99 has gone from 800ms to 3200ms in the last 20 minutes.
+
+Conclusion: Stripe is having an incident. Check Stripe's status page, activate the circuit breaker for Stripe to start failing fast, notify users that payment processing is degraded. This entire investigation took under 8 minutes because each pillar pointed to the next.
+
+Without traces: you'd know requests are failing, but you'd spend 20+ minutes trying to figure out which service is responsible.
+
+Without structured logs: you'd know the payment service is involved (from traces), but you'd be grepping text to find the timeout details.
+
+Without metrics: you'd have no alert until users reported it, and no way to confirm recovery.
 
 ### 2.3 Alerting Philosophy
 

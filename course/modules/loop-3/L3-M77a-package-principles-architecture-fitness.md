@@ -514,6 +514,265 @@ COST OF NOT ENFORCING:
 | **Decision record** | A log entry that captures the reasoning and outcome of a significant technical or process decision. |
 | **Supersede** | The act of replacing a previous decision record with a new one when the context or choice changes. |
 
+---
+
+## Part 6: Hands-On — Apply the Rules to TicketPulse's Monorepo (25 min)
+
+Reading about package principles is one thing. Actually running the tools against TicketPulse's codebase and fixing violations is another. This walkthrough takes you through the full cycle.
+
+### Step 1: Install and Initialize dependency-cruiser
+
+```bash
+cd /path/to/ticketpulse
+
+# Install dependency-cruiser as a dev dependency
+npm install --save-dev dependency-cruiser
+
+# Initialize a configuration
+npx dependency-cruiser --init
+# When prompted, choose: TypeScript, yes to tsconfig, no to webpack
+```
+
+### Step 2: Generate Your First Dependency Graph
+
+```bash
+# Generate an SVG of the full dependency graph
+npx depcruise \
+  --include-only "^packages" \
+  --output-type dot \
+  packages \
+  | dot -T svg > dep-graph-before.svg
+
+# Open it
+open dep-graph-before.svg   # macOS
+# or: xdg-open dep-graph-before.svg  # Linux
+```
+
+What you are looking for in the graph:
+- **Arrows that go "upward"** (from a stable package to an unstable one) — SDP violations
+- **Cycles** (circular arrows or patterns where you can follow arrows in a loop back to the start)
+- **Cross-feature imports** (arrows between `features/orders` and `features/payments`)
+- **Thick fan-in on shared packages** (many arrows pointing at one package = high coupling = change will be painful)
+
+### Step 3: Run the Violation Report
+
+```bash
+# Run with the forbidden rules from Part 3
+npx depcruise \
+  --config .dependency-cruiser.cjs \
+  --output-type err-long \
+  packages \
+  2>&1 | tee violations-report.txt
+
+cat violations-report.txt
+```
+
+For each violation found, record it in this table:
+
+```
+| Rule Violated        | Source File                          | Target File                    | Why It Happened (guess) |
+|----------------------|--------------------------------------|--------------------------------|-------------------------|
+| no-circular          | features/orders/orderService.ts      | features/payments/client.ts    | Direct import for type  |
+| no-shared-to-feature | shared/utils/formatting.ts           | features/events/eventTypes.ts  | Convenience import      |
+| ...                  | ...                                  | ...                            | ...                     |
+```
+
+### Step 4: Fix One Circular Dependency From End to End
+
+Pick the first circular dependency from your violations report. Here is the guided process:
+
+```bash
+# First, understand what the circular chain looks like
+npx depcruise \
+  --include-only "^packages/features/(orders|payments)" \
+  --output-type dot \
+  packages \
+  | dot -T svg > cycle-detail.svg
+
+open cycle-detail.svg
+```
+
+Typical circular dependency in TicketPulse:
+
+```
+orders/src/orderService.ts
+  → imports PaymentResult from payments/src/paymentTypes.ts
+  
+payments/src/paymentService.ts
+  → imports OrderStatus from orders/src/orderTypes.ts
+```
+
+**The fix (dependency inversion)**:
+
+```bash
+# Step 1: Create a new shared types package
+mkdir -p packages/shared/domain-events/src
+cat > packages/shared/domain-events/package.json << 'EOF'
+{
+  "name": "@ticketpulse/domain-events",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts"
+}
+EOF
+
+# Step 2: Move the shared types here
+cat > packages/shared/domain-events/src/index.ts << 'EOF'
+// Types that both orders and payments depend on
+// Neither orders nor payments owns these — the domain does
+
+export enum OrderStatus {
+  PENDING = 'pending',
+  CONFIRMED = 'confirmed',
+  CANCELLED = 'cancelled',
+  REFUNDED = 'refunded',
+}
+
+export interface PaymentResult {
+  success: boolean;
+  transactionId: string;
+  amountCharged: number;
+  currency: string;
+  failureReason?: string;
+}
+
+export interface OrderPaymentEvent {
+  orderId: string;
+  userId: string;
+  result: PaymentResult;
+  processedAt: Date;
+}
+EOF
+```
+
+```typescript
+// packages/features/orders/src/orderTypes.ts
+// BEFORE (causes the cycle):
+import { PaymentResult } from '../../payments/src/paymentTypes';
+
+// AFTER (no cycle — both depend on shared):
+import { PaymentResult } from '@ticketpulse/domain-events';
+```
+
+```typescript
+// packages/features/payments/src/paymentService.ts
+// BEFORE (causes the cycle):
+import { OrderStatus } from '../../orders/src/orderTypes';
+
+// AFTER (no cycle):
+import { OrderStatus } from '@ticketpulse/domain-events';
+```
+
+After the fix, run the violation report again:
+
+```bash
+npx depcruise --config .dependency-cruiser.cjs --output-type err packages
+# The no-circular violation should be gone
+```
+
+### Step 5: Add the Architecture Check to CI
+
+```bash
+# .github/workflows/architecture.yml
+cat > .github/workflows/architecture.yml << 'EOF'
+name: Architecture Check
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  check-architecture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - run: npm ci
+      
+      - name: Validate architecture rules
+        run: |
+          npx depcruise \
+            --config .dependency-cruiser.cjs \
+            --output-type err \
+            packages
+        
+      - name: Generate dependency graph
+        if: always()  # Generate even if violations found
+        run: |
+          npm install -g graphviz || apt-get install -y graphviz
+          npx depcruise \
+            --config .dependency-cruiser.cjs \
+            --output-type dot \
+            packages \
+            | dot -T svg > dependency-graph.svg
+        
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-graph
+          path: dependency-graph.svg
+EOF
+```
+
+Now every pull request automatically validates architecture rules. Violations block the merge. The dependency graph artifact lets reviewers see the structure without running the tool locally.
+
+---
+
+## Part 7: Extended Reflection — The Hard Cases (15 min)
+
+Package principles are clear in theory and messy in practice. Work through these real situations.
+
+### Hard Case 1: The "Just This Once" Exception
+
+A product manager asks for a hotfix that requires the `order-service` to read a pricing rule directly from the `pricing-service` database. Your dependency rules forbid cross-feature imports.
+
+You could:
+a) Add a `dependency-cruiser-ignore` comment to bypass the rule
+b) Create a proper API endpoint in pricing-service and call it over HTTP
+c) Temporarily add the exception to the rule config with an explanatory comment and a TODO
+
+Which do you choose? Under what time pressure does your answer change?
+
+> **Guided thinking**: Option (b) is architecturally correct but takes longer. For a true production emergency, option (c) is defensible — add the exception in the config with `// HOTFIX: remove by <date>, tracked in JIRA-1234`. The key: the exception is visible, documented, and time-bounded. Option (a) buries the exception in source code where it is invisible to future maintainers.
+
+### Hard Case 2: The Performance Exception
+
+Profiling shows that calling the `event-service` API from the `order-service` (correct architecture) adds 8ms of latency per order. Directly importing the event lookup function (wrong architecture) would reduce that to 0.3ms.
+
+The order flow is latency-sensitive: users see checkout slowness above 400ms. You are currently at 390ms.
+
+How do you resolve this tension?
+
+> **Guided thinking**: Before violating the architectural boundary, exhaust the correct-architecture options:
+> - Cache the event data in `order-service` (Redis, short TTL) — eliminates most of the 8ms
+> - Use a local read replica of the events data (database-level, not code-level coupling)
+> - Move the checkout to a co-located service that has fast access to both
+> 
+> If none of these work and the 8ms genuinely cannot be removed, document it as an ADR: "We accepted a cross-feature dependency for the order-checkout critical path due to latency constraints. We will revisit when we implement a service mesh with connection pooling."
+
+### Hard Case 3: The New Engineer Problem
+
+A new engineer joins the team. On their first PR, they add an import from `features/analytics` inside `features/orders`. Your CI rule catches it. Their response: "This is the most natural way to do what I needed. Why does this rule exist?"
+
+How do you explain it in a way that builds understanding rather than frustration?
+
+> **Guided thinking**: Start with what would go wrong, not the rule itself:
+> "If orders depends on analytics, then deploying analytics requires also deploying orders (or at least verifying it still works). Now you cannot deploy an analytics fix independently. Over time, you would end up with a dependency chain where changing any one component requires coordinating a dozen deployments. The rule exists to keep our deployments independent."
+> 
+> Then: "What were you trying to do? Let us find a way to do it that respects the boundary — maybe through an event emitted by orders that analytics consumes, or by extracting the shared logic into a shared package."
+
+---
+
+> **Want the deep theory?** See Ch 32 of the 100x Engineer Guide: "Package & Module Design Principles" — the full theoretical foundation including coupling metrics, zone of pain/uselessness, and the Main Sequence.
+
+---
+
 ## Further Reading
 
 - **Chapter 32, Section 10**: Package & Module Design Principles -- the full theoretical foundation

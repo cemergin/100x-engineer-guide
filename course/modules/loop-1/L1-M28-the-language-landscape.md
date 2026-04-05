@@ -489,6 +489,264 @@ done
 
 ---
 
+---
+
+## 6. Deep Dive: The Ecosystem Matters More Than You Think (15 min)
+
+Raw performance is only one dimension of the language decision. The ecosystem — libraries, tooling, deployment support, and hiring — often matters more.
+
+### 6.1 Audit the TicketPulse Dependency in Each Language
+
+For each language, find the best library for connecting to PostgreSQL. Install it and run a simple query:
+
+**Go:**
+```go
+// go get github.com/jackc/pgx/v5
+import "github.com/jackc/pgx/v5/pgxpool"
+
+pool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
+if err != nil {
+    log.Fatalf("Unable to connect: %v", err)
+}
+defer pool.Close()
+
+var eventName string
+err = pool.QueryRow(context.Background(),
+    "SELECT name FROM events LIMIT 1").Scan(&eventName)
+fmt.Printf("First event: %s\n", eventName)
+```
+
+**Python:**
+```python
+# pip install asyncpg
+import asyncio
+import asyncpg
+
+async def main():
+    conn = await asyncpg.connect(os.environ["DATABASE_URL"])
+    row = await conn.fetchrow("SELECT name FROM events LIMIT 1")
+    print(f"First event: {row['name']}")
+    await conn.close()
+
+asyncio.run(main())
+```
+
+**Rust:**
+```rust
+// In Cargo.toml: sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-native-tls"] }
+use sqlx::postgres::PgPoolOptions;
+
+let pool = PgPoolOptions::new()
+    .max_connections(5)
+    .connect(&std::env::var("DATABASE_URL").unwrap())
+    .await?;
+
+let row: (String,) = sqlx::query_as("SELECT name FROM events LIMIT 1")
+    .fetch_one(&pool)
+    .await?;
+println!("First event: {}", row.0);
+```
+
+**Observations to record:**
+- How verbose is the connection setup? (Go: ~5 lines. Python: ~3 lines. Rust: ~5 lines but with compile-time query verification.)
+- How does each library handle connection pooling?
+- Does Rust's `sqlx` verify your SQL at compile time? (Try misspelling a column name — what happens?)
+
+### 6.2 Error Handling: A Real Comparison
+
+Error handling philosophy differs dramatically between languages. Read this carefully — it affects how you design your entire application.
+
+**TypeScript (Exception-based):**
+```typescript
+// Errors can be thrown from anywhere and propagate invisibly
+async function getEvent(id: string) {
+  try {
+    const event = await db.query('SELECT * FROM events WHERE id = $1', [id]);
+    if (event.rows.length === 0) throw new Error('Event not found');
+    return event.rows[0];
+  } catch (err) {
+    // Is this a "not found" error? A DB connection error? A validation error?
+    // The type system won't tell you — you have to check at runtime
+    throw err;
+  }
+}
+```
+
+**Go (Explicit error return values):**
+```go
+// Errors are return values. You CANNOT ignore them (compiler warns if you do)
+func GetEvent(ctx context.Context, db *pgxpool.Pool, id string) (*Event, error) {
+    var event Event
+    err := db.QueryRow(ctx, "SELECT id, name, event_date FROM events WHERE id = $1", id).
+        Scan(&event.ID, &event.Name, &event.EventDate)
+    
+    if err == pgx.ErrNoRows {
+        return nil, fmt.Errorf("event %s not found: %w", id, ErrNotFound)
+    }
+    if err != nil {
+        return nil, fmt.Errorf("query event: %w", err)
+    }
+    return &event, nil
+}
+
+// Caller MUST handle the error
+event, err := GetEvent(ctx, db, "evt_123")
+if err != nil {
+    if errors.Is(err, ErrNotFound) {
+        // handle 404
+    }
+    // handle other errors
+}
+```
+
+**Rust (Result type):**
+```rust
+// Result<T, E> forces you to handle both success and failure
+async fn get_event(pool: &PgPool, id: &str) -> Result<Event, AppError> {
+    let event = sqlx::query_as::<_, Event>(
+        "SELECT id, name, event_date FROM events WHERE id = $1"
+    )
+    .bind(id)
+    .fetch_optional(pool)    // Returns Option<Event>, not error if not found
+    .await
+    .map_err(AppError::Database)?;   // ? propagates errors
+
+    event.ok_or(AppError::NotFound)  // Convert None to an error
+}
+
+// At the call site, you must match on both cases
+match get_event(&pool, "evt_123").await {
+    Ok(event) => /* use event */,
+    Err(AppError::NotFound) => /* 404 */,
+    Err(AppError::Database(e)) => /* 500 */,
+}
+```
+
+**Key insight**: TypeScript errors are invisible until they throw. Go errors are explicit but require repetitive `if err != nil`. Rust errors are type-safe and compiler-enforced — you cannot compile a program that ignores a `Result`. Each has a real cost and benefit.
+
+### 6.3 Type System Comparison: The Same Business Rule in Four Languages
+
+Implement this rule: "A ticket price must be between $1.00 and $10,000.00. It is stored as cents (integer)."
+
+```typescript
+// TypeScript: types are optional and erased at runtime
+type PriceInCents = number;  // No enforcement — still just a number
+// You could accidentally pass 750000 (units wrong) and TypeScript won't catch it
+
+// Better: branded type (but not everyone uses them)
+type PriceInCents = number & { readonly __brand: 'price' };
+function toPriceCents(value: number): PriceInCents {
+  if (value < 100 || value > 1_000_000) throw new Error('Invalid price');
+  return value as PriceInCents;
+}
+```
+
+```go
+// Go: simple but no enforcement beyond the type
+type PriceInCents int
+
+func NewPrice(cents int) (PriceInCents, error) {
+    if cents < 100 || cents > 1_000_000 {
+        return 0, fmt.Errorf("price %d outside valid range [100, 1000000]", cents)
+    }
+    return PriceInCents(cents), nil
+}
+```
+
+```python
+# Python with Pydantic: validation at runtime, not compile time
+from pydantic import BaseModel, field_validator
+
+class TicketPrice(BaseModel):
+    cents: int
+    
+    @field_validator('cents')
+    @classmethod
+    def validate_price(cls, v: int) -> int:
+        if not (100 <= v <= 1_000_000):
+            raise ValueError(f'Price {v} outside valid range')
+        return v
+```
+
+```rust
+// Rust: validation in the constructor, guaranteed valid once created
+struct PriceInCents(i64);
+
+impl PriceInCents {
+    fn new(cents: i64) -> Result<Self, String> {
+        if cents < 100 || cents > 1_000_000 {
+            return Err(format!("Price {} outside valid range [100, 1000000]", cents));
+        }
+        Ok(PriceInCents(cents))
+    }
+    
+    fn value(&self) -> i64 { self.0 }
+}
+
+// If you have a PriceInCents, it is valid — the type system guarantees it.
+// You cannot construct one with an invalid value from outside this module.
+```
+
+**Reflect**: Which language gives you the most confidence that `PriceInCents` is always valid when you have one? Which costs the most lines of code to achieve that confidence?
+
+---
+
+## 7. Reflection: Building Your Language Framework (10 min)
+
+You have now read, run, and benchmarked all four languages on the same problem. Before moving on, solidify your mental model with these exercises.
+
+### 7.1 Write Your Personal Decision Framework
+
+Fill in this table based on what you actually observed (not what blog posts say):
+
+| Situation | My Language Choice | Why |
+|---|---|---|
+| I need to build a fast prototype for a new API in 2 days | | |
+| I need a background job that processes video frames | | |
+| I need a CLI tool deployed to customers' machines | | |
+| I need to add ML inference to an existing Python data pipeline | | |
+| My team of 8 knows TypeScript; we need to build a new microservice | | |
+| We need an API that handles 50K requests/second at sub-1ms latency | | |
+
+There are no universally correct answers. Your reasoning is the exercise.
+
+### 7.2 The Uncomfortable Truth About Language Benchmarks
+
+Go back to your benchmark results from Section 2. Now consider: TicketPulse's event endpoint hits a database. The database query takes 15-25ms. All four languages handle a 25ms wait the same way — they wait. The difference in raw HTTP throughput (Rust at 150K req/s vs Python at 8K req/s) collapses to near-zero when the bottleneck is a 25ms database query.
+
+Run this test to verify:
+
+```bash
+# Start a mock server that always waits 25ms (simulates DB latency)
+# Then benchmark all four languages
+
+# In TypeScript:
+router.get('/api/events-realistic', async (req, res) => {
+  await new Promise(r => setTimeout(r, 25));  // Simulate DB
+  res.json(events);
+});
+
+wrk -t4 -c100 -d10s http://localhost:3000/api/events-realistic
+# Compare with:
+wrk -t4 -c100 -d10s http://localhost:3001/api/events-realistic  # Go
+wrk -t4 -c100 -d10s http://localhost:3003/api/events-realistic  # Rust
+```
+
+**Expected finding**: At 25ms I/O wait, 100 concurrent connections, all four languages achieve roughly the same throughput (~3,800 req/s at 100 connections × 25ms). The "10x faster" Rust advantage disappears.
+
+This is not a knock on Rust or Go — it is a reminder that language performance matters primarily when:
+- You are CPU-bound (computation, not I/O)
+- You are at extreme connection counts (100K+)
+- You have strict tail latency requirements (p99 < 5ms)
+
+For most web applications, team familiarity and ecosystem quality matter more.
+
+---
+
+> **Want the deep theory?** See Ch 11 of the 100x Engineer Guide: "Language Selection & Type Systems" — covers type theory, memory models, runtime trade-offs, and when language choice becomes a strategic decision.
+
+---
+
 ## What's Next
 
 All four servers handled 100 concurrent connections fine. But what happens at 10,000? The next module pushes each language to its limits with heavy concurrency, revealing how event loops, goroutines, async runtimes, and thread pools handle the pressure differently.

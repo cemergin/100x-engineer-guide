@@ -89,6 +89,207 @@ TDD is particularly powerful for bug fixes. When you find a bug: write a test th
 
 The refactor phase is where TDD unlocks compound returns. Because you have a passing test, you can aggressively improve the code — rename, extract, reorganize — with complete confidence that you haven't introduced a regression. Refactoring without tests is archaeology. Refactoring with tests is sculpture.
 
+**TDD Worked Example: Building an Order Discount Calculator**
+
+Let's walk through a complete red-green-refactor cycle for a realistic piece of business logic: a discount calculator for an e-commerce system. The rules:
+- Orders over $100 get a 10% discount
+- VIP customers always get 15% regardless of order total
+- Discounts are not applied to orders with discount code "NODISCOUNT"
+- Discount cannot exceed the order total (no negative totals)
+
+**Red Phase — Write a failing test first:**
+
+Before writing any implementation, write the test for the simplest case. Run it and watch it fail (confirming the test actually reaches the code path we care about):
+
+```typescript
+// discount-calculator.test.ts
+import { calculateDiscount } from './discount-calculator';
+
+describe('calculateDiscount', () => {
+  describe('standard customers', () => {
+    it('applies no discount for orders under $100', () => {
+      const order = { total: 50, customer: { isVip: false }, discountCode: null };
+      expect(calculateDiscount(order)).toBe(0);
+    });
+  });
+});
+```
+
+Run `npx jest`. It fails immediately:
+
+```
+FAIL src/discount-calculator.test.ts
+  ● Test suite failed to run
+    Cannot find module './discount-calculator' from 'discount-calculator.test.ts'
+```
+
+Good. The test fails for the right reason (no module). We've confirmed our test harness works.
+
+**Green Phase — Write the minimum code to make it pass:**
+
+```typescript
+// discount-calculator.ts
+export interface Order {
+  total: number;
+  customer: { isVip: boolean };
+  discountCode: string | null;
+}
+
+export function calculateDiscount(order: Order): number {
+  return 0;
+}
+```
+
+Run `npx jest`. Green. The test passes. Resist the urge to write more implementation than the test requires — that's the discipline of TDD.
+
+**Red Phase — Next test:**
+
+```typescript
+it('applies 10% discount for orders over $100', () => {
+  const order = { total: 150, customer: { isVip: false }, discountCode: null };
+  expect(calculateDiscount(order)).toBe(15);  // 10% of 150
+});
+```
+
+Red. `calculateDiscount` returns 0.
+
+**Green:**
+
+```typescript
+export function calculateDiscount(order: Order): number {
+  if (order.total > 100) {
+    return order.total * 0.10;
+  }
+  return 0;
+}
+```
+
+Green. Both tests pass.
+
+**Red Phase — VIP customer:**
+
+```typescript
+it('applies 15% discount for VIP customers regardless of total', () => {
+  const smallVipOrder = { total: 50, customer: { isVip: true }, discountCode: null };
+  expect(calculateDiscount(smallVipOrder)).toBe(7.5);  // 15% of 50
+
+  const largeVipOrder = { total: 200, customer: { isVip: true }, discountCode: null };
+  expect(calculateDiscount(largeVipOrder)).toBe(30);   // 15% of 200
+});
+```
+
+Red. VIP customers currently get no discount on orders under $100 and 10% on orders over $100.
+
+**Green:**
+
+```typescript
+export function calculateDiscount(order: Order): number {
+  if (order.customer.isVip) {
+    return order.total * 0.15;
+  }
+  if (order.total > 100) {
+    return order.total * 0.10;
+  }
+  return 0;
+}
+```
+
+Green.
+
+**Red Phase — The NODISCOUNT code:**
+
+```typescript
+it('applies no discount when NODISCOUNT code is present', () => {
+  const vipWithNoDiscount = { 
+    total: 200, 
+    customer: { isVip: true }, 
+    discountCode: 'NODISCOUNT' 
+  };
+  expect(calculateDiscount(vipWithNoDiscount)).toBe(0);
+
+  const largeOrderWithNoDiscount = { 
+    total: 150, 
+    customer: { isVip: false }, 
+    discountCode: 'NODISCOUNT' 
+  };
+  expect(calculateDiscount(largeOrderWithNoDiscount)).toBe(0);
+});
+```
+
+Red.
+
+**Green:**
+
+```typescript
+export function calculateDiscount(order: Order): number {
+  if (order.discountCode === 'NODISCOUNT') {
+    return 0;
+  }
+  if (order.customer.isVip) {
+    return order.total * 0.15;
+  }
+  if (order.total > 100) {
+    return order.total * 0.10;
+  }
+  return 0;
+}
+```
+
+Green.
+
+**Red Phase — Discount cannot exceed total:**
+
+This edge case wouldn't occur with the current rules (a 15% discount never exceeds the total). But defensive programming and explicit tests for invariants protect against future changes:
+
+```typescript
+it('discount cannot exceed the order total', () => {
+  // Imagine an order for $5 where some future rule gives 200% discount
+  // This guards against that possibility
+  const order = { total: 5, customer: { isVip: false }, discountCode: null };
+  const discount = calculateDiscount(order);
+  expect(discount).toBeLessThanOrEqual(order.total);
+  expect(discount).toBeGreaterThanOrEqual(0);
+});
+```
+
+This test passes already (0 ≤ 0 ≤ 5). But it's documented as a system invariant, and it will fail if future changes introduce a bug.
+
+**Refactor Phase — Improve the code without changing behavior:**
+
+All tests are passing. Now look at the implementation with fresh eyes. The `discountCode === 'NODISCOUNT'` check is a magic string, the rate constants are unexplained numbers, and the structure could be cleaner:
+
+```typescript
+// discount-calculator.ts
+
+const STANDARD_DISCOUNT_THRESHOLD = 100;
+const STANDARD_DISCOUNT_RATE = 0.10;
+const VIP_DISCOUNT_RATE = 0.15;
+const NO_DISCOUNT_CODE = 'NODISCOUNT';
+
+export function calculateDiscount(order: Order): number {
+  if (order.discountCode === NO_DISCOUNT_CODE) {
+    return 0;
+  }
+  
+  const rate = order.customer.isVip 
+    ? VIP_DISCOUNT_RATE 
+    : order.total > STANDARD_DISCOUNT_THRESHOLD 
+      ? STANDARD_DISCOUNT_RATE 
+      : 0;
+  
+  const discount = order.total * rate;
+  return Math.min(discount, order.total);  // Invariant: discount ≤ total
+}
+```
+
+Run the tests. All green. The refactored version has named constants (readable, changeable in one place), an explicit guard for the discount-exceeds-total invariant, and no magic numbers.
+
+**The payoff is visible immediately:**
+
+The test suite now serves as living documentation of the discount rules. When a product manager asks "does the NODISCOUNT code override VIP status?" — the test answers that question directly. When a new engineer needs to add "first-order customers get 20% off", they add a failing test first, implement the minimum to pass it, then refactor. They can't break the existing rules because the existing tests will catch it.
+
+This is TDD's gift: not just tested code, but code with a self-verifying specification attached.
+
 **BDD (Given-When-Then): Making Tests Speak Business**
 
 Behavior-Driven Development extends TDD by making the test descriptions themselves valuable to non-technical stakeholders. The Gherkin syntax structures tests in natural language:
@@ -174,6 +375,202 @@ def test_encode_decode_roundtrip(s):
     assert decode(encode(s)) == s
 ```
 
+**More examples showing how to think in properties:**
+
+The hardest part of property-based testing is identifying the right properties. Example-based thinking asks "what output do I expect?" Property-based thinking asks "what invariants must always hold?"
+
+Here are the main categories of properties and examples of each:
+
+**Category 1: Roundtrip properties — encode/decode, serialize/deserialize**
+
+Any function pair where one is the inverse of the other is a perfect candidate:
+
+```typescript
+// Serialize/deserialize: round-tripping produces the original
+fc.assert(
+  fc.property(
+    fc.record({
+      id: fc.uuid(),
+      name: fc.string({ minLength: 1 }),
+      price: fc.float({ min: 0.01, max: 10000 }),
+      tags: fc.array(fc.string({ minLength: 1 })),
+    }),
+    (product) => {
+      const serialized = serializeProduct(product);
+      const deserialized = deserializeProduct(serialized);
+      expect(deserialized).toEqual(product);
+    }
+  )
+);
+
+// URL encoding: round-tripping preserves the string
+fc.assert(
+  fc.property(fc.string(), (s) => {
+    expect(decodeURIComponent(encodeURIComponent(s))).toBe(s);
+  })
+);
+
+// JSON: valid objects survive JSON serialization intact
+fc.assert(
+  fc.property(
+    fc.jsonValue(),  // generates valid JSON-safe values
+    (value) => {
+      expect(JSON.parse(JSON.stringify(value))).toEqual(value);
+    }
+  )
+);
+```
+
+**Category 2: Algebraic properties — laws that operations must satisfy**
+
+Mathematical operations have provable properties. Test that your implementations honor them:
+
+```typescript
+// Addition is commutative: a + b = b + a
+fc.assert(
+  fc.property(fc.float({ noNaN: true }), fc.float({ noNaN: true }), (a, b) => {
+    expect(add(a, b)).toBeCloseTo(add(b, a));
+  })
+);
+
+// Set union is commutative and idempotent
+fc.assert(
+  fc.property(
+    fc.array(fc.integer()),
+    fc.array(fc.integer()),
+    (setA, setB) => {
+      const unionAB = union(setA, setB);
+      const unionBA = union(setB, setA);
+      // Commutativity: order doesn't matter
+      expect(new Set(unionAB)).toEqual(new Set(unionBA));
+      // Idempotency: union with self is self
+      expect(new Set(union(setA, setA))).toEqual(new Set(setA));
+    }
+  )
+);
+
+// Merge is associative: (a merge b) merge c = a merge (b merge c)
+fc.assert(
+  fc.property(
+    fc.object(), fc.object(), fc.object(),
+    (a, b, c) => {
+      const leftAssoc = deepMerge(deepMerge(a, b), c);
+      const rightAssoc = deepMerge(a, deepMerge(b, c));
+      expect(leftAssoc).toEqual(rightAssoc);
+    }
+  )
+);
+```
+
+**Category 3: Invariant preservation — properties that must hold before and after an operation**
+
+Some properties describe constraints on the data that must always hold:
+
+```typescript
+// Sorting must preserve all elements (no elements added or removed)
+fc.assert(
+  fc.property(fc.array(fc.integer()), (arr) => {
+    const sorted = sort(arr);
+    // Same length
+    expect(sorted.length).toBe(arr.length);
+    // Same elements (regardless of order)
+    expect([...sorted].sort()).toEqual([...arr].sort());
+    // Actually sorted
+    for (let i = 0; i < sorted.length - 1; i++) {
+      expect(sorted[i]).toBeLessThanOrEqual(sorted[i + 1]);
+    }
+  })
+);
+
+// Pagination must return non-overlapping, complete coverage of results
+fc.assert(
+  fc.property(
+    fc.array(fc.integer(), { minLength: 0, maxLength: 100 }),
+    fc.integer({ min: 1, max: 20 }),  // page size
+    (items, pageSize) => {
+      const pages = [];
+      let page = 1;
+      let hasMore = true;
+      
+      while (hasMore) {
+        const result = paginate(items, { page, pageSize });
+        pages.push(...result.items);
+        hasMore = result.hasMore;
+        page++;
+        if (page > 20) break;  // safety: shouldn't take more than 20 pages
+      }
+      
+      // All original items appear exactly once in paginated results
+      expect(pages).toEqual(items);
+    }
+  )
+);
+```
+
+**Category 4: Oracle properties — comparing to a known-correct reference implementation**
+
+When you're optimizing a function (replacing a slow but obviously correct version with a faster one), the new version should produce identical results to the old one:
+
+```typescript
+// Fast implementation of a complex aggregation
+// Reference: naive nested loop (obviously correct but O(n²))
+// Target: optimized version (must produce same results)
+fc.assert(
+  fc.property(
+    fc.array(
+      fc.record({ userId: fc.integer(), amount: fc.float({ min: 0 }) }),
+      { minLength: 0, maxLength: 50 }
+    ),
+    (transactions) => {
+      const naiveResult = computeTotalsNaive(transactions);    // reference
+      const optimizedResult = computeTotals(transactions);     // under test
+      expect(optimizedResult).toEqual(naiveResult);
+    }
+  )
+);
+```
+
+**Category 5: Stateful model-based testing**
+
+The most powerful form of property-based testing: generate sequences of operations and verify that a model (simple, obviously-correct implementation) always agrees with the system under test:
+
+```python
+# Hypothesis: stateful testing of a shopping cart
+from hypothesis.stateful import RuleBasedStateMachine, rule, invariant
+from hypothesis import strategies as st
+
+class CartTest(RuleBasedStateMachine):
+    def __init__(self):
+        super().__init__()
+        self.cart = ShoppingCart()         # system under test
+        self.model = {}                     # simple dict model
+
+    @rule(product_id=st.integers(min_value=1, max_value=100),
+          quantity=st.integers(min_value=1, max_value=10))
+    def add_item(self, product_id, quantity):
+        self.cart.add(product_id, quantity)
+        self.model[product_id] = self.model.get(product_id, 0) + quantity
+
+    @rule(product_id=st.integers(min_value=1, max_value=100))
+    def remove_item(self, product_id):
+        self.cart.remove(product_id)
+        self.model.pop(product_id, None)
+
+    @invariant()
+    def cart_matches_model(self):
+        """The cart's state must always match our simple dict model."""
+        assert self.cart.items() == self.model
+        
+    @invariant()
+    def total_is_non_negative(self):
+        """Cart total must never be negative."""
+        assert self.cart.total() >= 0
+
+TestCart = CartTest.TestCase
+```
+
+Hypothesis will generate sequences of `add_item` and `remove_item` calls, check invariants after each operation, and find the minimal failing sequence if any invariant is violated.
+
 Property-based testing is particularly powerful for:
 - Encoding/decoding functions (the roundtrip property)
 - Mathematical operations (commutativity, associativity, identity elements)
@@ -223,7 +620,210 @@ The tools are mature. **Stryker Mutator** handles JavaScript, TypeScript, C#, an
 
 The first time you run mutation testing on an existing codebase, expect to be humbled. Line coverage of 90% often corresponds to a mutation score of 50-60%. All those tests that execute the code but don't make meaningful assertions — they die on contact with mutation testing.
 
+**Mutation testing walkthrough — reading and acting on results:**
+
+Let's say you run Stryker on your `order-pricing.ts` module and get a report with 35 mutants. Here's how to interpret and act on what you find:
+
+**The report shows survived mutants like these:**
+
+```
+Mutant 1 (SURVIVED)
+  File: src/order-pricing.ts
+  Line 23, Column 5
+  Original:  if (order.total >= 100) {
+  Mutant:    if (order.total > 100) {
+  Status: Survived - no test caught this change
+```
+
+This is a real bug in your tests. The specification says orders of exactly $100 should get a discount, but your tests only check orders *over* $100. The boundary condition is untested. Add a test:
+
+```typescript
+it('applies discount for orders of exactly $100', () => {
+  const order = { total: 100, customer: { isVip: false } };
+  expect(calculateDiscount(order)).toBe(10);  // 10% of exactly $100
+});
+```
+
+```
+Mutant 2 (SURVIVED)  
+  File: src/order-pricing.ts
+  Line 31, Column 12
+  Original:  return subtotal - discount;
+  Mutant:    return subtotal + discount;
+  Status: Survived - no test caught this change
+```
+
+This is alarming. The mutation changes subtraction to addition — the discount is being *added* to the total instead of *subtracted*. Your tests apparently don't verify the direction of the discount. This means your tests are probably checking that a discount *exists* but not what the final total should be:
+
+```typescript
+// Existing test (doesn't catch the mutation):
+it('applies discount for VIP customers', () => {
+  const order = { total: 100, customer: { isVip: true } };
+  const discount = calculateDiscount(order);
+  expect(discount).toBeGreaterThan(0);  // this passes even if discount is applied wrong!
+});
+
+// Better test (catches the mutation):
+it('reduces the order total for VIP customers', () => {
+  const order = { total: 100, customer: { isVip: true } };
+  const finalTotal = applyDiscount(order);
+  expect(finalTotal).toBe(85);  // 100 - 15% = 85, not 100 + 15 = 115
+});
+```
+
+```
+Mutant 3 (SURVIVED)
+  File: src/order-pricing.ts
+  Line 45, Column 8
+  Original:  if (order.discountCode === 'NODISCOUNT') {
+  Mutant:    if (false) {
+  Status: Survived - no test caught this change
+```
+
+The entire `NODISCOUNT` code check was removed and your tests didn't notice. This means you have no test that:
+1. Creates an order with `discountCode: 'NODISCOUNT'` AND
+2. Asserts that the discount is zero
+
+You might have a test that checks the discount code is honored, but it's not airtight. Add the explicit test:
+
+```typescript
+it('waives discount when NODISCOUNT code is present', () => {
+  const vipOrder = { 
+    total: 200, 
+    customer: { isVip: true }, 
+    discountCode: 'NODISCOUNT' 
+  };
+  expect(calculateDiscount(vipOrder)).toBe(0);
+  expect(applyDiscount(vipOrder)).toBe(200);  // No reduction
+});
+```
+
+**Survived mutants that you can consciously accept:**
+
+Not every survived mutant represents a gap in your tests. Some are equivalent mutants — mutations that don't change the observable behavior — or mutants in code paths that are genuinely difficult to test:
+
+```
+Mutant 4 (SURVIVED)
+  File: src/order-pricing.ts
+  Line 67, Column 4
+  Original:  logger.debug(`Applying ${rate} discount to order ${order.id}`);
+  Mutant:    (nothing — log call removed)
+  Status: Survived
+```
+
+You don't have a test that asserts on log output for debug-level messages. This is intentional — testing log output couples your tests to implementation details. Mark this as "acceptable survived mutant" in your Stryker config:
+
+```json
+{
+  "mutate": ["src/**/*.ts", "!src/**/*.test.ts"],
+  "testRunner": "jest",
+  "ignoreStatic": true,
+  "mutatorExclusions": [
+    { "mutatorName": "StringLiteral", "description": "Log messages are not business logic" }
+  ]
+}
+```
+
+**The workflow to establish:**
+
+1. Run mutation testing on a critical module
+2. Triage survived mutants: real gap? equivalent mutant? acceptable?
+3. Write tests that kill the real gaps
+4. Re-run to confirm the mutation score improved
+5. Commit the new tests alongside the mutation configuration
+
+After a few rounds of this, your mutation score for critical modules climbs into the 85-90% range. The remaining 10-15% is typically equivalent mutants and genuinely hard-to-test paths (error handling in infrastructure code, logging, defensive assertions). This is the right target — don't chase 100%, invest the time in getting the business-critical paths to 90%+.
+
 Mutation testing is expensive. Running the full mutation suite on a large codebase can take 10-30 minutes. The pragmatic approach: don't run it on every commit, but run it on critical modules before major releases, and enforce a minimum mutation score in your CI as a quality gate for particularly important code paths.
+
+---
+
+## Testing Decision Framework — Which Test for Which Situation
+
+Before diving into test types, a practical framework for choosing what to write. The decision isn't "unit vs integration" in isolation — it's what you're trying to verify and what failure scenarios you're guarding against.
+
+```
+WHAT ARE YOU TESTING?
+│
+├── A pure function with no external dependencies (sort, format, calculate)
+│   └── UNIT TEST. Fast, deterministic, test all edge cases and properties.
+│       Add property-based tests if the input space is large.
+│
+├── A class or module that has dependencies you can substitute
+│   ├── Does the interaction with the dependency matter as much as the output?
+│   │   ├── YES → SOCIABLE UNIT TEST (use real collaborators where possible)
+│   │   └── NO  → SOLITARY UNIT TEST with mocks (focus on the algorithm)
+│   └── If using mocks: verify behavior, not implementation. 
+│       "Assert the service was called" is weak. "Assert the outcome is correct" is strong.
+│
+├── A database query, repository method, or ORM operation
+│   └── INTEGRATION TEST with a real database (Testcontainers).
+│       Do not mock the database. You will not catch dialect-specific bugs,
+│       transaction behavior, or constraint violations with a mock.
+│
+├── An HTTP endpoint or API handler
+│   └── INTEGRATION TEST against the full HTTP stack.
+│       Spin up the real server (or use a test client that routes through real middleware).
+│       Test authentication, authorization, serialization, and validation together.
+│
+├── An interaction between two services that you own
+│   └── CONTRACT TEST (Pact or equivalent).
+│       Consumer writes the expectations. Provider verifies against them.
+│       Do not use a shared integration environment unless you also have contract tests.
+│
+├── An external API you don't control (Stripe, Twilio, AWS)
+│   └── SERVICE VIRTUALIZATION (WireMock, VCR cassettes) for unit/integration.
+│       Add a manual smoke test in staging against the real service.
+│       Never mock at the library level — you'll miss transport-level behavior.
+│
+├── A complete user flow across multiple services
+│   └── E2E TEST for the most critical flows only (login, core value transaction, payment).
+│       Treat E2E tests as precious — write few, make them stable, fix flakes immediately.
+│
+├── A function that receives many kinds of inputs with hard-to-enumerate edge cases
+│   └── PROPERTY-BASED TEST alongside example-based tests.
+│       Especially valuable for: parsers, encoders/decoders, mathematical functions,
+│       sorting/searching, serialization.
+│
+├── A batch job or data pipeline
+│   └── INTEGRATION TEST with real data fixtures for the happy path.
+│       PROPERTY TEST for transformation logic (invariants on output data).
+│       LOAD TEST against realistic data volumes before launch.
+│
+├── Performance-sensitive code paths (SLO-bound APIs, latency-sensitive services)
+│   └── LOAD TEST with realistic traffic shapes in a production-like environment.
+│       Add BENCHMARK TESTS (criterion, benchmark.js) for the algorithmic hot paths.
+│
+└── Test quality of your existing tests
+    └── MUTATION TESTING on critical modules.
+        Run periodically, not on every commit. Aim for 80%+ mutation score on
+        your business-critical code.
+```
+
+**The "what do I mock?" decision:**
+
+| Thing you're testing against | What to do |
+|---|---|
+| Database (Postgres, MySQL, MongoDB) | Use Testcontainers — real database, fresh instance per test |
+| Message broker (Kafka, RabbitMQ) | Use Testcontainers or embedded broker for integration tests |
+| In-process collaborators (services, repositories) | Prefer sociable tests (real collaborators). Mock at architectural seams only. |
+| External HTTP APIs | Service virtualization (WireMock) for unit/integration. Real API for smoke tests. |
+| File system | Use temp directories (`tmpdir`) for tests that need real FS behavior. |
+| Time / clocks | Mock. Always. Tests that depend on real time are a flakiness factory. |
+| Random number generation | Seed the RNG in tests for determinism, or test at the property level. |
+
+**The rule for when to skip a test:**
+
+You don't write a test when the cost of writing and maintaining the test exceeds the risk of the code being wrong. This applies to:
+- Thin wrappers around well-tested third-party libraries (don't test that `JSON.stringify` works)
+- Configuration values (test that they're loaded, not that the value is "us-east-1")
+- Simple data containers (POJOs, DTOs) with no logic
+
+You always write a test for:
+- Business rules (anything with `if/else` that makes a business decision)
+- Error handling paths (what happens when the database is down?)
+- Security-critical code (authentication, authorization, input validation)
+- Code that's broken before (regression tests are your debt repayment)
 
 ---
 
@@ -295,6 +895,24 @@ Testcontainers starts a real Docker container for each test run. The database is
 The distinction matters for diagnosis. When a narrow integration test fails, the problem is either in your code or in the immediate interface with one external system. When a broad integration test fails, you have more hunting to do — but the bug it found is more likely to be a real-world user-facing bug.
 
 ### Contract Testing (Pact): The Microservices Superpower
+
+**Why Pact was created — the problem that motivated it:**
+
+In 2013, the team at REA Group (Australian real estate company) was building one of the early large-scale microservices architectures. They had dozens of services communicating with each other over HTTP, each owned by a different team, each with its own deployment pipeline and release cadence.
+
+The problem they kept running into: integration regressions. Service A would change its API in a way that was entirely reasonable from its perspective — maybe they renamed a field to something cleaner, or added a new required parameter to an endpoint, or changed the format of a date field. They had unit tests. They had integration tests against their own code. They deployed. And then Service B, which called Service A, broke in production.
+
+The obvious solution — integration tests where you deploy both services and test them together — didn't scale. You can't deploy all the services together in CI before each merge; the setup cost is too high, the test run is too slow, and the failure mode is too noisy (if Service B is flaky, it blocks merges to Service A even when Service A's changes are correct).
+
+The Pact team's insight: **the contract between a consumer and a provider should be tested, not the integration**. The consumer knows what it expects from the provider. The provider knows what it currently implements. Those two things can be tested independently, in each service's own CI pipeline, without co-deployment.
+
+Pact is the implementation of that insight. It was open-sourced in 2015 and has since become the de facto standard for consumer-driven contract testing.
+
+**The key shift in thinking:** In traditional integration testing, the question is "does this work together?" In contract testing, the questions are:
+1. "Does the consumer correctly describe what it needs?" (tested in the consumer's CI)
+2. "Does the provider correctly implement what consumers need?" (tested in the provider's CI)
+
+When both answers are "yes," you have confidence the services will work together — without deploying them together.
 
 Here's a scenario that plays out painfully in microservices organizations: Team A owns the Orders service. Team B owns the Inventory service. Team A calls the Inventory service's API. Everything works fine in development. Then Team B ships a change — they renamed a JSON field — and suddenly, in production, Orders start failing in a way that's hard to diagnose because the two services are deployed independently and the failure is only visible when real requests flow between them.
 

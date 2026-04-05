@@ -402,6 +402,103 @@ Negotiation is not about demanding more. It is about presenting evidence that yo
 
 ---
 
+## 5b. Negotiation Role-Play Workshop
+
+Reading about negotiation is not enough. You need to practice the words out loud, including the awkward silences and the phrases that feel presumptuous until you have said them a few dozen times.
+
+This workshop runs three role-play scenarios. For each one, read both sides of the dialogue, then practice your side with a partner or by writing your responses.
+
+### Scenario 1: The Initial Offer
+
+**Context**: You applied through a recruiter. The hiring manager emails: "Great news — we want to extend an offer. We're thinking $165K base. Can you confirm that works for you?"
+
+**The trap**: Confirming immediately. Even if $165K is above your current salary, you are leaving money on the table. The first offer is a starting position, not a final one.
+
+**Your response (practice saying this out loud):**
+```
+"Thank you — I am genuinely excited about this role and the team.
+ I would like to take 48 hours to review the full package details
+ before responding. Could you send me the complete offer in writing
+ including base, equity, bonus structure, and benefits?"
+
+[After receiving the full offer]
+
+"I have reviewed the offer carefully and I appreciate it.
+ The role is a great fit, and I want to make this work.
+ My research shows that the market rate for this level at a company
+ of this stage is in the $185K-$205K range. Based on my experience
+ with [specific relevant skill] and [specific relevant accomplishment],
+ I believe $195K would be appropriate. Is there flexibility there?"
+```
+
+**What makes this effective:**
+- You do not panic or apologize
+- You anchor to market data, not personal needs ("I need more" is weak; "the market says" is strong)
+- You are specific ($195K, not "a bit more")
+- You leave the door open ("is there flexibility" — not "I won't accept less")
+
+### Scenario 2: The Counter
+
+**Context**: The recruiter comes back: "We hear you on the data. We can go to $175K — that's our maximum for this level. Is that something you can work with?"
+
+**The trap**: Accepting immediately because they moved. $175K is still $20K below your anchor.
+
+**Your response:**
+```
+"I appreciate you going to bat for me — $175K is meaningful progress.
+ I understand you may have a band constraint. Can we look at whether
+ there are other levers? For example: a signing bonus, an accelerated
+ first review at 6 months instead of 12, or additional equity?
+ I want to find a package that works for both of us."
+```
+
+**What this accomplishes:**
+- You acknowledge their movement without caving
+- You open other dimensions (equity, signing bonus, timeline) that they may have more flexibility on
+- You keep the conversation collaborative, not adversarial
+
+### Scenario 3: The Internal Promotion Conversation
+
+**Context**: You have been working hard for 18 months and you believe you are performing at the next level. Your manager has not brought up promotion. You need to start that conversation.
+
+**The wrong approach**: "I think I deserve a promotion."
+
+**The right approach — requesting a structured conversation:**
+```
+"I want to talk about my career development. I have been thinking
+ about what the L5 level looks like and whether I am on track for
+ a promotion cycle. Can we schedule 30 minutes to walk through
+ where I stand and what I should focus on?
+
+ I have put together a summary of my contributions over the past
+ 18 months that I would like to share."
+```
+
+**In the meeting:**
+```
+"Here is what I have been working on [walk through top 3-4 brag doc entries].
+ I think these demonstrate [specific competency] and [specific competency].
+
+ Based on what you know about the L5 expectations, where do you see gaps?
+ And what would a realistic timeline look like if I close those gaps?"
+```
+
+**What makes this effective:**
+- You come prepared with evidence (your brag document)
+- You frame it as a partnership (you want to close gaps, not just receive a promotion)
+- You ask for specifics ("realistic timeline" forces a concrete answer, not a vague "maybe next cycle")
+
+### Reflection Questions (5 minutes)
+
+After the role-play exercises:
+
+1. Which scenario was most uncomfortable? Why?
+2. What phrase felt most foreign to say out loud?
+3. What is your actual walk-away number (below which you would decline an offer)? Write it down before your next negotiation.
+4. Who do you know at your target company or compensation level who could give you real data on their package?
+
+---
+
 ## 6. Switching Jobs Strategically
 
 ### When to Stay vs When to Leave
@@ -499,6 +596,16 @@ You have:
 
 **Next module**: L3-M90 -- The Final Capstone. The last module of the entire course. A retrospective on everything you have learned, a showcase of what you have built, and a plan for what comes next.
 
+---
+
+## Cross-References
+
+- **Chapter 29** (Career Engineering): The full framework for treating your career as a system — metrics, capacity planning, and strategic investment in the areas that compound fastest.
+- **L3-M77** (Architecture Decision Records): The skill of writing clear, structured arguments for technical decisions transfers directly to writing promotion narratives and negotiation cases.
+- **L3-M90** (Final Capstone): Incorporates the brag document and career plan into your end-of-course retrospective.
+
+---
+
 ## Key Terms
 
 | Term | Definition |
@@ -508,3 +615,6 @@ You have:
 | **Staff+ archetype** | A recognized pattern of senior engineering impact such as Tech Lead, Architect, Solver, or Right Hand. |
 | **Negotiation** | The process of discussing and reaching agreement on compensation, role, or scope with an employer. |
 | **Sponsorship** | Active advocacy by a senior leader who creates opportunities and visibility for your career advancement. |
+| **Five-layer deepening** | A method for transforming vague brag document entries into specific, quantified, context-rich narratives. |
+| **Anchor** | In negotiation, the first specific number stated, which disproportionately shapes the final outcome. |
+| **Walk-away number** | Your minimum acceptable outcome in a negotiation, determined before the conversation begins. |

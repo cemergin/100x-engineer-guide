@@ -480,6 +480,125 @@ You have:
 
 ---
 
+## 7. The Live Architecture Review: Practice Walkthrough (30 min)
+
+The architecture review is a skill you develop by doing it, not by reading about it. Run through this structured practice session.
+
+### Setup: Record Yourself
+
+Turn on your camera and screen recording. You are going to do a 25-minute verbal walkthrough of TicketPulse's architecture, as if presenting to a staff engineer panel. Speaking out loud — not just thinking — exposes gaps you do not notice when you only read your own notes.
+
+```bash
+# Open your C4 diagrams. Have these tabs ready:
+# 1. Your Level 1 context diagram
+# 2. Your Level 2 container diagram
+# 3. Your ADR document
+# 4. Your risk/debt tables
+```
+
+### The 25-Minute Script (Use This as a Prompt)
+
+**Minutes 0-3: The Context (Do Not Overthink It)**
+
+Start with one sentence: "TicketPulse is a globally distributed event ticketing platform used by attendees, organizers, and admins to manage and purchase event tickets." 
+
+Then draw or show the Level 1 diagram while narrating:
+- Who are the actors? (attendees, organizers, admins, partner systems)
+- What external dependencies does it have? (Stripe, SendGrid, Cloudflare, FCM/APNs)
+- What is the scale? (mention your peak traffic assumptions and current infra cost range)
+
+**Pause here and ask yourself**: "Could a non-engineer understand what this system does from what I just said?" If not, simplify.
+
+**Minutes 3-12: The Container Diagram (The Hard Part)**
+
+Walk through each component of the Level 2 diagram. For each service, answer two questions:
+1. What does this service own? (its data, its domain)
+2. Why this technology choice? (reference your ADRs)
+
+Do not just list services — explain the architecture as a story:
+
+"The API gateway is the single entry point for all clients. We chose Kong because we needed request-level plugins for auth and rate limiting without baking that into every service. Traffic fans out to five domain services: Order, Event, User, Payment, and Search. Each service owns its own PostgreSQL database — no shared databases — because this gives us independent deployments and no query contention between services. They communicate asynchronously via Kafka because..."
+
+**Minutes 12-18: The Deep Dive (Pick Your Most Interesting Problem)**
+
+Choose ONE of these and explain it at the component level:
+- How a ticket purchase flows through the system (saga pattern, event sourcing, payment coordination)
+- How the real-time seat map works (WebSocket scaling, Redis pub/sub fan-out)
+- How multi-region routing works (DNS latency-based routing, regional data ownership)
+
+When you reach a design decision in the deep dive, pause and say: "We could have done X, but we chose Y because..." Use your ADR language.
+
+**Minutes 18-22: Risks and Debt (Show Self-Awareness)**
+
+Walk through your top 3 risks from the table above. For each: name it, say why it concerns you, explain your mitigation. Do not be defensive — reviewers respect engineers who see their own system's weaknesses.
+
+Walk through your top 2 debt items. Explain the priority and why you have not fixed them yet (time, priority, dependencies). If you have a plan to address them, say so.
+
+**Minutes 22-25: Scaling Analysis**
+
+Pick the 10x scenario and explain what would break. Be specific: "At 10x traffic, the first bottleneck would be PostgreSQL max_connections. Each service runs 10 pods, 5 services = 50 pods × 5 connections each = 250 connections. PostgreSQL default max is 100. We need PgBouncer in transaction pooling mode immediately."
+
+Specificity signals you have actually thought about this, not just recited generic answers.
+
+---
+
+### Hard Questions Practice
+
+After the 25-minute walkthrough, answer each of these out loud (3-4 minutes total). Time yourself — fast, confident answers beat slow hedged ones.
+
+**Q: "What would you have done differently if you had started with a serverless architecture?"**
+
+> Work through the answer before reading this. Consider: Lambda cold starts on the real-time purchase flow, WebSocket limitations with API Gateway, Kafka consumer patterns with Lambda, and cost at scale. This is not "serverless is worse" — it is about specific trade-offs for TicketPulse's access patterns.
+
+**Q: "Your CTO says cut infrastructure costs by 30% in 90 days without degrading user experience. Where do you start?"**
+
+> First-pass audit: spot instances for non-critical background workers, right-size pods that are allocated but under-utilized, add aggressive CDN caching for static event data, review ElasticSearch cluster size (search indexing lag is acceptable if it saves $), move dev/staging to half-size clusters on a schedule. Do NOT touch the purchase flow or real-time WebSocket servers — user experience for revenue paths is non-negotiable.
+
+**Q: "A single Kafka partition for the `orders` topic is the bottleneck at 2K messages/second. How do you fix it without data loss?"**
+
+> This is a surgical operation. You cannot reduce partitions, but you can add them. Add new partitions to the topic. Update the producer to use the new partition count. The existing consumers will rebalance. The risk: messages already in old partitions keep their ordering; new messages are distributed across all partitions. If your order processor assumes strict ordering per user, you need to repartition by `user_id` hash to ensure all of a user's orders stay in the same partition.
+
+---
+
+## 8. Post-Review Improvement Sprint (15 min)
+
+After every architecture review (real or practice), run this retrospective:
+
+### The Three-Column Debrief
+
+```
+CLEAR (I explained this well)    FOGGY (I stumbled here)    GAP (I had no answer)
+────────────────────────────     ───────────────────────     ─────────────────────
+Kafka choice and rationale        Spanner vs CockroachDB      Exactly how TrueTime
+Event sourcing for orders         when to choose               works at the hardware
+Multi-region DNS routing          What happens to in-flight    level
+                                  messages during Kafka        
+                                  partition rebalancing        Cost of a Kafka node
+                                                              in AP-Northeast
+```
+
+**For each item in the GAP column**: spend 15 minutes researching it right now and update your ADR or risk doc. Gaps in your knowledge are just future embarrassments that you can close today.
+
+**For each item in the FOGGY column**: write a one-paragraph plain-English explanation. If you cannot write it, you do not understand it well enough to defend it.
+
+### The Improvement Loop
+
+```
+1. Identify a gap from the review
+2. Research → write a one-paragraph explanation
+3. Find the relevant module or Chapter to deepen it (Ch 19 for distributed, Ch 28 for architecture patterns)
+4. Update your C4 diagram or ADR to reflect the clarification
+5. Practice explaining that specific topic out loud again (just 2 minutes)
+```
+
+Architecture clarity is a compounding skill. Every review cycle — even a practice one — makes the next one sharper.
+
+---
+
+> **Want the deep theory?** See Ch 28 of the 100x Engineer Guide: "System Design for Staff Engineers" — covers C4 in detail, how to run and receive architecture reviews, and the communication patterns that distinguish Staff from Senior engineers.
+
+---
+
 **Next module**: L3-M89 -- Your Career Engineering Plan, where we translate everything you have learned into concrete career action.
 
 ## Key Terms

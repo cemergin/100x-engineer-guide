@@ -1076,9 +1076,101 @@ Reactive programming is powerful for complex stream transformations and systems 
 
 ---
 
-## Choosing the Right Model
+---
 
-After all of this, the practical question: when do you use which model?
+## Concurrency Bugs Hall of Fame
+
+Real bugs from real systems. These are not hypothetical — they happened, they caused significant harm, and each one illustrates a concurrency principle from this chapter.
+
+### The Therac-25: Race Condition That Killed People (1985-1987)
+
+The Therac-25 was a radiation therapy machine that killed six patients and injured several more due to software bugs, several of which were race conditions.
+
+The machine had two operating modes: a low-power electron beam mode and a high-power X-ray mode (which used a metal plate to diffuse the beam). A race condition in the control software meant that if an operator typed too quickly — entering the treatment type and confirming it before the software had finished setting up the previous state — the machine could set up for X-ray mode (high power) but skip placing the metal plate, and then fire the raw electron beam at full power directly at the patient.
+
+The flag that controlled whether the beam intersector was in position was a single byte. The operator interface software and the beam control software both read and wrote this flag without synchronization. The race window was tiny — it only manifested when operators typed at a specific speed, which is why it wasn't caught in testing. The engineers had removed a hardware interlock that had existed in earlier models (trusting the software), and the software had no protection against concurrent access to shared state.
+
+**Lesson:** Shared mutable state without synchronization is not just a performance bug or a data integrity bug — in safety-critical systems, it is a lethal bug. Hardware interlocks exist because software race conditions do.
+
+### The Mars Pathfinder Priority Inversion (1997)
+
+Already mentioned in the priority inversion section, but worth recounting in full because the debugging story is remarkable.
+
+The Mars Pathfinder rover began experiencing system resets after landing on Mars. The team back on Earth had no direct access to the rover's system — they had to reason about the bug from telemetry data and their knowledge of the software.
+
+The system used VxWorks (a real-time operating system) with priority-based scheduling. A low-priority meteorological data collection task held a mutex shared with the high-priority information bus task. Medium-priority tasks preempted the low-priority task before it could release the mutex. The high-priority bus task waited indefinitely, triggering the watchdog timer, which reset the system.
+
+The debugging was done largely by recreating the conditions in a lab on Earth. Engineers realized that the root cause was that VxWorks' mutexes had priority inheritance as a configurable option — and it had been left off. The fix was to enable priority inheritance via a command sent to a rover on Mars.
+
+This was executed successfully. A software configuration change was uploaded to a rover 120 million miles away to fix a concurrency bug. It worked.
+
+**Lesson:** Priority inversion is not theoretical. Use RTOS mutexes with priority inheritance enabled in any real-time system. And invest in the ability to reconfigure production systems remotely — you will need it.
+
+### The Python GIL and the Missing Parallelism (2004-present)
+
+This is less a bug and more a pervasive architectural constraint that catches Python engineers off guard.
+
+CPython (the standard Python interpreter) has a Global Interpreter Lock — a mutex that prevents more than one thread from executing Python bytecode at a time. Threads exist, but only one runs at any given moment. The GIL is released during I/O operations, which is why threading works for I/O-bound work. But for CPU-bound work, adding more threads achieves nothing — they take turns holding the GIL.
+
+The GIL was introduced in 1992 as a practical simplification to protect CPython's reference counting garbage collector. It made extension modules simpler and avoided a whole class of memory safety bugs. But it also meant that Python's threading model fundamentally cannot provide CPU parallelism.
+
+The workarounds are `multiprocessing` (separate processes, separate GILs, but IPC overhead and no shared memory), C extensions that release the GIL during computation (NumPy does this — which is why NumPy matrix operations can be fast), and more recently, subinterpreters in Python 3.12+ and work toward a "nogil" build.
+
+The real lesson: this was a correct engineering tradeoff in 1992 that became increasingly painful as the world went multicore. Many engineers have spent days debugging "why isn't my Python code using all cores?" before discovering the GIL.
+
+**Lesson:** Every concurrency model has constraints. Know the constraints of your runtime. Python's answer to CPU parallelism is multiprocessing, not multithreading.
+
+### The Node.js Single-Thread Event Loop Bomb (common, no single canonical incident)
+
+This is the pattern that occurs regularly in Node.js production systems: an async function that contains a synchronous computation bomb.
+
+```javascript
+// This looks async. It is not, in the way that matters.
+app.get('/process', async (req, res) => {
+    const data = await fetchFromDatabase(req.query.id);  // yields to event loop ✓
+    const result = computeExpensiveHash(data);            // runs synchronously ✗
+    res.json({ result });
+});
+
+function computeExpensiveHash(data) {
+    // This takes 500ms of pure CPU computation
+    // During these 500ms, the event loop is blocked
+    // All other pending requests are frozen
+    return crypto.createHash('sha512').update(data.repeat(100000)).digest('hex');
+}
+```
+
+A team at a payments company shipped exactly this pattern — an expensive HMAC computation for webhook signature verification that took ~300ms on large payloads. Under normal load: fine. Under a burst of large webhook deliveries: the event loop blocked, and their entire API server became unresponsive for several seconds at a time. Latency graphs showed flat lines, not spikes — the server simply stopped responding.
+
+The fix: move CPU-bound work to worker threads (`worker_threads` in Node.js) or to a separate process pool.
+
+**Lesson:** `async/await` in Node.js means "this function can yield at I/O boundaries." It does not mean "this function is parallelized." CPU work inside an async function blocks the event loop exactly as much as it would in synchronous code. Profile your async functions; not all `await` points are equal.
+
+### The Java `HashMap` Infinite Loop (Java 6, 2008-era)
+
+A particularly nasty concurrency bug in Java's standard library HashMap.
+
+Before Java 8, `HashMap` used a singly-linked list for collision chaining. When the map grew beyond its load factor, it was resized — a new array allocated, all entries rehashed and reinserted. This rehashing process was not thread-safe, and HashMap's documentation said so clearly. But the warning was easy to miss.
+
+If two threads both triggered a resize simultaneously (both inserted new keys that crossed the load factor threshold), a race condition in the linked list rebalancing could produce a cycle in the linked list. Two nodes pointing to each other in a circle. After this happened, any call to `get()` or `put()` that resolved to that bucket would loop forever — 100% CPU, never returning.
+
+This caused production outages at companies across the industry. The symptoms were mysterious: a Java service pegging a CPU core at 100% with thread dumps showing a single thread spinning in `HashMap.get()`. The bug was invisible under normal single-threaded load, only manifested under concurrent access, and was already fixed by using `ConcurrentHashMap` — a class the Java documentation recommended for concurrent use.
+
+**Lesson:** "Not thread-safe" means exactly that. Even read operations on a `HashMap` during a concurrent resize can trigger infinite loops. If a data structure might be accessed concurrently, use the explicitly concurrent version. And read the documentation about thread safety before reaching for a shared collection.
+
+### The AWS us-east-1 Kinesis Outage and the Thundering Herd (2020)
+
+In November 2020, AWS experienced a significant outage in us-east-1. The root cause was instructive.
+
+A service responsible for managing Kinesis front-end fleet capacity experienced a capacity addition event (new servers brought online to handle increased load). A large number of front-end servers came online simultaneously and began their startup sequence — which included querying an internal metadata service to get shard-to-server routing tables.
+
+Hundreds of servers all queried the metadata service at the same time. The metadata service was not provisioned for this burst of simultaneous requests. It slowed down, which caused the front-end servers' initialization to time out, which caused them to retry — adding more load to an already overloaded metadata service. A thundering herd, compounded by retry storms.
+
+The metadata service degradation cascaded to other services that depended on it (including IAM authentication in the same region), broadening the blast radius significantly.
+
+**Lesson:** Thundering herds are real at distributed scale. Staggered startup, jittered retries, and capacity planning for "all servers restart simultaneously" scenarios are not edge cases — they are foreseeable operational events that you must design for. The single-flight pattern, exponential backoff with jitter, and circuit breakers exist precisely for this class of problem.
+
+---
 
 There's no universal answer, but there are clear patterns.
 

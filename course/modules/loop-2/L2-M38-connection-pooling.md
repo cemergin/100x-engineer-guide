@@ -422,6 +422,264 @@ The app pool is wasteful — it's holding connections to PgBouncer (cheap) but p
 
 ---
 
+## Part 5: PgBouncer Configuration Deep Dive (20 min)
+
+Getting PgBouncer running is step one. Tuning it for production requires understanding what each configuration parameter does and how to measure whether your settings are correct.
+
+### The Full Parameter Reference with Reasoning
+
+```ini
+[pgbouncer]
+# ─── Networking ───────────────────────────────────────────────────────
+listen_addr = 0.0.0.0
+listen_port = 6432
+
+# ─── Pool core ────────────────────────────────────────────────────────
+pool_mode = transaction         # transaction | session | statement
+                                # transaction: best for web apps
+                                # session: required for prepared statements
+                                # statement: for autocommit-only workloads
+
+default_pool_size = 20          # Server connections PER USER PER DATABASE
+                                # Formula: (DB_cores * 2) + spindles
+                                # 4-core RDS: (4*2) + 1 = 9; round to 10
+                                # 8-core RDS: (8*2) + 1 = 17; round to 20
+
+max_client_conn = 1000          # Total client connections PgBouncer accepts
+                                # Set high — client connections are cheap
+                                # Rule of thumb: 10x your default_pool_size
+
+min_pool_size = 0               # Server connections kept alive when idle
+                                # Set to 2-5 to reduce first-query latency
+
+reserve_pool_size = 5           # Extra server connections for when pool is full
+                                # Clients wait up to reserve_pool_timeout seconds
+reserve_pool_timeout = 3        # Seconds to wait before using reserve pool
+
+max_db_connections = 0          # Hard cap across ALL users for a database
+                                # 0 = no limit; useful in multi-tenant setups
+
+# ─── Timeouts ─────────────────────────────────────────────────────────
+server_connect_timeout = 15     # Max seconds to wait for a server connection
+server_idle_timeout = 600       # Close idle server connections after 10 minutes
+client_idle_timeout = 0         # Close idle client connections (0 = never)
+query_timeout = 0               # Max query duration (0 = no limit)
+                                # Set to 30s in production to kill runaway queries
+transaction_timeout = 0         # Max transaction duration (0 = no limit)
+                                # Set to 60s to prevent "idle in transaction" locks
+
+# ─── Session management ────────────────────────────────────────────────
+server_reset_query = DISCARD ALL  # Run when server connection is returned to pool
+                                   # DISCARD ALL clears: prepared statements,
+                                   # advisory locks, session-level GUC settings,
+                                   # temp tables, and notification listeners
+                                   # Adds ~1ms per checkout but prevents state leaks
+
+# ─── Observability ────────────────────────────────────────────────────
+log_connections = 1             # Log each client connect/disconnect
+log_disconnections = 1
+log_pooler_errors = 1
+stats_period = 60               # Log pool stats every 60 seconds
+```
+
+### The Four Configuration Exercises
+
+**Exercise 1: Size the pool for TicketPulse's production database**
+
+Given:
+- RDS instance: `db.r6g.2xlarge` (8 vCPUs, SSD storage)
+- 5 microservices, each with 4 replicas
+- Peak transaction rate: 200 transactions/second
+- Average transaction duration: 15ms
+
+Calculate:
+1. Optimal server-side pool size using the formula
+2. Maximum client connections needed
+3. `reserve_pool_size` setting
+
+```
+Step 1: Pool size
+formula = (cores * 2) + spindles
+        = (8 * 2) + 1
+        = 17 → round to 20
+
+Step 2: Client connection headroom
+5 services × 4 replicas × app_pool_size_per_instance = total clients
+If we set app pool to 5 per instance:
+  5 × 4 × 5 = 100 max_client_conn
+
+Step 3: Check: can 20 server connections handle 200 TPS at 15ms?
+  Throughput = pool_size / avg_transaction_time
+             = 20 / 0.015s
+             = 1,333 TPS ← well above 200 TPS; pool is appropriately sized
+
+Step 4: Reserve pool
+  During peak, add 5 reserve connections
+  reserve_pool_size = 5
+  reserve_pool_timeout = 3
+```
+
+**Exercise 2: Diagnose a misconfigured pool**
+
+You are seeing these numbers in `SHOW POOLS`:
+
+```
+database  | user         | cl_active | cl_waiting | sv_active | sv_idle
+----------+--------------+-----------+------------+-----------+--------
+tickets   | ticketpulse  | 15        | 12         | 20        | 0
+```
+
+What does `cl_waiting = 12` mean? What should you change?
+
+```
+Analysis:
+- 15 clients actively executing queries
+- 12 clients waiting for a server connection
+- 20 server connections, all in use (sv_idle = 0)
+- The pool is saturated
+
+Possible causes:
+  A) default_pool_size is too small for the workload
+  B) Long-running transactions are holding connections (check sv_active duration)
+  C) A traffic spike is temporarily exceeding capacity
+
+Diagnosis steps:
+1. Check if this is sustained or momentary:
+   SHOW POOLS; -- run again in 10 seconds. Is cl_waiting still high?
+
+2. Check for long-running transactions:
+   SELECT pid, duration, state, query
+   FROM pg_stat_activity
+   WHERE state = 'active'
+   ORDER BY duration DESC;
+
+If sustained:
+  → Increase default_pool_size (but do not exceed DB capacity)
+  → OR reduce query duration (optimize slow queries)
+
+If caused by long transactions:
+  → Set transaction_timeout in PgBouncer
+  → Investigate and fix the slow queries
+```
+
+**Exercise 3: Configure PgBouncer for a multi-database setup**
+
+TicketPulse runs separate databases per service. Configure PgBouncer to route each service to its own database while using a shared server pool:
+
+```ini
+[databases]
+; Route each logical database to the physical host
+; Syntax: logical_name = host=... port=... dbname=... pool_size=...
+
+tickets = host=postgres port=5432 dbname=tickets pool_size=20
+orders  = host=postgres port=5432 dbname=orders  pool_size=15
+users   = host=postgres port=5432 dbname=users   pool_size=10
+events  = host=postgres port=5432 dbname=events  pool_size=20
+
+; Read-only connection to replica (for analytics queries)
+tickets_ro = host=postgres-replica port=5432 dbname=tickets pool_size=30
+
+[pgbouncer]
+pool_mode = transaction
+max_client_conn = 500
+default_pool_size = 20
+; default_pool_size applies when pool_size is not specified per-database
+```
+
+Services connect by using the logical database name:
+```
+ticket-service: postgres://user:pass@pgbouncer:6432/tickets
+order-service:  postgres://user:pass@pgbouncer:6432/orders
+analytics:      postgres://user:pass@pgbouncer:6432/tickets_ro  ← read replica
+```
+
+This single PgBouncer instance routes all services, maintains separate pools per database, and directs analytics to the replica without any application code changes.
+
+**Exercise 4: Tune timeouts to prevent "idle in transaction" leaks**
+
+"Idle in transaction" is the silent killer of connection pools. A query starts a transaction, the application crashes or hangs, and the connection is held open indefinitely — blocking other queries on those rows.
+
+```sql
+-- Check for idle in transaction connections
+SELECT pid, duration::interval, state, query
+FROM pg_stat_activity
+WHERE state = 'idle in transaction'
+ORDER BY duration DESC;
+
+-- Kill one (careful in production)
+SELECT pg_terminate_backend(pid)
+FROM pg_stat_activity
+WHERE state = 'idle in transaction'
+AND duration > interval '5 minutes';
+```
+
+PgBouncer settings to prevent accumulation:
+
+```ini
+; Kill transactions that have been running for more than 60 seconds
+transaction_timeout = 60
+
+; Kill server connections idle in a transaction for more than 30 seconds
+idle_transaction_timeout = 30
+
+; Also set this in PostgreSQL itself (belt and suspenders)
+; In postgresql.conf or via ALTER SYSTEM:
+; idle_in_transaction_session_timeout = '30s'
+```
+
+Set these in PgBouncer AND in PostgreSQL. If PgBouncer restarts, the PostgreSQL-level timeout still protects you.
+
+---
+
+## Part 6: Pool Sizing Math: The Full Derivation
+
+The formula `(cores * 2) + spindles` is a rule of thumb. Here is the reasoning behind it, and how to validate it with your actual workload.
+
+### Why CPU Cores Drive the Limit
+
+A database query consumes one CPU core while executing. If you have 8 cores and 9 simultaneous queries, one query waits. With 8 connections, the theoretical maximum is 8 fully-utilized cores.
+
+But queries are not 100% CPU-bound. They wait for disk I/O, lock releases, and network responses. During those waits, the CPU is free. This is why `cores * 2` is better than `cores` — a second batch of queries can run on the CPU while the first batch waits for I/O.
+
+For SSDs, adding 1 for disk I/O is a slight correction. For spinning disks, you add the number of disk spindles because parallel disk seeks matter more.
+
+### Measuring Your Actual Optimal Pool Size
+
+The rule of thumb is a starting point. Validate it with pgbench:
+
+```bash
+# Install pgbench (included with PostgreSQL client)
+# Initialize a test database
+pgbench -i -s 50 -h localhost -p 6432 -U ticketpulse tickets
+# -s 50: scale factor 50 (~5M rows)
+
+# Benchmark with increasing connection counts
+for clients in 1 5 10 20 30 50 80 100; do
+  echo -n "Clients=$clients: "
+  pgbench -c $clients -j $((clients / 2 + 1)) -T 30 \
+    -h localhost -p 6432 -U ticketpulse tickets 2>&1 \
+    | grep "tps ="
+done
+```
+
+Expected output pattern:
+```
+Clients=1:   tps = 320 (excluding connections establishing)
+Clients=5:   tps = 1,450
+Clients=10:  tps = 2,200
+Clients=20:  tps = 2,850    ← peak (sweet spot for 8-core DB)
+Clients=30:  tps = 2,710    ← slight drop (contention starting)
+Clients=50:  tps = 2,400    ← clear drop
+Clients=80:  tps = 2,100    ← significant drop
+Clients=100: tps = 1,900    ← worse than 20 connections
+```
+
+The peak TPS is your optimal pool size. In this example, 20 connections beats 100 connections by 50%.
+
+Run this benchmark against your actual database instance type (RDS r6g.2xlarge has different characteristics than a local MacBook). The formula gives you a starting point; the benchmark confirms it.
+
+---
+
 ## 🏁 Module Summary
 
 | Concept | Key Takeaway |
@@ -447,6 +705,16 @@ In **L2-M39: Advanced SQL for Analytics**, you'll build a TicketPulse analytics 
 | **Transaction pooling** | A PgBouncer mode where connections are returned to the pool after each transaction completes. |
 | **Max connections** | The PostgreSQL configuration parameter that limits the total number of concurrent client connections. |
 | **Connection overhead** | The CPU, memory, and time cost of establishing and tearing down a database connection. |
+
+---
+
+## Cross-References
+
+- **Chapter 24** (Database Internals): The PostgreSQL process model, `pg_stat_activity`, and query planning are covered in depth. Connection pooling sits on top of the fundamentals explained there.
+- **L2-M39** (Advanced SQL for Analytics): Many analytics queries are long-running and can monopolize connection pool slots. The connection pool tuning here directly affects analytics workload isolation.
+- **L3-M61** (Multi-Region Design): Running PgBouncer in a multi-region setup requires regional poolers close to each app deployment, covered in the global infrastructure module.
+
+---
 
 ## 📚 Further Reading
 - [PgBouncer Documentation](https://www.pgbouncer.org/config.html)

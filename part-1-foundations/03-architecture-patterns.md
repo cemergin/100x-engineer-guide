@@ -1261,6 +1261,41 @@ Over time, more and more routes are handled by new services. The monolith shrink
 
 **The routing layer** is critical to get right. It needs to be fast, reliable, and flexible. A feature flag system that routes based on path prefix, user attributes, or percentage rollout gives you tremendous control. The proxy shouldn't know about business logic; it should just forward requests.
 
+**A concrete strangler fig: extracting the notification service**
+
+Imagine a monolith where `/api/notifications` and `/api/users/{id}/notifications` are both handled inside the Rails monolith. Notifications are a good extraction candidate: they have clear boundaries, they're stateless, and the notification team is blocked on a major feature while the checkout team merges daily.
+
+Step 1: Add a proxy. Put nginx or an API gateway in front of the monolith. All traffic still flows through — but now you have a routing layer you control.
+
+```nginx
+# Initially: everything goes to the monolith
+location / {
+  proxy_pass http://monolith:3000;
+}
+```
+
+Step 2: Build the notification service independently. Run it in staging. Write a contract test that verifies it returns the same responses as the monolith for the same inputs.
+
+Step 3: Shadow traffic (optional, high-value). Route notification requests to both the monolith AND the new service, discard the new service's responses, but compare them. You'll surface any behavioral differences before a single real user is affected.
+
+Step 4: Canary rollout. Route 5% of notification traffic to the new service. Watch error rates, latency, and alert. Expand to 25%, 50%, 100%.
+
+```nginx
+# Split traffic: 5% to new service, 95% to monolith
+upstream notifications_backend {
+  server notification-service:8080 weight=5;
+  server monolith:3000 weight=95;
+}
+
+location ~ ^/api/(notifications|users/.+/notifications) {
+  proxy_pass http://notifications_backend;
+}
+```
+
+Step 5: When at 100%, delete the notification code from the monolith. Don't leave dead code — the codebase should reflect reality.
+
+The total elapsed time from Step 1 to Step 5 is often 4-8 weeks for a well-scoped service. The migration happens live, in production, with zero downtime and a clear rollback path at every step.
+
 ---
 
 ### Branch by Abstraction
@@ -1331,6 +1366,53 @@ In a monolith, everything shares a database. The user table is joined to the ord
 
 All these patterns, and you still need to pick one. Here's the distillation:
 
+### Architecture Selection Flowchart
+
+Work through these questions in order. Stop when you have an answer.
+
+```
+1. HOW BIG IS YOUR TEAM TODAY?
+   ├── < 10 engineers → Monolith. Full stop.
+   │     └── UNLESS: radically different scaling needs exist now (unusual for < 10)
+   │
+   └── 10-50 engineers → Continue to question 2
+
+2. DO YOU KNOW YOUR DOMAIN WELL ENOUGH TO DRAW BOUNDARIES?
+   ├── NO (building V1, still discovering what you're building)
+   │     → Modular monolith. Invest in boundaries inside one deployment.
+   │     └── Revisit in 6-12 months as the domain clarifies.
+   │
+   └── YES (3+ years of production learnings) → Continue to question 3
+
+3. ARE TEAMS GENUINELY BLOCKED ON EACH OTHER'S DEPLOYMENTS?
+   ├── NO → Modular monolith is still the right answer.
+   │     └── Team coordination pain ≠ microservices problem if teams aren't blocked
+   │
+   └── YES (deployment coordination is a real, recurring bottleneck) → Continue to question 4
+
+4. DO YOU HAVE THE OPERATIONAL FOUNDATIONS?
+   ├── NO (no distributed tracing, no per-service CI/CD, no service discovery)
+   │     → Build foundations first. Microservices without these are chaos, not architecture.
+   │
+   └── YES → Microservices are appropriate. Use Strangler Fig to migrate incrementally.
+
+5. INTERNAL ARCHITECTURE STYLE (independent of deployment topology):
+   ├── Complex domain with rich business rules → Hexagonal/Clean + DDD tactical patterns
+   ├── Many features with little shared logic → Vertical Slice Architecture
+   ├── CRUD-heavy with simple rules → Layered (Controller-Service-Repository)
+   └── All of the above in different parts → Hybrid (common; align style to domain complexity)
+
+6. COMMUNICATION PATTERNS:
+   ├── Need real-time response → Synchronous (REST or gRPC)
+   │     ├── Internal, high throughput → gRPC
+   │     └── External/browser-facing → REST or GraphQL
+   │
+   └── Can tolerate latency / fan-out needed → Async (message queue or event stream)
+         ├── Simple queue (one consumer) → SQS, RabbitMQ
+         ├── Fan-out (many consumers) → Kafka topic, SNS
+         └── Durable workflow with compensation → Temporal or AWS Step Functions
+```
+
 **The question to ask first:** "What's my team size and maturity?" Not "What does Netflix do?" or "What's the most scalable?" The right architecture is the one your team can build, understand, operate, and evolve. An architecture that's theoretically correct but operationally beyond your team's capabilities is the wrong architecture.
 
 **Then ask:** "What do I actually know about my domain right now?" If you're building V1 and you're not sure what your bounded contexts are, don't design a microservices architecture yet. You'll get the boundaries wrong — guaranteed — and changing service boundaries is much harder than refactoring modules in a monolith.
@@ -1353,6 +1435,80 @@ All these patterns, and you still need to pick one. Here's the distillation:
 | Full audit trail needed | Event sourcing + CQRS |
 | Multiple client types | BFF + API gateway |
 | Migrating from monolith | Strangler fig + branch by abstraction |
+
+---
+
+### Architecture Decision Records (ADRs)
+
+One practice that pays disproportionate dividends: write down the architectural decisions you make. Not the "how" but the "why" — and especially the options you considered and rejected.
+
+An Architecture Decision Record (ADR) is a short document (typically 1-2 pages) that captures:
+
+- **Context:** What situation prompted this decision? What were the constraints?
+- **Decision:** What did you decide?
+- **Alternatives considered:** What else did you evaluate and why did you reject it?
+- **Consequences:** What becomes easier? What becomes harder? What do you now assume?
+- **Status:** Proposed / Accepted / Deprecated / Superseded
+
+```markdown
+# ADR-007: Use gRPC for internal service communication
+
+**Status:** Accepted | 2026-01-15
+
+**Context:**
+With the checkout, inventory, and pricing services now live, internal service
+calls run at approximately 8,000 RPS during peak hours. Current REST/JSON
+communication is adding ~12ms average serialization overhead per call, and
+we're hitting schema drift issues where services have different assumptions
+about field types.
+
+**Decision:**
+Adopt gRPC with Protocol Buffers for all new internal service-to-service 
+communication. Existing REST endpoints remain unchanged for external consumers.
+
+**Alternatives Considered:**
+- Continue REST: Lower migration overhead but doesn't solve schema drift.
+  Rejected because typed contracts are worth the migration cost at this scale.
+- JSON over HTTP/2: Gets multiplexing benefits but not binary serialization.
+  Partial solution; gRPC gives us both.
+- GraphQL federation: Overkill for service-to-service; better suited for 
+  client-facing APIs.
+
+**Consequences:**
+- Positive: Strong typing catches schema drift at build time. ~8x serialization 
+  speedup. Native streaming support for order update push.
+- Negative: Browser-facing APIs need gRPC-Web proxy. New team members need 
+  to learn Protocol Buffers. Local development requires proto tooling.
+- Assumption: We remain a Go/TypeScript shop where gRPC tooling is excellent.
+  If we add a language without good gRPC support, revisit this decision.
+```
+
+ADRs live in a `/docs/decisions/` directory in your repo, numbered sequentially. They're committed alongside the code they describe. When a new engineer asks "why do we use gRPC?" the answer isn't "someone decided that years ago" — it's a link to a document that explains the reasoning, the tradeoffs, and what was true at the time.
+
+This practice compounds. After two years, you have a map of every significant architectural decision and its context. Decisions made in 2024 that were correct then might become wrong by 2026 — the ADR tells you what was assumed, and when assumptions change, you can revisit deliberately.
+
+---
+
+### Common Architecture Anti-Patterns
+
+These are the failure modes engineers encounter most often. Recognizing them in your own system is the first step.
+
+**The Distributed Monolith**
+Services exist but they can't be deployed independently. Each deployment requires coordinating three teams. The inventory service shares a database table with the order service. Removing this coupling requires more work than the original monolith extraction cost. Signs: deployment coordination still required, shared databases, services that fail together. Fix: go back to basics — enforce one authoritative owner per data, route through APIs not databases, make deployments independent.
+
+**The God Service**
+One service contains all the business logic. Other services are thin wrappers. When you add a feature, you always end up touching the God Service. Signs: one service is orders of magnitude larger than others, teams always coordinate changes through one team. Fix: identify what the God Service actually is — it's probably a core domain that hasn't been properly broken into bounded contexts. Apply DDD strategic design.
+
+**Event Spaghetti**
+Events flow everywhere and nobody can trace what happens when. Adding a new feature requires understanding 12 event subscriptions across 6 services. Signs: no choreography documentation, debugging requires reading subscriber code across every service, engineers afraid to change events because they don't know all the consumers. Fix: document event flows, add correlation IDs to trace event chains, consider orchestration for complex flows.
+
+**The Premature Microservice**
+A service extracted from a monolith before the domain was understood. The service boundaries are wrong. Adding a feature requires changing three services simultaneously. The services are so coupled they might as well be one service with network latency added. Signs: cross-service changes for single features, tight coupling despite being separate deployments. Fix: if the coupling is severe and consistent, seriously consider merging back — this is not failure, it's learning. Re-extract when you understand the domain better.
+
+**Anemic Domain Model**
+Entities are data bags with no behavior. All the logic lives in service classes. The `Order` class has only fields; the `OrderService` has hundreds of methods that operate on `Order`. Signs: domain objects with only getters/setters, services with names like `OrderProcessor`, `UserManager`, `PaymentHandler`. Fix: move behavior into the domain objects. Let `order.addItem()`, `order.calculateTotal()`, `order.place()` live in `Order` where they belong.
+
+---
 
 **The meta-lesson:** Architecture decisions are not permanent, but they're expensive to change. The best architecture is one that buys you flexibility as your understanding grows. A well-structured monolith that's refactorable is better than a premature microservices decomposition that locks you into the wrong boundaries.
 
