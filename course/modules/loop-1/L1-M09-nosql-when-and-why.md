@@ -103,7 +103,7 @@ GET event:1:views
 -- Returns: "102"
 ```
 
-💡 **Insight:** `INCR` is atomic. If 1,000 users view an event page simultaneously, all 1,000 increments are applied correctly with zero locking, zero contention. Try doing that with `UPDATE events SET views = views + 1` in Postgres under load — you'll hit row-level lock contention.
+> **Pro tip:** `INCR` is atomic. If 1,000 users view an event page simultaneously, all 1,000 increments are applied correctly with zero locking, zero contention. Try doing that with `UPDATE events SET views = views + 1` in Postgres under load — you'll hit row-level lock contention.
 
 ### Hashes (Like a Row in a Table)
 
@@ -299,7 +299,25 @@ Redis is amazing for caching, sessions, counters, and leaderboards. It is NOT a 
 
 ## Part 3: Build a View Counter (10 min)
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Event View Counter with Redis
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Use INCR event:{id}:pageviews for the basic counter — INCR is atomic and creates the key if it does not exist, starting from 0. For daily counters, encode the date in the key: INCR event:1:views:2026-03-24 and set EXPIRE event:1:views:2026-03-24 2592000 (30 days) so old counters clean themselves up.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+For a leaderboard of most-viewed events, use a sorted set: ZINCRBY event_views_leaderboard 1 "event:1" on every page view. Then ZREVRANGE event_views_leaderboard 0 2 WITHSCORES gives you the top 3 events instantly — no scanning or sorting required.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+To bundle multiple counters per event (pageviews, unique visitors, add-to-cart), use a hash: HINCRBY event:1:stats pageviews 1. Retrieve everything at once with HGETALL event:1:stats. This is more efficient than separate string keys because Redis stores small hashes in a compact ziplist encoding.
+</details>
+
 
 Every time someone views an event page, we increment a counter. This is a perfect Redis use case — high frequency writes to a single key with no need for ACID.
 
@@ -474,6 +492,22 @@ Problems with this approach:
 
 ### 📐 Design: Which Parts of TicketPulse Belong Where?
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Ask two questions for each data type: (1) Does it need ACID transactions? Ticket purchases and orders absolutely do — keep those in PostgreSQL. (2) Is it ephemeral or high-frequency? Sessions (SET/GET with EX 3600) and page view counters (INCR) are perfect for Redis because they need sub-millisecond latency and no durability guarantees.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+For search, check whether PostgreSQL's built-in tsvector full-text search is enough before reaching for Elasticsearch. For images and media, no database is the right answer — use object storage (S3). Binary blobs in Postgres bloat your WAL and backups.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The default answer is "Postgres + Redis covers 90% of use cases." Map each data type to one of: PostgreSQL (relational, transactional), Redis (sessions via SET/GET EX, counters via INCR, leaderboards via ZADD/ZREVRANGE), S3 (binary blobs), or a specialized store only when you have a measured need. Every additional database is another system to operate, back up, and monitor.
+</details>
+
+
 Polyglot persistence means using the right database for each access pattern. Here's how TicketPulse might split its data:
 
 | Data | Database | Why |
@@ -518,6 +552,9 @@ QUIT
 Keep both containers running — we need Redis for the next module on caching.
 
 ---
+
+
+> **What did you notice?** Look back at what you just built. What surprised you? What felt harder than expected? That's where the real learning happened.
 
 ## 🏁 Module Summary
 

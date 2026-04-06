@@ -101,6 +101,21 @@ Every request goes to the failing service. Every request waits for a response. E
 
 ## 1. Build the Circuit Breaker (15 minutes)
 
+<details>
+<summary>💡 Hint 1: Config Values</summary>
+Start with these Resilience4j-style defaults: <code>failureThreshold: 5</code> (5 failures to open), <code>failureWindowMs: 10_000</code> (within 10 seconds), <code>openDurationMs: 30_000</code> (stay open 30 seconds before probing), <code>halfOpenMaxProbes: 3</code> (3 successful probes to close). Tune based on your service's p99 latency and traffic volume.
+</details>
+
+<details>
+<summary>💡 Hint 2: State Transitions</summary>
+CLOSED (normal) -> OPEN (after failureThreshold failures in the window) -> HALF_OPEN (after openDurationMs expires) -> back to CLOSED (if halfOpenMaxProbes succeed) or back to OPEN (if any probe fails). Log every transition with <code>[circuit:payment-service] CLOSED -> OPEN</code> for debugging.
+</details>
+
+<details>
+<summary>💡 Hint 3: Layering Order</summary>
+Wrap resilience patterns in this order from outside to inside: Bulkhead (limits concurrency) -> Circuit Breaker (stops calling dead services) -> Retry with exponential backoff and jitter (handles transient failures) -> Timeout (hard limit on any single call). Each layer addresses a different failure mode.
+</details>
+
 A circuit breaker has three states:
 
 ```
@@ -287,6 +302,8 @@ export function getPaymentCircuitState() {
 
 ---
 
+> **Before you continue:** After 5 consecutive failures, the circuit opens. How long will requests take when the circuit is open compared to when it was closed and failing? What is the benefit of fast failure?
+
 ## 2. Try It: Watch the Circuit Open (5 minutes)
 
 Write a test script that hammers the payment service and watches the circuit state change:
@@ -357,6 +374,21 @@ After 30 seconds, the circuit transitions to HALF_OPEN, sends probe requests, an
 ---
 
 ## 3. Build: Fallback Queue (10 minutes)
+
+<details>
+<summary>💡 Hint 1: CircuitOpenError Detection</summary>
+When the circuit is open, your code throws a <code>CircuitOpenError</code>. Catch this specifically with <code>if (error instanceof CircuitOpenError)</code> and route to the fallback queue instead of returning an error to the user. Other errors (network timeouts, 400s) should propagate normally.
+</details>
+
+<details>
+<summary>💡 Hint 2: Queue Processing</summary>
+Process the fallback queue when the circuit transitions back to CLOSED. Use a max retry count (3 attempts) per queued item. Items that fail all retries go to a dead letter queue -- log them, alert ops, and handle them manually. Never silently drop failed payments.
+</details>
+
+<details>
+<summary>💡 Hint 3: User Experience</summary>
+When a payment is queued (not processed immediately), return a "pending" status to the user: "Your order is confirmed -- payment processing may take a few minutes." This is a product decision, not just engineering. Discuss with your team what TicketPulse shows the user and how to handle queued payments that eventually fail.
+</details>
 
 Failing fast is better than failing slow, but failing is still bad. When the payment circuit is open, instead of telling the user "sorry, try again later," queue the purchase for processing when the service recovers.
 
@@ -770,6 +802,8 @@ git add -A && git commit -m "feat: add circuit breaker, retry, bulkhead, and fal
 
 ## Reflect
 
+> **What did you notice?** When the circuit breaker opened and requests started failing in 0ms instead of waiting for a timeout, how significant was the difference? Did the fallback queue change how you think about user experience during partial outages?
+
 **The resilience stack in order of importance:**
 
 1. **Timeouts** -- the most basic and most important. Without timeouts, everything else is moot.
@@ -792,6 +826,14 @@ git add -A && git commit -m "feat: add circuit breaker, retry, bulkhead, and fal
 | **Backoff** | A strategy of progressively increasing the wait time between retry attempts to reduce load on a failing system. |
 | **Jitter** | Random variation added to backoff intervals to prevent many clients from retrying simultaneously. |
 | **Timeout** | A maximum duration allowed for an operation to complete before it is aborted and treated as a failure. |
+
+---
+
+## What's Next
+
+In **Rate Limiting** (L2-M50), you'll protect TicketPulse's APIs from abuse and overload with token buckets, sliding windows, and distributed rate limiting.
+
+---
 
 ## Further Reading
 

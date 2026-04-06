@@ -309,13 +309,47 @@ Document the breaking sequence. Common findings for a TicketPulse-like system:
 
 Your numbers will differ. The important thing is identifying the sequence and understanding why each failure happens.
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🐛 Debug: Find the First Bottleneck
+
+<details>
+<summary>💡 Hint 1</summary>
+Run `k6 run ticketpulse-stress-test.js` while watching `kubectl top pods -n ticketpulse` in a second terminal. The first pod to hit its CPU or memory limit is your primary bottleneck. Common first failure: the event-service database connection pool fills up around 200 concurrent users because each purchase checks ticket availability, and the connection pool defaults to 20 connections.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+In Grafana, correlate three panels simultaneously: (1) `rate(http_requests_total{status=~"5.."}[1m])` for error rate, (2) `histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[1m]))` for p99 latency, (3) `pg_stat_activity_count{datname="events"}` for database connections. The metric that degrades FIRST is the root bottleneck -- everything else is a cascade.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+To double capacity from the current ceiling, identify the cheapest fix: if the bottleneck is database connections, increase `max_connections` in Postgres and the pool size in the application (cheapest). If it is CPU on a service pod, increase the resource limit or add replicas via HPA (medium cost). If it is a slow synchronous call to the payment provider, add a circuit breaker with a shorter timeout and a retry queue (highest effort but biggest payoff).
+</details>
+
 
 Using the observability skills from L2-M58, identify:
 
 1. **What component fails first?** (Database connections? CPU? Memory? External dependency?)
 2. **At what load level?** (This is your current capacity ceiling.)
 3. **What would you change to increase capacity by 2x?** (The cheapest fix for the tightest bottleneck.)
+
+
+<details>
+<summary>💡 Hint 1</summary>
+Open Jaeger and search for traces with `minDuration=1s` during the load test. The waterfall view shows which service span dominates the critical path. If `event-service: GET /availability` takes 800ms out of a 1200ms total trace, that is your 67% contributor. Focus optimization there first -- improving a 50ms span by 50% saves 25ms, but improving an 800ms span by 50% saves 400ms.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Check Kafka consumer lag during the stress test: `kafka-consumer-groups.sh --describe --group purchase-processor`. If lag grows linearly while traffic is constant, the consumer is processing slower than the production rate. Solutions in order of effort: (1) increase consumer `max.poll.records` to process batches, (2) add consumer replicas with more Kafka partitions, (3) switch to an async consumer with a connection pool instead of single-threaded processing.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Fill in the results table from section 2.4 with your actual numbers. The "First Problem" column is the most valuable -- it tells you the order of cascade. Typical pattern: DB connection pool exhaustion (200 users) -> purchase service timeouts (400 users) -> circuit breaker opens on payment service (600 users) -> Kafka consumer lag grows (800 users) -> pod OOMKills (1000 users). Your optimization plan should address these in order.
+</details>
 
 ---
 
@@ -601,6 +635,8 @@ The difference between Loop 2 and Loop 3: in Loop 2, you followed patterns and i
 
 ---
 
+> **What did you notice?** Looking back at the full TicketPulse architecture, which decisions had the highest impact? Which would you make differently with what you know now? This self-awareness is the real output of Loop 2.
+
 ## Final Checkpoint
 
 Before closing Loop 2, verify:
@@ -639,3 +675,9 @@ See you in Loop 3.
 | **Architecture review** | A structured evaluation of a system's design to identify risks, bottlenecks, and improvement opportunities. |
 | **Postmortem** | A blameless review conducted after an incident to document findings and prevent recurrence. |
 | **Service mesh** | An infrastructure layer that manages service-to-service communication with built-in observability and resilience features. |
+
+---
+
+## What's Next
+
+You've completed Loop 2. In **Loop 3**, you'll scale TicketPulse to handle millions of users with advanced patterns like multi-region deployment, ML-powered recommendations, and platform engineering.

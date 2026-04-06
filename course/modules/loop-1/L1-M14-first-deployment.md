@@ -61,6 +61,21 @@ With containers:
 
 ## 2. Build: The Dockerfile (Step by Step)
 
+<details>
+<summary>💡 Hint 1: Multi-Stage = Two FROM Statements</summary>
+Stage 1 (`FROM node:20-alpine AS builder`) installs ALL dependencies, compiles TypeScript, then runs `npm ci --production` to strip devDependencies. Stage 2 (`FROM node:20-alpine AS production`) copies ONLY `node_modules/`, `dist/`, and `package.json` from the builder. The TypeScript compiler and dev tools never reach the final image.
+</details>
+
+<details>
+<summary>💡 Hint 2: Layer Order Matters for Caching</summary>
+Docker caches each layer. Copy `package.json` and `package-lock.json` BEFORE copying source code, then run `npm ci`. If only your source code changed, Docker reuses the cached `npm ci` layer (saving 30-60 seconds). Put things that change rarely first, things that change often last.
+</details>
+
+<details>
+<summary>💡 Hint 3: Security -- Non-Root User and HEALTHCHECK</summary>
+Add `RUN addgroup -S appgroup && adduser -S appuser -G appgroup` and `USER appuser` before CMD. This limits damage if the container is compromised. Add a `HEALTHCHECK --interval=30s CMD wget -qO- http://localhost:3000/health || exit 1` so Docker knows when your app is actually ready, not just started.
+</details>
+
 We will write a multi-stage Dockerfile. Multi-stage means we use one stage to build the app and a separate stage to run it. The build tools (TypeScript compiler, dev dependencies) never end up in the production image.
 
 ```dockerfile
@@ -191,6 +206,21 @@ Our multi-stage Alpine build is ~180MB vs ~1.2GB. That is an 85% reduction.
 ---
 
 ## 4. Build: Docker Compose for the Full Stack
+
+<details>
+<summary>💡 Hint 1: Service Names Become Hostnames</summary>
+In docker-compose.yml, each service name (app, postgres, redis) becomes a DNS hostname on the internal Docker network. Your DATABASE_URL uses `postgres:5432` (the service name), not `localhost:5432`. The app never needs to know IP addresses.
+</details>
+
+<details>
+<summary>💡 Hint 2: depends_on With Health Checks</summary>
+Use `depends_on: postgres: condition: service_healthy` so the app waits for Postgres to be READY, not just started. Define health checks on each service: `pg_isready -U ticketpulse` for Postgres, `redis-cli ping` for Redis. Without this, your app crashes on startup because the DB is not accepting connections yet.
+</details>
+
+<details>
+<summary>💡 Hint 3: Named Volumes Persist Data</summary>
+Declare `volumes: postgres_data:` and mount it to `/var/lib/postgresql/data`. Without a named volume, `docker compose down` wipes your database. With it, data survives restarts. Use `docker compose down -v` only when you intentionally want to destroy data.
+</details>
 
 Now let us wire up the entire stack -- app, Postgres, and Redis:
 
@@ -540,3 +570,8 @@ After this module, TicketPulse should have:
 | **Graceful shutdown** | Handling SIGTERM by finishing in-flight work and closing connections cleanly before exiting. |
 | **Build context** | The set of files Docker sends to the build engine. Controlled by `.dockerignore`. |
 | **Immutable infrastructure** | The practice of never modifying running servers. Instead, deploy a new image and replace the old one. |
+---
+
+## What's Next
+
+In **CI/CD Pipeline** (L1-M15), you'll build on what you learned here and take it further.

@@ -27,6 +27,10 @@ Temporal (the leading durable execution platform) processes over 1 billion workf
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before reading the solution, think about the purchase saga from L2-M34. If the orchestrator crashes between "payment charged" and "order confirmed," what recovery mechanism do you currently have? What state is lost?
+
 ## 1. The Problem: Fragile Multi-Step Processes
 
 ### What Can Go Wrong
@@ -561,6 +565,16 @@ This workflow can wait for 48 hours without holding a connection, a thread, or a
 
 ### Stop and Design (10 minutes)
 
+<details>
+<summary>💡 Hint 1: The decision hinges on what happens when the orchestrator dies mid-step</summary>
+For each flow, ask: "If the process crashes between step N and step N+1, is there real business damage (money taken, tickets orphaned)?" If yes, durable execution pays for itself. If the worst case is a retry, simple queues are enough.
+</details>
+
+<details>
+<summary>💡 Hint 2: Think about Temporal workflow signals for human-in-the-loop steps</summary>
+Any flow that pauses for human approval (refund review, event compliance) maps directly to Temporal's `workflow.signal` or Inngest's `waitForEvent` step. If the wait spans hours or days, that is a strong signal for durable execution over in-memory orchestration.
+</details>
+
 TicketPulse has several multi-step processes beyond purchasing. For each one, evaluate whether durable execution is worth the complexity:
 
 | Flow | Steps | Duration | Worth It? |
@@ -662,6 +676,10 @@ You have:
 
 **Next module**: L3-M82 — Event Sourcing at Scale, where we store events instead of state and gain a complete audit trail of every change that ever happened in TicketPulse's order system.
 
+### 🤔 Reflection Prompt
+
+After implementing the purchase saga as a durable workflow, how does the mental model differ from the saga pattern in M34? Where does durable execution eliminate complexity you previously had to manage manually?
+
 ## Key Terms
 
 | Term | Definition |
@@ -671,3 +689,8 @@ You have:
 | **Deterministic replay** | The technique of re-executing workflow code using recorded results to recover state after a failure. |
 | **Temporal** | An open-source durable execution platform that manages workflow state, retries, and timeouts. |
 | **Activity** | A single unit of work within a durable workflow that performs a side effect (e.g., API call, database write). |
+---
+
+## What's Next
+
+In **Event Sourcing at Scale** (L3-M82), you'll build on what you learned here and take it further.

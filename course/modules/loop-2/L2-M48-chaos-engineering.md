@@ -86,7 +86,24 @@ The goal is NOT to cause an outage. The goal is to disprove your hypothesis. If 
 
 ---
 
+> **Before you continue:** When the payment service is killed, will purchase requests fail immediately (0ms), fail slowly (30s timeout), or succeed with degraded behavior? Write down your prediction before injecting the failure.
+
 ## 3. Experiment 1: Kill the Payment Service
+
+<details>
+<summary>💡 Hint 1: Injection Method</summary>
+Use <code>docker compose stop payment-service</code> (Docker) or <code>kubectl delete pod -n ticketpulse -l app=payment-service</code> (Kubernetes). The Kubernetes approach is more realistic because K8s will attempt to restart the pod -- test whether the circuit breaker trips before the pod recovers.
+</details>
+
+<details>
+<summary>💡 Hint 2: Observing in Real Time</summary>
+Keep your Grafana dashboard open while injecting. Watch three panels simultaneously: error rate (should spike for purchases only), request rate (non-purchase traffic should be unaffected), and latency (purchases should fail fast after the circuit breaker trips, not hang for 30s).
+</details>
+
+<details>
+<summary>💡 Hint 3: Validating Circuit Breaker Behavior</summary>
+In the API gateway logs, look for circuit breaker state transitions: CLOSED -> OPEN. After the breaker opens, purchase attempts should return in <1ms (fail fast) instead of waiting for a TCP timeout. If you see 30-second hangs, the Resilience4j CircuitBreaker config from L2-M49 is not wired up correctly.
+</details>
 
 ### Steady state
 
@@ -427,7 +444,22 @@ Common gaps:
 
 ## 7. Build: Game Day Plan
 
-A game day is a scheduled session where the team runs chaos experiments together. Write a plan for TicketPulse:
+A game day is a scheduled session where the team runs chaos experiments together. Write a plan for TicketPulse.
+
+<details>
+<summary>💡 Hint 1: Experiment Structure</summary>
+Each experiment in the game day plan needs five parts: a hypothesis (what you predict will happen), an injection method (the exact command), a duration (time-boxed), success criteria (measurable outcomes), and a rollback command. Use the Chaos Toolkit experiment format: <code>steady-state-hypothesis</code>, <code>method</code>, <code>rollbacks</code>.
+</details>
+
+<details>
+<summary>💡 Hint 2: Pre-Game Checklist</summary>
+Before any experiment, verify: all services are healthy (<code>kubectl get pods -n ticketpulse</code> shows all Running), Grafana dashboard is open and showing baseline metrics, Alertmanager is routing to a TEST channel (not production), and you have rollback commands ready to paste.
+</details>
+
+<details>
+<summary>💡 Hint 3: Post-Experiment Documentation</summary>
+After each experiment, document: was the hypothesis correct? what surprised you? what gaps were discovered? Create tickets for each gap (missing circuit breaker, unhelpful error message, alert that did not fire). Schedule fixes before the next game day -- the value of chaos engineering is the fixes, not the experiments.
+</details>
 
 ```markdown
 # TicketPulse Game Day Plan
@@ -504,6 +536,8 @@ For TicketPulse (and most teams starting out): begin with scheduled game days in
 
 ## 9. Reflect
 
+> **What did you notice?** Which chaos experiment produced the most surprising result? Did your predictions match reality, or did you discover resilience gaps you did not expect?
+
 > **"What was the most surprising result from your experiments?"**
 >
 > Write down what surprised you. The surprises are the value of chaos engineering. If nothing surprised you, your mental model is accurate -- which is also valuable information.
@@ -551,3 +585,9 @@ After this module, you should have:
 | **Cascading Failure** | When a failure in one component causes failures in dependent components, which cause failures in their dependents, and so on. |
 | **Graceful Degradation** | The ability of a system to maintain partial functionality when a component fails, rather than failing completely. |
 | **Circuit Breaker** | A resilience pattern that stops calling a failing service after a threshold of failures, allowing it to recover. Tested in this module's experiments. |
+
+---
+
+## What's Next
+
+In **Circuit Breakers and Resilience** (L2-M49), you'll add circuit breakers, retries, and bulkheads so TicketPulse degrades gracefully instead of cascading into total failure.

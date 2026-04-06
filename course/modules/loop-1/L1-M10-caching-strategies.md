@@ -87,7 +87,25 @@ Request comes in
   │                              └── Return data to client
 ```
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Cache-Aside for GET /api/events
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The cache key should be a descriptive string like "events:listing". Step 1: call redis GET events:listing. If it returns non-nil, parse the JSON and return immediately — that is your cache hit path. If nil, you have a cache miss and proceed to query Postgres.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+On cache miss, run the Postgres query that JOINs events, venues, and tickets with the GROUP BY and FILTER clauses. Use json_agg() in Postgres to get the result as a JSON string you can store directly. Then call redis SET events:listing '...' EX 300 to cache it for 5 minutes.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Always include the EX (expiration) argument in your SET command — SET events:listing '...' EX 300. A key without TTL lives forever and becomes permanently stale if your invalidation logic misses it. The TTL is your safety net even when you also do explicit DEL on writes.
+</details>
+
 
 Here's the implementation in pseudocode that maps to any language:
 
@@ -276,6 +294,22 @@ GET events:listing
 ```
 
 ### 🐛 Debug: The Stale Data Problem
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The bug is that the UPDATE in Postgres changed the event name, but nobody told Redis. Run GET event:1:name in Redis and SELECT name FROM events WHERE id = 1 in Postgres side by side — you will see two different values. That mismatch is the stale cache.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Check the TTL with TTL event:1:name in Redis. If it returns 580 seconds, the stale name will be served for almost 10 more minutes. The fix is either DEL event:1:name (cache-aside invalidation — the next read repopulates from Postgres) or SET event:1:name "Aurora Flux: FINAL Synthesis Tour" EX 600 (write-through — update the cache immediately).
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The root cause is missing invalidation on the write path. In production, every UPDATE events SET ... query should be followed by redis DEL event:{id}:name (and DEL events:listing if the listing cache includes the name). The pattern is: write to Postgres first, then DEL the affected Redis keys. Even with explicit invalidation, always keep a TTL as a safety net for cases where the DEL fails or is missed.
+</details>
+
 
 Let's intentionally create a cache inconsistency and see what happens.
 
@@ -586,6 +620,9 @@ DROP MATERIALIZED VIEW IF EXISTS mv_popular_events;
 ```
 
 ---
+
+
+> **What did you notice?** Look back at what you just built. What surprised you? What felt harder than expected? That's where the real learning happened.
 
 ## 🏁 Module Summary
 

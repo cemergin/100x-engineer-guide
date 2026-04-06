@@ -23,6 +23,10 @@ This module takes TicketPulse's K8s deployment from "works" to "production-grade
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before reading about network policies, think: in your current Kubernetes cluster, which pod-to-pod communication paths are actually necessary? If you enforced "default deny," how many explicit allow rules would you need?
+
 ## 1. NetworkPolicies: Default Deny, Explicit Allow
 
 ### The Problem
@@ -48,6 +52,11 @@ Internet → Ingress → API Gateway → Backend Services → Databases
 No shortcuts. No direct database access from the gateway. No cross-service communication that bypasses the intended architecture.
 
 ### Build: Default Deny All
+
+<details>
+<summary>💡 Hint 1: Do not forget the DNS egress rule</summary>
+A default-deny egress policy will break DNS resolution for every pod in the namespace. Apply the CoreDNS egress allow (port 53 UDP/TCP to kube-system) immediately after the deny-all, or your pods will not resolve any service names.
+</details>
 
 Start by denying all ingress and egress traffic. Then explicitly allow what is needed.
 
@@ -347,6 +356,11 @@ spec:
 
 ### Try It: Drain a Node
 
+<details>
+<summary>💡 Hint 1: Check your PDB math before draining</summary>
+If your PDB says `minAvailable: 2` and you only have 2 replicas, the drain will block forever -- Kubernetes cannot evict a pod without violating the budget. You need at least N+1 replicas where N is your minAvailable value. Verify with `kubectl get pdb -n ticketpulse`.
+</details>
+
 ```bash
 # See which nodes your pods are on
 kubectl get pods -n ticketpulse -o wide
@@ -504,7 +518,171 @@ You have:
 
 ---
 
+---
+
+## 8. Walkthrough: Harden One Service End-to-End (20 min)
+
+Reading policies is one thing. Walking through the complete hardening of a single service makes the concepts concrete. Let's fully harden the `payment-service` — the most security-sensitive component in TicketPulse.
+
+### Step 1: Audit the Current State
+
+```bash
+# What does the payment-service deployment look like today?
+kubectl get deployment payment-service -n ticketpulse -o yaml
+
+# Check current security context (probably none)
+kubectl get deployment payment-service -n ticketpulse -o jsonpath='{.spec.template.spec.securityContext}'
+# If empty: {}  — that means running as root with full capabilities
+
+# Check what service account it's using
+kubectl get deployment payment-service -n ticketpulse -o jsonpath='{.spec.template.spec.serviceAccountName}'
+# If "default": that's the shared default account — needs fixing
+
+# Check what it can reach on the network
+kubectl exec -it -n ticketpulse deployment/payment-service -- \
+  wget -qO- --timeout=3 http://event-service:3000/health
+# If this succeeds: payment-service can reach event-service — it should NOT need to
+```
+
+Document your findings before making any changes. This is your baseline.
+
+### Step 2: Apply Hardening Layer by Layer
+
+Apply each change, verify it works, then apply the next:
+
+```bash
+# Layer 1: Service account
+kubectl apply -f rbac/payment-service-account.yaml
+kubectl patch deployment payment-service -n ticketpulse \
+  --type='json' \
+  -p='[{"op": "replace", "path": "/spec/template/spec/serviceAccountName", "value": "payment-service"}]'
+
+# Verify: payment-service is still healthy
+kubectl rollout status deployment/payment-service -n ticketpulse
+curl http://localhost:3000/api/events/evt_1/purchase  # Should still work
+
+# Layer 2: Security context
+kubectl apply -f deployments/payment-service-secured.yaml  # The hardened deployment
+kubectl rollout status deployment/payment-service -n ticketpulse
+
+# Verify again: the security constraints did not break the app
+kubectl exec -it -n ticketpulse deployment/payment-service -- id
+# Should show: uid=1000 gid=1000 — not root
+
+kubectl exec -it -n ticketpulse deployment/payment-service -- \
+  sh -c "echo test > /app/test.txt"
+# Should fail: Read-only file system
+
+# Layer 3: Network policies
+kubectl apply -f network-policies/payment-service-egress.yaml
+kubectl rollout restart deployment/payment-service -n ticketpulse
+
+# Verify: payment-service can still reach postgres and Stripe API
+kubectl exec -it -n ticketpulse deployment/payment-service -- \
+  wget -qO- http://postgres:5432  # Should fail (cannot reach DB on 5432 — goes through service)
+  
+kubectl exec -it -n ticketpulse deployment/payment-service -- \
+  wget -qO- --timeout=5 https://api.stripe.com/v1  # Should succeed (egress to Stripe allowed)
+```
+
+### Step 3: Verify Denials Work
+
+The most important test: confirm that your deny rules actually deny.
+
+```bash
+# Test 1: payment-service CANNOT reach event-service (should be blocked by NetworkPolicy)
+kubectl exec -it -n ticketpulse deployment/payment-service -- \
+  wget -qO- --timeout=3 http://event-service:3000/health
+# Expected: Connection timed out (denied by NetworkPolicy)
+# If this succeeds: your NetworkPolicy is wrong
+
+# Test 2: frontend CANNOT reach payment-service directly (must go through API gateway)
+kubectl exec -it -n ticketpulse deployment/frontend -- \
+  wget -qO- --timeout=3 http://payment-service:3000/internal/process
+# Expected: Connection timed out
+
+# Test 3: payment-service CANNOT create a kubernetes secret (RBAC test)
+kubectl exec -it -n ticketpulse deployment/payment-service -- \
+  kubectl create secret generic test-secret --from-literal=key=value
+# Expected: Error from server (Forbidden): ...
+```
+
+If all three denials work: your hardening is effective.
+
+### Step 4: Create a Security Posture Scorecard
+
+Document the hardened state for the payment service and use it as a template for other services:
+
+```markdown
+# payment-service Security Posture
+
+## ✅ Hardening Applied
+- [x] Dedicated service account (payment-service) — not default
+- [x] automountServiceAccountToken: false
+- [x] runAsNonRoot: true, runAsUser: 1000
+- [x] readOnlyRootFilesystem: true
+- [x] capabilities.drop: ["ALL"]
+- [x] seccompProfile: RuntimeDefault
+- [x] PodDisruptionBudget: minAvailable=2
+- [x] NetworkPolicy: ingress only from api-gateway on port 3000
+- [x] NetworkPolicy: egress only to postgres:5432, redis:6379, api.stripe.com:443, kube-dns:53
+
+## ❌ Still TODO
+- [ ] mTLS via service mesh (Istio or Linkerd) for encrypted service-to-service traffic
+- [ ] OPA/Kyverno policy to enforce SecurityContext on all new deployments
+- [ ] Secrets managed via external-secrets-operator (not plain K8s Secrets)
+- [ ] Runtime threat detection (Falco) to alert on unexpected syscalls
+
+## Blast Radius if payment-service is Compromised
+- Can reach: postgres (orders DB), redis, Stripe API
+- Cannot reach: event-service, user-service, kafka, kubernetes API
+- Cannot write to: filesystem (read-only), other namespaces
+- Cannot escalate to: root, cluster-admin, other service accounts
+```
+
+---
+
+## 9. Reflection: Production Kubernetes Trade-offs (10 min)
+
+Work through these questions. The goal is to develop judgment, not recall the "correct" answer.
+
+### Question 1: The Rollout Chicken-and-Egg
+
+You want to enforce `runAsNonRoot: true` on all deployments in the `ticketpulse` namespace using a Kyverno policy. But 3 of your 8 services currently run as root (because they were written before you thought about this). If you enforce the policy, those 3 services cannot deploy.
+
+**Walk through the migration path.** Do not leave any service unable to deploy, even temporarily.
+
+> **Guided approach**: 
+> 1. Apply the policy in `audit` mode first — violations are logged but not blocked.
+> 2. Fix the 3 non-compliant services (update Dockerfile USER instruction, test locally).
+> 3. Apply the policy in `enforce` mode once all services are compliant.
+> 4. Never apply an enforcing policy that would break existing deployments — that is a weekend-ruining mistake.
+
+### Question 2: PDB Math
+
+You have the `api-gateway` with `maxUnavailable: 1` and 3 replicas. You are draining a node that has 2 of those 3 replicas.
+
+Will the drain succeed? How will Kubernetes handle it?
+
+> **Guided answer**: The drain will succeed, but slowly. Kubernetes will evict the first replica (1 unavailable — allowed by PDB). It will then wait until that replica is scheduled and Ready on another node before evicting the second one. This can take 1-3 minutes per replica. With PDB properly configured, you never have zero api-gateway pods, but the drain is serialized. If your pods take 30 seconds to start, this drain takes 30-60 seconds total — acceptable.
+
+### Question 3: Custom Metrics HPA — The Chicken-and-Egg
+
+Your HPA scales the order-processor based on Kafka consumer lag. But if the Kafka exporter or Prometheus Adapter is down, the HPA cannot get the `kafka_consumer_lag` metric. What happens?
+
+> **Guided answer**: By default, Kubernetes HPAs become "flapping" when the metric source is unavailable — they may scale down to minimum replicas or hold at current. Configure `behavior.scaleDown.stabilizationWindowSeconds: 3600` (1 hour hold before scale-down) to prevent dangerous scale-downs during monitoring outages. Also, keep CPU as a secondary metric — if Kafka lag is unavailable but CPU is spiking, the HPA can still scale up. Defense in depth.
+
+---
+
+> **Want the deep theory?** See Ch 7 of the 100x Engineer Guide: "Production Kubernetes Architecture" — covers advanced scheduling, admission controllers, service meshes, and the full Kubernetes security model.
+
+---
+
 **Next module**: L3-M84 — Nix & Reproducible Builds, where we eliminate "works on my machine" by defining TicketPulse's exact development environment in a single file.
+
+### 🤔 Reflection Prompt
+
+After hardening the cluster, which security control gave you the most "I can not believe this was not already in place" reaction? What is the single cheapest security improvement any Kubernetes deployment should have from day one?
 
 ## Key Terms
 
@@ -516,3 +694,8 @@ You have:
 | **SecurityContext** | A Kubernetes setting that defines privilege and access-control options for a pod or container. |
 | **HPA** | Horizontal Pod Autoscaler; a Kubernetes controller that automatically scales the number of pod replicas based on observed metrics. |
 | **Resource quota** | A Kubernetes mechanism that limits the total amount of CPU, memory, or other resources a namespace can consume. |
+---
+
+## What's Next
+
+In **Observability & GitOps as Code** (L3-M83a), you'll build on what you learned here and take it further.

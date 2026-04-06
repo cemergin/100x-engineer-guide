@@ -343,7 +343,22 @@ The first thing wrong with this file is the names. Names are the primary way dev
 | `c` | Event capacity | `eventCapacity` |
 | `p` | Calculated price | `totalPriceInCents` |
 
-### Build: Rename 10 Things
+### 🛠️ Build: Rename 10 Things
+
+<details>
+<summary>💡 Hint 1: Function Names Should Be Verb Phrases</summary>
+`processData` tells you nothing. `handleTicketPurchase` tells you exactly what it does. Parameters follow the same rule: `d` becomes `purchaseRequest`, `flag` becomes `isEarlyBirdEligible`, `tmp` becomes `discountPercentage`. If you need a comment to explain a variable, the variable has the wrong name.
+</details>
+
+<details>
+<summary>💡 Hint 2: Use TypeScript Interfaces for Shape</summary>
+Replace the `any` parameter `d` with a typed `PurchaseRequest` interface: `{ eventId: string, userId: string, type: 'general' | 'vip' | 'early_bird', qty: number }`. Replace the return type `any` with `PurchaseResult`. The type system becomes your documentation.
+</details>
+
+<details>
+<summary>💡 Hint 3: Single-Letter Variables Are Only OK in 3-Line Scopes</summary>
+`e` for an event record that spans 150 lines? Rename to `event`. `p` for a price that gets modified 6 times? Rename to `totalPriceInCents`. `n` and `c` for tickets sold and capacity? `ticketsSold` and `eventCapacity`. The cognitive load drops immediately.
+</details>
 
 Create the renamed version:
 
@@ -770,7 +785,22 @@ The `PluginManager` class is 70+ lines of code. It supports registering, unregis
 
 This is a textbook YAGNI violation. Someone anticipated a plugin system that never materialized. Every developer now must understand the plugin lifecycle to modify analytics tracking.
 
-### Build: Replace With What You Actually Need
+### 🛠️ Build: Replace With What You Actually Need
+
+<details>
+<summary>💡 Hint 1: Count the Implementations</summary>
+The PluginManager supports register, unregister, prioritized init, executeAll, list, and shutdown -- for ONE plugin. Ask: "If I deleted the PluginManager and called analytics directly, what would I lose?" Answer: nothing. The abstraction has zero users besides AnalyticsPlugin.
+</details>
+
+<details>
+<summary>💡 Hint 2: Replace 70 Lines With 5</summary>
+Create `class AnalyticsTracker { track(event: string, data: Record<string, unknown>) { console.log(JSON.stringify({event, ...data, timestamp: new Date().toISOString()})); } }`. Export a singleton instance. Delete the PluginManager, Plugin interface, PluginConfig, and AnalyticsPlugin class.
+</details>
+
+<details>
+<summary>💡 Hint 3: Add Abstraction When the Second Use Case Appears</summary>
+If Segment or Mixpanel appears later, THEN introduce an interface. Not before. YAGNI means the cost of building unused abstraction exceeds the cost of adding it later when you actually understand the requirements.
+</details>
 
 ```typescript
 // BEFORE: 70 lines of PluginManager + AnalyticsPlugin

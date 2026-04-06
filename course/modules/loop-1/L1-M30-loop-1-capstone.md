@@ -631,3 +631,8 @@ See you in Loop 2.
 | **Load test** | A test that simulates expected user traffic to measure system behavior under a defined level of demand. |
 | **Capacity planning** | The process of estimating the resources needed to handle current and projected workload growth. |
 | **Trade-off** | A deliberate decision to accept a disadvantage in one area in exchange for a benefit in another. |
+---
+
+## What's Next
+
+You've completed Loop 1 — the Foundation. You have a working TicketPulse monolith with auth, tests, and CI/CD. In **Loop 2: Practice**, starting with **The Strangler Fig — Extracting Your First Service** (L2-M31), you'll break this monolith apart and scale it into a microservices architecture.

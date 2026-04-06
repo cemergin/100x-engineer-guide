@@ -18,9 +18,13 @@ TicketPulse stores personal data: names, email addresses, payment information, p
 
 This is not a legal problem. It is an engineering problem. The law says "delete all user data." The engineering reality is: data is spread across 5 services, replicated to Elasticsearch and Neo4j, immutably stored in Kafka events, included in database backups, and scattered through log files. "Just delete it" is a 6-month project if you did not design for it from the start.
 
-> 💡 **Insight**: "Privacy is not a feature you add at the end. It is an architectural constraint you design for from the beginning. The companies that treat GDPR as a legal checkbox end up with the most expensive and painful compliance projects."
+> **Pro tip:** "Privacy is not a feature you add at the end. It is an architectural constraint you design for from the beginning. The companies that treat GDPR as a legal checkbox end up with the most expensive and painful compliance projects."
 
 ---
+
+### 🤔 Prediction Prompt
+
+Before reading the implementation, list every place in TicketPulse where user PII might live: databases, caches, event stores, logs, search indices, backups. How many did you count? The answer is almost certainly more than you think.
 
 ## Part 1: Right to Access -- Data Export
 
@@ -67,6 +71,17 @@ WHERE USER DATA LIVES
 
 ### 📐 Design: Data Export Architecture
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Article 15 requires a "commonly used, machine-readable format" within 30 days. Fan out requests to each service in parallel, aggregate into a single JSON/ZIP, and upload to a time-limited S3 presigned URL.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Each service exposes an internal-only `/internal/users/:id/export` endpoint. Use `Promise.allSettled` to handle partial failures gracefully -- if one service is down, send a partial export rather than failing entirely. The GDPR requirement is "best effort within 30 days," not "all or nothing."
+</details>
+
+
 ```
 USER DATA EXPORT FLOW
 ═════════════════════
@@ -88,7 +103,20 @@ Data Export Service:
   7. Delete the export file after 7 days
 ```
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Data Export Endpoint
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The export endpoint is internal-only (service mesh auth, not user auth). Each service returns its data in a standard `{ service, exported_at, data }` format so the aggregation service can combine them uniformly.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Query all user-related tables in the service, including indirect references (tickets via orders, notifications via preferences). Encrypt the export at rest (S3 SSE), set a 7-day expiration on the presigned download URL, and delete the file after download or expiration.
+</details>
+
 
 Each service implements an internal export endpoint:
 
@@ -239,6 +267,17 @@ WHY DELETION IS HARD IN DISTRIBUTED SYSTEMS
 
 ### 📐 Design: Deletion Architecture
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Article 17 (right to erasure) requires deletion across every data store. The hard parts: Kafka events are immutable (use crypto-shredding), financial records must be retained for 7 years (anonymize, do not delete), and backups contain deleted data (maintain a deletion log that replays after every restore).
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Implement in three phases: (1) soft delete immediately (revoke sessions, remove from search), (2) hard delete async within 30 days (fan out to each service, anonymize financial records, crypto-shred Kafka events), (3) verify by running the export endpoint -- it should return empty.
+</details>
+
+
 ```
 USER DELETION FLOW
 ══════════════════
@@ -273,6 +312,17 @@ Phase 3: VERIFICATION
 ```
 
 ### 🛠️ Build: Crypto-Shredding for Kafka Events
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+You cannot delete Kafka messages, but you can make them unreadable. Encrypt PII with a per-user key stored in a separate key store. When the user requests deletion, delete the key -- the encrypted PII becomes permanently irrecoverable.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Each Kafka event stores PII as `{ ciphertext, key_id }`. Consumers call `keyStore.get(key_id)` to decrypt. After deletion, `keyStore.get` returns null and the consumer returns `[DELETED]`. This means every consumer must handle missing keys gracefully.
+</details>
+
 
 You cannot delete Kafka messages. But you CAN make them unreadable.
 
@@ -341,6 +391,17 @@ async function shredUserData(userId: string): Promise<void> {
 
 ### 🛠️ Build: Post-Backup-Restore Deletion Cleanup
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+If you restore from yesterday's backup, deleted users come back. Maintain a deletion log (user_id, deleted_at) that survives independently of the main database, and replay it after every restore.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Query the deletion log for all users deleted after the backup timestamp, then re-execute the deletion for each. This must be a mandatory step in every restore runbook -- not optional, not "if we remember."
+</details>
+
+
 ```typescript
 // Run after EVERY database restore from backup
 async function reapplyDeletions(): Promise<void> {
@@ -365,6 +426,17 @@ async function reapplyDeletions(): Promise<void> {
 ## Part 3: Consent Management
 
 ### 📐 Design: Granular Consent Records
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+GDPR requires consent to be granular (per purpose), recorded (who, when, which policy version), and withdrawable (as easy to withdraw as to give). Never UPDATE consent rows -- always INSERT new ones to maintain an audit trail.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+The consent table needs: user_id, purpose (marketing_email, analytics, etc.), granted (boolean), policy_version, granted_at, and withdrawn_at. No consent record means no consent (opt-in model). Before sending any marketing email, check `canSendMarketingEmail(userId)`.
+</details>
+
 
 GDPR requires that you track consent: what the user consented to, when, and under which version of the privacy policy.
 
@@ -444,6 +516,17 @@ COMMON PII LEAKS IN LOGS
 
 ### 🛠️ Build: PII Scrubbing Middleware
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The better approach is not logging PII in the first place: log user_id, not email. But as a safety net, build a scrubbing middleware that replaces email addresses, IP addresses, and card numbers with `[REDACTED]` tokens before they reach the log store.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Define regex patterns for emails, IPv4, credit card numbers, and phone numbers. Apply them to both the message string and any JSON metadata. Wrap your logger with `createSafeLogger(baseLogger)` that scrubs before every info/warn/error call.
+</details>
+
+
 ```typescript
 // PII scrubbing for structured logs
 const PII_PATTERNS: Array<{ pattern: RegExp; replacement: string }> = [
@@ -509,6 +592,17 @@ logger.info("User alice@example.com logged in from 192.168.1.1");
 ---
 
 ## 📐 Design: The Compliance Audit
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Walk through the GDPR checklist as if a regulator is auditing tomorrow. The biggest gaps are usually: no data inventory (Article 30), PII in logs without scrubbing, and no tested deletion path for Kafka events.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+For each checklist item, answer concretely: "Can we fulfill a right-to-erasure request (Article 17) within 30 days across all 5 services, Elasticsearch, Kafka, Redis, and log archives?" If the answer is "we would need to figure it out," that is your biggest gap.
+</details>
+
 
 ### 🤔 Reflect: If a Regulator Audited TicketPulse Tomorrow
 
@@ -581,6 +675,10 @@ YOUR BIGGEST GAP: _____________________________________________
 | **Consent** | A GDPR requirement that users must give informed, explicit permission before their personal data is processed. |
 | **Data export** | The ability for users to download their personal data in a portable, machine-readable format as required by GDPR. |
 
+### 🤔 Reflection Prompt
+
+Which data location surprised you most during the PII audit? If you had to implement GDPR compliance retroactively on a system that was not designed for it, what would be the most expensive part?
+
 ## Further Reading
 
 - **Chapter 30**: Data Privacy, Ethics & Compliance -- the full technical guide
@@ -589,3 +687,8 @@ YOUR BIGGEST GAP: _____________________________________________
 - **Crypto-shredding paper**: "Forgetting in Event-Sourced Systems" by Martin Kleppmann
 - **CCPA (California)**: similar to GDPR, applies to California residents
 - **HIPAA (Healthcare)**: stricter than GDPR for health data -- relevant if TicketPulse adds health-related events
+---
+
+## What's Next
+
+In **Building Your Platform** (L3-M80), you'll build on what you learned here and take it further.

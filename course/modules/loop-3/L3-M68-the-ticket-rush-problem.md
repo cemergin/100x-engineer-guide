@@ -49,6 +49,10 @@ Stop. Before reading any implementation, design the ticket rush system yourself.
 3. Where is the bottleneck: the application server, the database, or the network?
 4. Should you process all 50K requests simultaneously, or queue them?
 
+### 🤔 Prediction Prompt
+
+Before reading the solutions, predict: will the bottleneck be the application server, the database, or something else entirely? What is the simplest mechanism that could prevent the 501st ticket from being sold?
+
 Write down your design. Draw the data flow. Then continue.
 
 ---
@@ -114,6 +118,16 @@ Under 50K concurrent requests, this is not a theoretical risk. It will happen. C
 ---
 
 ## 3. Solution 1: Optimistic Locking
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered combining the check and update into a single atomic SQL statement? The `WHERE status = 'available'` clause in the UPDATE is your compare-and-swap -- only the first request to reach the row succeeds.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+For "give me any available ticket," use `FOR UPDATE SKIP LOCKED` in a subquery. Without `SKIP LOCKED`, all 50K queries serialize on the same row. With it, concurrent requests each grab a different available ticket -- throughput scales with the number of available rows.
+</details>
 
 Instead of separate check-and-update steps, combine them into a single atomic operation:
 
@@ -244,6 +258,16 @@ User clicks "Buy"
 ```
 
 ### Build: The Virtual Queue
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered using a Redis sorted set with timestamp as the score? `ZADD NX` gives you atomic enqueue with deduplication (same user cannot join twice), and `ZPOPMIN` gives you FIFO dequeue of the earliest joiner.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+The score formula is just `Date.now()` -- lower timestamp = higher priority. Use `ZRANK` to get a user's current position. Push position updates to users via WebSocket every 2 seconds so they see "You are #42 in queue..." counting down.
+</details>
 
 ```typescript
 import Redis from 'ioredis';
@@ -566,6 +590,16 @@ Run the load test. Check: exactly 50 sold? No duplicates? No stuck reservations?
 
 ## 6. Debug: The 51st Ticket
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered that the application-level count check (`getAvailableCount`) and the actual `UPDATE` are not atomic? Between those two operations, another processor can sell the last ticket.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+The fix is a database-level constraint, not an application-level check. Add a `tickets_sold` counter on the `events` table with `CHECK (tickets_sold <= capacity)`. Increment it inside the purchase transaction. If it exceeds capacity, the CHECK constraint rolls back the entire transaction -- the database enforces correctness even if your application logic has a bug.
+</details>
+
 A race condition has allowed one extra sale. The database shows 51 confirmed tickets for a 50-ticket event. How?
 
 ### The Bug
@@ -759,9 +793,16 @@ Before moving on, verify:
 
 ---
 
+
+> **What did you notice?** Consider how this connects to systems you've worked on. Where have you seen similar patterns — or missed opportunities to apply them?
+
 ## Summary
 
 The ticket rush is a concurrency gauntlet. The naive approach fails immediately. Optimistic locking at the database level is the foundation of correctness -- never rely on application-level checks alone. A virtual queue transforms a chaotic stampede into an orderly line, with WebSocket providing real-time feedback. Database constraints are the final safety net: even if everything else has a bug, the database will refuse the 501st ticket.
+
+### 🤔 Reflection Prompt
+
+Compare your initial design from Section 1 with the final solution. What did you get right? What failure mode would have bitten you hardest in production?
 
 This pattern -- queue + optimistic locking + idempotency + database constraints -- applies far beyond ticketing. Flash sales, limited-edition drops, reservation systems, auction closings: any time many users compete for scarce resources under time pressure.
 
@@ -774,3 +815,9 @@ This pattern -- queue + optimistic locking + idempotency + database constraints 
 | **Distributed lock** | A lock held across multiple processes or machines, ensuring only one can access a resource at a time. |
 | **FOR UPDATE SKIP LOCKED** | A PostgreSQL clause that locks selected rows and skips any already locked by another transaction. |
 | **Race condition** | A bug where the system's behavior depends on the unpredictable timing of concurrent operations. |
+
+---
+
+## What's Next
+
+Next up: **[L3-M69: Notification System](L3-M69-notification-system.md)** -- you will design the multi-channel notification system that tells users their ticket was confirmed, their event is tomorrow, or their payment failed.

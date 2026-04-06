@@ -22,6 +22,10 @@ This module is not about gaming a system. It is about ensuring that the real wor
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before starting the brag document, try to list your top 5 accomplishments from the last 6 months from memory. How many can you actually recall? That gap between what you did and what you remember is why the brag document exists.
+
 ## 1. Build: Your Brag Document
 
 ### What It Is
@@ -194,6 +198,11 @@ Your bottom 3 are your gaps. You do not need to become an expert in all of them 
 
 ### Design: Your 6-Month Learning Roadmap
 
+<details>
+<summary>💡 Hint 1: Pick the gap that blocks your next role, not the one that is most interesting</summary>
+Look at your self-assessment. If you are aiming for Staff and your weakest area is system design communication, prioritize that over learning another database -- the bottleneck to promotion is almost never more technical depth, it is the ability to articulate and defend decisions.
+</details>
+
 For each of your bottom 3 gaps, define a concrete plan:
 
 ```
@@ -273,6 +282,93 @@ Make the work legible. If you built something complex, write about it. If you so
 
 ---
 
+## 4b. Brag Document Writing Workshop
+
+Most engineers write brag documents that are too vague to be useful. "Improved system performance" is not a brag document entry. "Reduced 99th percentile API latency from 1.2s to 340ms by adding a read replica routing layer, eliminating 60% of queries from the primary" is a brag document entry.
+
+This workshop takes you through the transformation from vague to specific for the entries you wrote in Section 1.
+
+### The Five-Layer Deepening Method
+
+For each brag document entry, apply these five questions in order. Each question adds a layer of specificity that makes the entry more credible and more useful in reviews, interviews, and negotiations.
+
+**Layer 1: The What (you already have this)**
+```
+"Improved API performance"
+```
+
+**Layer 2: The How**
+```
+"Added Redis caching layer for event listing queries"
+```
+
+**Layer 3: The Numbers**
+```
+"Reduced average response time from 450ms to 38ms (88% improvement)
+ for the top 3 most-trafficked endpoints"
+```
+
+**Layer 4: The Business Context**
+```
+"Event listing is the entry point for 73% of ticket purchases.
+ The speed improvement increased mobile session completion rates by 12%."
+```
+
+**Layer 5: The Difficulty**
+```
+"The challenge was cache invalidation: events update frequently (seat
+ availability changes every minute). Designed a targeted invalidation
+ strategy using Redis pub/sub to notify caching nodes when specific
+ events change, achieving freshness within 2 seconds without wholesale
+ cache busts."
+```
+
+Layer 5 is where your entry becomes a promotion packet exhibit, not just a resume bullet. The difficulty is what demonstrates Staff-level thinking: you understood the problem deeply enough to navigate a non-obvious trade-off.
+
+### Workshop Exercise (20 minutes)
+
+Take your three weakest brag document entries — the ones that are most vague — and apply all five layers. Start at your current layer and add the next one.
+
+Use this template for each entry:
+
+```
+ENTRY: [your current entry text]
+
+Layer 1 (What): ___________________________________
+Layer 2 (How):  ___________________________________
+Layer 3 (Numbers): ________________________________
+Layer 4 (Business context): _______________________
+Layer 5 (Difficulty / insight): ___________________
+
+REVISED ENTRY:
+[rewrite the entry incorporating all five layers in 3-5 sentences]
+```
+
+### Quantifying Qualitative Work
+
+Some of your most important contributions are qualitative — mentoring, process improvements, technical design reviews. These can be quantified too:
+
+```
+VAGUE: "Mentored junior engineers"
+QUANTIFIED: "Mentored 2 engineers from L3 to L4 in 12 months.
+             Both now independently own features with zero incidents
+             in the past 6 months. One presented at the company all-hands."
+
+VAGUE: "Improved the code review process"
+QUANTIFIED: "Reduced average PR review turnaround from 3.5 days to 18 hours
+             by introducing async review guidelines and a tiered review depth
+             checklist. Measured via linear PR age metrics over 90 days."
+
+VAGUE: "Wrote technical documentation"
+QUANTIFIED: "Authored the runbook that reduced P1 incident MTTR from 42 minutes
+             to 11 minutes across 4 incidents. The runbook has been used in
+             every production incident for the past 6 months."
+```
+
+The pattern: count things, name names, cite time periods, reference outcomes.
+
+---
+
 ## 5. Negotiation Preparation
 
 ### Research Market Rates
@@ -312,6 +408,103 @@ Negotiation is not about demanding more. It is about presenting evidence that yo
 - **Negotiating without data**: "I want more" is weak. "The market rate for this role is X, and here is why I am at the top of that range" is strong.
 - **Making it adversarial**: Negotiation is collaborative. You are both trying to find a number that reflects your value.
 - **Accepting the first offer immediately**: Even if the offer is good, asking for 24-48 hours to consider is normal and expected.
+
+---
+
+## 5b. Negotiation Role-Play Workshop
+
+Reading about negotiation is not enough. You need to practice the words out loud, including the awkward silences and the phrases that feel presumptuous until you have said them a few dozen times.
+
+This workshop runs three role-play scenarios. For each one, read both sides of the dialogue, then practice your side with a partner or by writing your responses.
+
+### Scenario 1: The Initial Offer
+
+**Context**: You applied through a recruiter. The hiring manager emails: "Great news — we want to extend an offer. We're thinking $165K base. Can you confirm that works for you?"
+
+**The trap**: Confirming immediately. Even if $165K is above your current salary, you are leaving money on the table. The first offer is a starting position, not a final one.
+
+**Your response (practice saying this out loud):**
+```
+"Thank you — I am genuinely excited about this role and the team.
+ I would like to take 48 hours to review the full package details
+ before responding. Could you send me the complete offer in writing
+ including base, equity, bonus structure, and benefits?"
+
+[After receiving the full offer]
+
+"I have reviewed the offer carefully and I appreciate it.
+ The role is a great fit, and I want to make this work.
+ My research shows that the market rate for this level at a company
+ of this stage is in the $185K-$205K range. Based on my experience
+ with [specific relevant skill] and [specific relevant accomplishment],
+ I believe $195K would be appropriate. Is there flexibility there?"
+```
+
+**What makes this effective:**
+- You do not panic or apologize
+- You anchor to market data, not personal needs ("I need more" is weak; "the market says" is strong)
+- You are specific ($195K, not "a bit more")
+- You leave the door open ("is there flexibility" — not "I won't accept less")
+
+### Scenario 2: The Counter
+
+**Context**: The recruiter comes back: "We hear you on the data. We can go to $175K — that's our maximum for this level. Is that something you can work with?"
+
+**The trap**: Accepting immediately because they moved. $175K is still $20K below your anchor.
+
+**Your response:**
+```
+"I appreciate you going to bat for me — $175K is meaningful progress.
+ I understand you may have a band constraint. Can we look at whether
+ there are other levers? For example: a signing bonus, an accelerated
+ first review at 6 months instead of 12, or additional equity?
+ I want to find a package that works for both of us."
+```
+
+**What this accomplishes:**
+- You acknowledge their movement without caving
+- You open other dimensions (equity, signing bonus, timeline) that they may have more flexibility on
+- You keep the conversation collaborative, not adversarial
+
+### Scenario 3: The Internal Promotion Conversation
+
+**Context**: You have been working hard for 18 months and you believe you are performing at the next level. Your manager has not brought up promotion. You need to start that conversation.
+
+**The wrong approach**: "I think I deserve a promotion."
+
+**The right approach — requesting a structured conversation:**
+```
+"I want to talk about my career development. I have been thinking
+ about what the L5 level looks like and whether I am on track for
+ a promotion cycle. Can we schedule 30 minutes to walk through
+ where I stand and what I should focus on?
+
+ I have put together a summary of my contributions over the past
+ 18 months that I would like to share."
+```
+
+**In the meeting:**
+```
+"Here is what I have been working on [walk through top 3-4 brag doc entries].
+ I think these demonstrate [specific competency] and [specific competency].
+
+ Based on what you know about the L5 expectations, where do you see gaps?
+ And what would a realistic timeline look like if I close those gaps?"
+```
+
+**What makes this effective:**
+- You come prepared with evidence (your brag document)
+- You frame it as a partnership (you want to close gaps, not just receive a promotion)
+- You ask for specifics ("realistic timeline" forces a concrete answer, not a vague "maybe next cycle")
+
+### Reflection Questions (5 minutes)
+
+After the role-play exercises:
+
+1. Which scenario was most uncomfortable? Why?
+2. What phrase felt most foreign to say out loud?
+3. What is your actual walk-away number (below which you would decline an offer)? Write it down before your next negotiation.
+4. Who do you know at your target company or compensation level who could give you real data on their package?
 
 ---
 
@@ -412,6 +605,16 @@ You have:
 
 **Next module**: L3-M90 -- The Final Capstone. The last module of the entire course. A retrospective on everything you have learned, a showcase of what you have built, and a plan for what comes next.
 
+---
+
+## Cross-References
+
+- **Chapter 29** (Career Engineering): The full framework for treating your career as a system — metrics, capacity planning, and strategic investment in the areas that compound fastest.
+- **L3-M77** (Architecture Decision Records): The skill of writing clear, structured arguments for technical decisions transfers directly to writing promotion narratives and negotiation cases.
+- **L3-M90** (Final Capstone): Incorporates the brag document and career plan into your end-of-course retrospective.
+
+---
+
 ## Key Terms
 
 | Term | Definition |
@@ -421,3 +624,16 @@ You have:
 | **Staff+ archetype** | A recognized pattern of senior engineering impact such as Tech Lead, Architect, Solver, or Right Hand. |
 | **Negotiation** | The process of discussing and reaching agreement on compensation, role, or scope with an employer. |
 | **Sponsorship** | Active advocacy by a senior leader who creates opportunities and visibility for your career advancement. |
+| **Five-layer deepening** | A method for transforming vague brag document entries into specific, quantified, context-rich narratives. |
+| **Anchor** | In negotiation, the first specific number stated, which disproportionately shapes the final outcome. |
+| **Walk-away number** | Your minimum acceptable outcome in a negotiation, determined before the conversation begins. |
+
+### 🤔 Reflection Prompt
+
+After completing the gap analysis, which weakness surprised you most? Where is the gap between "I understand the concept" and "I could build it under pressure in production"?
+
+---
+
+## What's Next
+
+In **The 100x Engineer Retrospective** (L3-M90), you'll build on what you learned here and take it further.

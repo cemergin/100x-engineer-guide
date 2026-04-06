@@ -26,6 +26,10 @@ This is how bank ledgers work. This is how Git works. This is how Kafka works in
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before reading the implementation, think about TicketPulse's order table. If a support agent asks "what happened between order creation and confirmation," can you answer that today with CRUD? What information is permanently lost on each UPDATE?
+
 ## 1. Events vs State: Two Ways of Thinking
 
 ### Traditional CRUD (State-Based)
@@ -752,6 +756,16 @@ After `forgetUser('u_123')`:
 
 ### Stop and Think (10 minutes)
 
+<details>
+<summary>💡 Hint 1: Evaluate each domain by asking "do I need to answer what happened at 3:47 PM?"</summary>
+If temporal queries and complete audit trails are a legal or business requirement (orders, payments, compliance), event sourcing earns its keep. If the domain is purely CRUD with no audit need (user preferences, session data), the projection and snapshot overhead is not worth it.
+</details>
+
+<details>
+<summary>💡 Hint 2: Consider the snapshot threshold and projection rebuild cost</summary>
+For high-write aggregates (group orders modified dozens of times), you need snapshots every N events to keep load times fast. If an aggregate rarely exceeds 10 events, snapshots are unnecessary overhead. Let the expected event count per aggregate guide your decision.
+</details>
+
 Event sourcing gives you a complete audit trail and temporal queries. But it adds significant complexity: projections, eventual consistency, schema evolution, crypto-shredding. For which TicketPulse domains is it worth it?
 
 **Strong candidates:**
@@ -787,6 +801,10 @@ You have:
 
 **Next module**: L3-M83 — Advanced Kubernetes, where we production-harden TicketPulse's K8s deployment with NetworkPolicies, RBAC, security contexts, and Pod Disruption Budgets.
 
+### 🤔 Reflection Prompt
+
+After building the event-sourced order system, which capability surprised you most -- temporal queries, projection rebuilds, or crypto-shredding for GDPR? Where in TicketPulse would event sourcing add the most value vs where would it add unnecessary complexity?
+
 ## Key Terms
 
 | Term | Definition |
@@ -796,3 +814,8 @@ You have:
 | **Projection** | A read-model derived by replaying events, optimized for specific query patterns. |
 | **Snapshot** | A periodic capture of aggregate state used to avoid replaying the entire event history from the beginning. |
 | **Upcasting** | The process of transforming old event schemas into the current schema during replay to handle schema evolution. |
+---
+
+## What's Next
+
+In **Advanced Kubernetes** (L3-M83), you'll build on what you learned here and take it further.

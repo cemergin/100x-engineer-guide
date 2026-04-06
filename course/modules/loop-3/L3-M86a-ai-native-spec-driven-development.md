@@ -22,9 +22,13 @@ This changes what "engineering skill" means. The bottleneck is no longer typing 
 
 The spec is the product. The code is the artifact.
 
-> 💡 **Insight**: "The best prompt is a spec. The best spec is a prompt. Once you internalize this, the entire AI-assisted development workflow clicks into place."
+> **Pro tip:** "The best prompt is a spec. The best spec is a prompt. Once you internalize this, the entire AI-assisted development workflow clicks into place."
 
 ---
+
+### 🤔 Prediction Prompt
+
+Before reading, think: what is the difference between a spec a human can follow and a spec an AI agent can execute from? What information do you take for granted that an AI would need spelled out?
 
 ## Prereq Check
 
@@ -279,6 +283,9 @@ This is crucial. Without it, the AI agent invents its own patterns. With it, the
 ```markdown
 # Feature Spec: Venue Capacity Tracking
 
+
+> **What did you notice?** Consider how this connects to systems you've worked on. Where have you seen similar patterns — or missed opportunities to apply them?
+
 ## Summary
 Add real-time capacity tracking to venues so the API can report
 available tickets, utilization percentage, and sell-out status.
@@ -474,7 +481,7 @@ BREAKS DOWN:
 
 The pattern: AI agents excel at the *what* when you are precise about it. They struggle with the *why* and the *how much*.
 
-> 💡 **Insight**: "The workflow does not replace engineering judgment. It relocates it. Instead of spending judgment on writing code, you spend it on writing specs and reviewing output. The total judgment required is the same. The total typing required drops dramatically."
+> **Pro tip:** "The workflow does not replace engineering judgment. It relocates it. Instead of spending judgment on writing code, you spend it on writing specs and reviewing output. The total judgment required is the same. The total typing required drops dramatically."
 
 ---
 
@@ -663,6 +670,16 @@ The AI agent does not need to see the RFC for code generation. The RFC is for hu
 
 ## Design Exercise: The Smart Pricing Spec Stack (30 minutes)
 
+<details>
+<summary>💡 Hint 1: Your CLAUDE.md update should include the "prices in cents" constraint</summary>
+If you do not explicitly state that prices are integers in cents (not floats in dollars), the AI will generate floating-point math that introduces rounding errors. Add it to the Code Conventions section alongside your existing naming and error-handling rules.
+</details>
+
+<details>
+<summary>💡 Hint 2: Write the Gherkin scenarios BEFORE the OpenAPI spec</summary>
+The acceptance criteria ("GIVEN event in 45 days, base price 5000 THEN currentPrice 4000, tier early_bird") force you to pin down the exact pricing rules. Once those are concrete, the OpenAPI response schema writes itself. Ambiguity in the Gherkin means ambiguity in the spec.
+</details>
+
 TicketPulse wants to add smart ticket pricing: dynamic prices that adjust based on demand, time to event, artist popularity, and historical sales data. This is a significant feature that touches multiple services.
 
 Your task: write the complete spec stack for this feature.
@@ -825,6 +842,10 @@ Before moving on, confirm you have completed:
 
 ---
 
+### 🤔 Reflection Prompt
+
+After building the spec stack, how did the quality of AI-generated code change when you gave it a CLAUDE.md + OpenAPI + Gherkin spec vs a plain English description? What does this tell you about where to invest your time as an engineer in 2026?
+
 ## Further Reading
 
 - **Chapter 34**: Spec-Driven Development -- RFCs, contract-first APIs, executable specs, and AI-native specification patterns
@@ -834,3 +855,8 @@ Before moving on, confirm you have completed:
 - **AsyncAPI Specification**: asyncapi.com -- the standard for event-driven API specifications
 - **Gherkin Reference**: cucumber.io/docs/gherkin/reference/ -- behavior-driven development scenario syntax
 - **"Specification by Example" by Gojko Adzic**: the book that predicted specs and tests would converge
+---
+
+## What's Next
+
+In **Mobile Backend Patterns** (L3-M87), you'll build on what you learned here and take it further.

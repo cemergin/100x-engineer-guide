@@ -608,6 +608,9 @@ gl    # your alias for git log --oneline --graph --decorate -20
 
 ---
 
+
+> **What did you notice?** Look back at what you just built. What surprised you? What felt harder than expected? That's where the real learning happened.
+
 ## Module Summary
 
 - **ripgrep** (`rg`) replaces `grep` — 5-10x faster, respects `.gitignore`, better output

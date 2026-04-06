@@ -20,6 +20,9 @@ By the end of this module, TicketPulse will have two running services — the or
 
 ---
 
+> **Before you continue:** You have a working monolith with auth, tickets, payments, notifications, search, and analytics. If you had to split it, which piece would you extract first and why? Write down your gut instinct before reading on.
+
+
 ## 0. The Strangler Fig Pattern (5 minutes)
 
 The pattern is simple:
@@ -56,9 +59,27 @@ Martin Fowler named this after the strangler fig tree, which grows around a host
 
 ---
 
+> **Before you continue:** Before reading the analysis, predict which service would be the best first extraction. What criteria would you use to decide? Write down your choice and two reasons.
+
 ## 1. Design: Which Service to Extract First? (10 minutes)
 
 ### 📐 Design Exercise
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Score each candidate (Notifications, Payments, Search) on four axes: coupling to the monolith, blast radius if extraction fails, value of independence, and data ownership clarity. The best first extraction is not always the easiest one.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Notifications is already async via RabbitMQ (lowest coupling), but it teaches you nothing about synchronous communication or failure handling. Payments has a clean data boundary (payments, refunds, ledger_entries) and forces you to solve the hard problems: HTTP client timeouts, idempotency, and network errors.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Choose Payments. It has a clear business justification (PCI-DSS compliance isolation), a clean data boundary, and forces you to deal with synchronous service-to-service calls, which is the hardest part of microservices you will face in every future extraction.
+</details>
+
 
 This is your first real architectural decision in Loop 2. No one is telling you the answer. You need to evaluate options and justify your choice.
 
@@ -102,9 +123,40 @@ Characteristics:
 - Change frequency: MEDIUM
 ```
 
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider which service has the fewest synchronous callers and the cleanest data boundary. Think about what happens if the extraction fails mid-way.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Evaluate each candidate on four axes: coupling to the monolith, blast radius on failure, value of independence, and data separation complexity. Score them.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Notifications is the easiest (already async via RabbitMQ) but teaches you the least. Payments is harder but forces you to solve sync communication, failure handling, and data consistency — the problems you will face in every future extraction.
+</details>
+
 ### 🤔 Pause and Decide
 
 Before reading on, pick one. Write down your choice and two reasons why.
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Consider which service has the fewest synchronous callers -- that is usually the easiest to extract without breaking other services.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Evaluate each candidate on four axes: coupling to the monolith, blast radius if extraction fails, value of independence, and data ownership clarity.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Payments has the highest learning value (synchronous communication, failure handling, data consistency) and a clear business justification (PCI compliance, independent scaling). Notifications is the easiest but teaches the least.
+</details>
 
 ---
 
@@ -130,9 +182,28 @@ We will extract Payments. If you chose Notifications, that is a perfectly valid 
 
 ---
 
+> **Before you continue:** What new failure modes do you think service extraction will introduce? List at least three things that can go wrong now that could not go wrong before.
+
+
 ## 2. Build: The Payments Service (20 minutes)
 
 ### 🛠️ Create the Service Directory
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The Payments service needs its own directory under `services/payment-service/` with its own `package.json`, `tsconfig.json`, and `Dockerfile` -- completely independent from the monolith's build.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Create a standalone Express server on port 3001 with three endpoints: `POST /api/payments` (process), `GET /api/payments/:id` (lookup), and `POST /api/payments/:id/refund`. Use an in-memory Map for storage now; M35 will give it its own database.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+In the monolith, replace the local `processPaymentLocally()` call with an HTTP call to `http://payment-service:3001/api/payments`. Add an nginx `location /api/payments` block that proxies to the new service. The key: the client never sees the change -- same URLs, same response shapes.
+</details>
+
 
 ```bash
 # From the TicketPulse root
@@ -594,6 +665,21 @@ Notice something important: the monolith still calls the payment service directl
 
 ### 🐛 What Happens When the Payment Service Is Down?
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Stop the payment service container and try to purchase a ticket through the gateway. What HTTP status code does the monolith return?
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Check the monolith logs for the error message. The key insight: this failure mode did not exist when payments were in-process.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Add a timeout to the payment client using AbortController with a 5-second limit. This prevents the monolith from waiting forever for a dead service.
+</details>
+
 ```bash
 # Stop the payment service
 docker compose stop payment-service
@@ -613,7 +699,39 @@ monolith | [purchase] Error: Payment service is unavailable
 
 This is a problem you **did not have before.** When payments were part of the monolith, a function call could not fail due to a network error. Now it can.
 
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Stop the payment service container and try to purchase a ticket. What error does the monolith return? This failure mode did not exist when payments were in-process.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Compare the failure modes: connection refused, timeout, network partition, serialization error, version mismatch. None of these existed in the monolith. The fix starts with adding an AbortController timeout.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Use `const controller = new AbortController()` with `setTimeout(() => controller.abort(), 5000)` passed as the `signal` option to `fetch()`. Catch `AbortError` specifically and throw a meaningful timeout error.
+</details>
+
 ### 🐛 What Happens When the Payment Service Is Slow?
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Add `ARTIFICIAL_DELAY: 5000` to the payment service's environment in docker-compose.yml. The monolith's purchase endpoint will now take 5+ seconds because it waits for the payment service to respond.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Without a timeout, a slow payment service cascades: the monolith holds the request open, the client waits, and if enough requests pile up, the monolith's connection pool is exhausted. This is the cascading failure pattern.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Use `const controller = new AbortController()` with `setTimeout(() => controller.abort(), 5000)` passed as the `signal` option to `fetch()`. Catch `AbortError` specifically and throw a meaningful timeout error like "Payment service timed out after 5000ms."
+</details>
+
 
 ```bash
 # Start the payment service again
@@ -792,6 +910,8 @@ Your TicketPulse now has two services. The monolith is slightly smaller. The pay
 
 ---
 
+> **What did you notice?** Compare the monolith logs before and after extraction. How many more things can go wrong now? Was the extraction worth the added complexity for a team your size?
+
 ## 8. Checkpoint
 
 After this module, TicketPulse should have:
@@ -830,6 +950,14 @@ After this module, TicketPulse should have:
 | **API gateway** | A reverse proxy with additional cross-cutting concerns: authentication, rate limiting, logging, request transformation. |
 | **Blast radius** | The scope of impact if something goes wrong. A small blast radius means fewer things break. |
 | **Idempotent** | An operation that produces the same result regardless of how many times it is called. Critical for payment operations. |
+
+---
+
+---
+
+## What's Next
+
+In **Service Communication — REST vs gRPC vs Events** (L2-M32), you'll explore three communication patterns — REST, gRPC, and async events — and benchmark them head-to-head in TicketPulse.
 
 ---
 

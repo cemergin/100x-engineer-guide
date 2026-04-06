@@ -147,7 +147,7 @@ Read EXPLAIN output **bottom-up** (innermost to outermost):
 - The **actual** time in milliseconds. Startup took 0.03ms, full execution took 24.8ms.
 - Compare estimated rows (300) vs actual rows (287) — close enough. If these differ wildly, your statistics are stale (run `ANALYZE`).
 
-### 💡 Insight: Why Seq Scan is Bad at Scale
+> **Pro tip:** Why Seq Scan is Bad at Scale
 
 With 100K rows, reading 834 pages takes ~25ms. That seems fine. But consider:
 - With 10M rows: 83,400 pages = ~650 MB = **2.5 seconds**
@@ -367,6 +367,8 @@ Without the expression index, Postgres cannot use any index because `LOWER()` tr
 
 ## Part 7: Design Optimal Indexes for TicketPulse (5 min)
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Your Turn
 
 TicketPulse runs these 5 queries most frequently. Design the optimal set of indexes. Think about which indexes overlap and which are truly needed.
@@ -376,6 +378,21 @@ TicketPulse runs these 5 queries most frequently. Design the optimal set of inde
 3. **Admin search**: `WHERE event_date BETWEEN ? AND ? AND status = ?` (on events table)
 4. **Revenue report**: `WHERE status = 'sold' GROUP BY event_id` (on tickets table)
 5. **Venue listing**: `WHERE venue_id = ? ORDER BY event_date` (on events table)
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+For query 1, status = 'available' is a constant filter that applies to a subset of rows. That screams partial index: CREATE INDEX ... ON tickets (event_id, price) WHERE status = 'available'. The partial index is smaller and also covers the ORDER BY price since price is the last column.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Apply the composite index rule: equality columns first, range columns last. For query 3 (event_date BETWEEN ? AND ? AND status = ?), status is equality and event_date is range, so the index should be (status, event_date) — not (event_date, status). For query 2, customer_email is equality and ordered_at is range/sort, so (customer_email, ordered_at DESC).
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Check for redundancy. If you have idx_tickets_event_available ON tickets (event_id, price) WHERE status = 'available', you do NOT also need a separate (event_id) index on tickets for the revenue report — but you DO need a separate partial index for query 4: ON tickets (event_id) WHERE status = 'sold'. Two partial indexes serving two different status filters is not redundancy, it is precision.
+</details>
 
 <details>
 <summary>Solution</summary>
@@ -477,6 +494,9 @@ ANALYZE tickets;
 
 ---
 
+
+> **What did you notice?** Look back at what you just built. What surprised you? What felt harder than expected? That's where the real learning happened.
+
 ## 🏁 Module Summary
 
 | Concept | Key Takeaway |
@@ -511,6 +531,200 @@ In **L1-M08: Data Modeling Decisions**, you'll learn when to normalize, when to 
 | **Index scan** | A query execution method that uses an index to locate matching rows without reading the entire table. |
 | **EXPLAIN ANALYZE** | A PostgreSQL command that executes a query and displays the actual execution plan with timing and row counts. |
 | **Query plan** | The step-by-step strategy the database engine chooses to execute a given SQL statement. |
+
+---
+
+## Part 9: Guided Walkthrough — The Slow Report Query (20 min)
+
+Every production database has at least one query that the team is afraid to touch. Usually it is a report query that was "fast enough" when there were 10,000 rows but is now the source of weekly Monday morning pages because it takes 45 seconds against 5 million rows.
+
+Work through this end-to-end diagnosis exercise.
+
+### The Query
+
+TicketPulse's finance team runs a weekly revenue report:
+
+```sql
+-- Run this and time it BEFORE adding any indexes
+\timing on
+
+SELECT
+  e.name                                    AS event_name,
+  e.event_date,
+  v.name                                    AS venue,
+  v.city,
+  COUNT(t.id)                               AS tickets_sold,
+  SUM(t.price)                              AS gross_revenue,
+  AVG(t.price)                              AS avg_ticket_price,
+  COUNT(t.id) FILTER (WHERE t.status = 'cancelled') AS cancellations
+FROM events e
+JOIN venues v  ON e.venue_id = v.id
+JOIN tickets t ON t.event_id = e.id
+WHERE e.event_date >= NOW() - INTERVAL '90 days'
+  AND e.event_date <  NOW()
+  AND t.status != 'reserved'
+GROUP BY e.id, e.name, e.event_date, v.name, v.city
+ORDER BY gross_revenue DESC;
+```
+
+### Step 1: Run EXPLAIN ANALYZE
+
+```sql
+EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT)
+SELECT
+  e.name AS event_name,
+  e.event_date,
+  v.name AS venue,
+  v.city,
+  COUNT(t.id) AS tickets_sold,
+  SUM(t.price) AS gross_revenue,
+  AVG(t.price) AS avg_ticket_price,
+  COUNT(t.id) FILTER (WHERE t.status = 'cancelled') AS cancellations
+FROM events e
+JOIN venues v  ON e.venue_id = v.id
+JOIN tickets t ON t.event_id = e.id
+WHERE e.event_date >= NOW() - INTERVAL '90 days'
+  AND e.event_date <  NOW()
+  AND t.status != 'reserved'
+GROUP BY e.id, e.name, e.event_date, v.name, v.city
+ORDER BY gross_revenue DESC;
+```
+
+Read the output. Find:
+1. Which node in the plan has the highest `actual time`?
+2. Are there any Seq Scans on large tables?
+3. What is the ratio of estimated rows to actual rows? If it's off by 10x, your statistics are stale — run `ANALYZE events; ANALYZE tickets;` and re-run EXPLAIN.
+
+### Step 2: Identify the Bottleneck
+
+Expected findings for this query on the 100K ticket dataset:
+
+```
+Hash Aggregate  (cost=15200..15400 rows=50 width=72)
+                (actual time=580..585 rows=6 loops=1)
+  ->  Hash Join  (cost=450..14800 rows=80000 width=48)
+                 (actual time=45..570 rows=80000 loops=1)
+       Hash Cond: (t.event_id = e.id)
+       ->  Seq Scan on tickets t  (cost=0..2100 rows=80000 width=24)
+                                  (actual time=0.05..35 rows=80000 loops=1)
+             Filter: (status <> 'reserved')
+             Rows Removed by Filter: 20000
+       ->  Hash  (cost=420..420 rows=24 width=36)
+                 (actual time=44..44 rows=6 loops=1)
+             Buckets: 1024  Batches: 1  Memory Usage: 9kB
+             ->  Hash Join  (cost=200..420 rows=24 width=36)
+                            (actual time=43..44 rows=6 loops=1)
+                   Hash Cond: (e.venue_id = v.id)
+                   ->  Index Scan using idx_events_date on events
+                       (actual time=0.1..0.2 rows=6 loops=1)
+                       Index Cond: (event_date >= ... AND event_date < ...)
+```
+
+**Reading this**:
+- `events` is using an index scan (fast) — the `event_date` filter is working.
+- `tickets` is doing a Seq Scan — reading all 100K tickets to find the 80K that match.
+- The slow node is the Seq Scan on tickets, taking 35ms for this dataset. At 5M rows, this is where you get 1,750ms just for the scan.
+
+### Step 3: Design the Fix
+
+The tickets Seq Scan is caused by filtering on `status != 'reserved'`. You need an index that helps PostgreSQL find tickets for specific events while filtering status.
+
+Design the index before reading the solution:
+
+```
+Query pattern: WHERE t.event_id = <values from JOIN> AND t.status != 'reserved'
+```
+
+<details>
+<summary>Solution</summary>
+
+```sql
+-- Index for the JOIN condition (event_id) + status filter
+CREATE INDEX idx_tickets_event_status ON tickets (event_id, status)
+  INCLUDE (price);  -- Include price for covering index scan (no heap access for price)
+
+-- This index lets Postgres:
+-- 1. For each event_id from the JOIN, jump directly to that event's tickets
+-- 2. Skip the WHERE status != 'reserved' by range-scanning the status column
+-- 3. Read price from the index itself (INCLUDE) — no heap access needed
+```
+
+After creating the index, re-run EXPLAIN. You should see the Seq Scan replaced with an Index Scan on `idx_tickets_event_status`.
+
+</details>
+
+### Step 4: Verify and Measure
+
+```sql
+-- After creating the index
+EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT)
+SELECT /* same query as above */ ...;
+
+-- Compare:
+-- Before: Seq Scan on tickets, actual time = 35ms (scales to 1,750ms at 5M rows)
+-- After:  Index Scan on tickets, actual time = 2ms  (scales to 100ms at 5M rows)
+```
+
+Record the improvement ratio. This is the kind of result you present in a post-mortem: "We reduced the Monday revenue report from 45 seconds to 2.3 seconds by adding a composite index with covering columns."
+
+### Step 5: Think About the Write Penalty
+
+This index adds a cost to every `INSERT` into tickets and every `UPDATE` that changes `event_id`, `status`, or `price`. 
+
+Calculate: TicketPulse processes 500 ticket purchases per hour at peak. Each purchase writes 1-8 ticket rows. That is 500-4,000 index maintenance operations per hour. At ~0.1ms per index maintenance, that is 50-400ms per hour of overhead spread across all writes — completely invisible.
+
+The write penalty becomes significant when you have many indexes AND very high write throughput (millions of rows per minute). For TicketPulse's scale, the read improvement vastly outweighs the write cost.
+
+---
+
+## Part 10: Reflection — The Index Design Interview (10 min)
+
+Index design is a common topic in backend engineering interviews. Work through these questions:
+
+### Question 1: The OR Query
+
+```sql
+SELECT * FROM tickets
+WHERE event_id = 1 OR status = 'cancelled';
+```
+
+You have an index on `(event_id, status)`. Does this query use the index? Why or why not?
+
+> **Guided answer**: The `OR` condition is the problem. PostgreSQL cannot use the composite index for both sides of an OR simultaneously. It might:
+> - Use the index for `event_id = 1` and do a bitmap heap scan
+> - Do a separate index scan for `status = 'cancelled'` (if a single-column index exists)
+> - Combine both with a bitmap OR operation
+> - Fall back to a Seq Scan if it estimates a Seq Scan is cheaper (e.g., if both conditions match many rows)
+> 
+> Run EXPLAIN and see what PostgreSQL actually chooses. If the query is slow and frequently used, consider two separate indexes: `(event_id)` and `(status)`.
+
+### Question 2: The Null Problem
+
+```sql
+SELECT * FROM orders WHERE completed_at IS NULL;
+```
+
+You add an index on `(completed_at)`. Does it help?
+
+> **Guided answer**: B-tree indexes store NULL values. An index on `(completed_at)` will be used for `IS NULL` queries in PostgreSQL (unlike some other databases). However, if 95% of orders have `completed_at IS NULL` (pending orders), the index is nearly useless — the planner will do a Seq Scan because it expects to touch 95% of the table anyway.
+> 
+> The right index for "find all pending orders": `CREATE INDEX idx_orders_pending ON orders (created_at) WHERE completed_at IS NULL;` — a partial index that only indexes the rows you actually query.
+
+### Question 3: The Sort Without an Index
+
+```sql
+SELECT * FROM events ORDER BY event_date DESC LIMIT 20;
+```
+
+Without any index on `event_date`, this requires a sequential scan + sort. How does PostgreSQL handle the sort for 100K rows? What changes if you add an index?
+
+> **Guided answer**: Without an index, PostgreSQL reads all 100K rows, sorts them in memory (or on disk if the sort exceeds `work_mem`), and returns the top 20. With an index on `(event_date DESC)`, PostgreSQL walks the index backwards, reads exactly 20 rows from the heap, and returns them in order — no sort needed. The LIMIT makes this even more dramatic: instead of processing 100K rows, you read 20 index entries and 20 heap pages. EXPLAIN output will show `Index Scan Backward using idx_events_date on events` with no Sort node.
+
+---
+
+> **Want the deep theory?** See Ch 2 and Ch 24 of the 100x Engineer Guide: "Database Internals" and "Query Optimization Masterclass" — covers B-tree algorithms, query planning statistics, and advanced index strategies including GIN/GiST for full-text and geospatial queries.
+
+---
 
 ## 📚 Further Reading
 - [Use The Index, Luke](https://use-the-index-luke.com/) — The best free resource on SQL indexing

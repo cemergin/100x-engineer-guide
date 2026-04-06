@@ -32,7 +32,21 @@ This module covers how to add GraphQL to TicketPulse correctly.
 
 GraphQL is schema-first. The schema defines every type, query, mutation, and subscription your API supports. It is the contract between backend and frontend.
 
+### 🤔 Prediction Prompt
+
+Before reading the reference schema, sketch your own GraphQL types for TicketPulse. What would the Event type look like? What mutations does the purchase flow need? Where would you use subscriptions?
+
 ### Design: TicketPulse GraphQL Schema
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered naming mutations after domain actions (`purchaseTicket`) rather than CRUD operations (`createOrder`)? The schema should speak the business language. Also decide your non-null strategy upfront -- making a nullable field non-null later is safe, the reverse is a breaking change.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Core types: Event, Venue, TicketType, Order, Ticket, User. Use Relay-style connections (`EventConnection` with `edges`, `pageInfo`, `totalCount`) for any list that needs pagination. Include an `idempotencyKey` field in `PurchaseTicketInput` -- GraphQL mutations need idempotency just like REST endpoints.
+</details>
 
 Stop and design the schema yourself first. What types does TicketPulse need? What queries? What mutations?
 
@@ -322,6 +336,16 @@ SELECT * FROM venues WHERE id = 'v1';  -- duplicate! Same venue as event 1
 That is 21 queries. DataLoader batches and deduplicates them into 2.
 
 ### Build: DataLoaders for TicketPulse
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered that without DataLoader, a `events(first: 20)` query with venue resolution fires 21 SQL queries (1 + N)? DataLoader batches those 20 venue lookups into a single `WHERE id IN (...)` query. This is not an optimization -- it is a requirement for a usable GraphQL API.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+The critical contract: DataLoader's batch function must return results in the same order as the input IDs. Use `inputIds.map(id => results.find(r => r.id === id))`. Create fresh loaders per request (`createLoaders()` in context) -- sharing loaders across requests leaks data between users.
+</details>
 
 ```javascript
 function createLoaders() {
@@ -703,6 +727,9 @@ Before moving on, verify:
 
 ---
 
+
+> **What did you notice?** Consider how this connects to systems you've worked on. Where have you seen similar patterns — or missed opportunities to apply them?
+
 ## Summary
 
 GraphQL gives TicketPulse's clients the power to request exactly what they need. The mobile app gets a minimal event list in one query. The web app gets a rich event detail page in one query. Both use the same endpoint.
@@ -710,6 +737,10 @@ GraphQL gives TicketPulse's clients the power to request exactly what they need.
 The cost of this flexibility: you must solve the N+1 problem (DataLoader), implement pagination properly (Relay connections), and secure against malicious queries (depth limiting, complexity analysis). These are not optional. Without them, a GraphQL API is slower and less secure than the REST API it replaced.
 
 The pragmatic approach: GraphQL for client-facing queries where flexibility drives developer velocity. REST for webhooks, internal services, and public APIs where simplicity and cacheability matter more. They are complementary tools, not competitors.
+
+### 🤔 Reflection Prompt
+
+Has this module changed your opinion on when GraphQL is worth the complexity? What is the threshold in your own projects where the REST "add another endpoint" pattern breaks down?
 
 ## Key Terms
 
@@ -721,3 +752,9 @@ The pragmatic approach: GraphQL for client-facing queries where flexibility driv
 | **DataLoader** | A utility that batches and caches data-fetching calls within a single GraphQL request to prevent N+1 queries. |
 | **Subscription** | A GraphQL operation that maintains a real-time connection and pushes updates to the client when data changes. |
 | **Federation** | An architecture that composes multiple GraphQL services into a single unified API graph. |
+
+---
+
+## What's Next
+
+Next up: **[L3-M73: Incident Response Simulation](L3-M73-incident-response-simulation.md)** -- you will run a full incident response drill, from the first alert to the blameless postmortem, practicing the skills that separate a 15-minute incident from a 4-hour one.

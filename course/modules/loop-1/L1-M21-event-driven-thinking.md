@@ -177,7 +177,25 @@ Purchase Flow                    Event Bus                    Listeners
 └──────────────┘  listeners)
 ```
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: The Event Emitter
+
+<details>
+<summary>💡 Hint 1: Two registration methods — onSync and onAsync</summary>
+Use two separate Maps: `handlers` (sync) and `asyncHandlers` (async). Sync handlers are awaited one by one inside `emit()`. Async handlers are fired with `.catch()` error logging but are NOT awaited — the emit returns immediately after sync handlers finish.
+</details>
+
+<details>
+<summary>💡 Hint 2: Async handlers must never crash the caller</summary>
+Wrap each async handler call in `.catch(err => console.error(...))`. If the analytics listener throws, the purchase still succeeds. The key pattern: `handler(payload).catch(err => { /* log, do not rethrow */ })`.
+</details>
+
+<details>
+<summary>💡 Hint 3: Use a singleton EventBus instance</summary>
+Export a single `eventBus` instance from the module. Register listeners at startup (in a `listeners.ts` file). The purchase endpoint calls `await eventBus.emit('TicketPurchased', payload)` — sync handlers run, then the response is sent while async handlers continue in the background.
+</details>
+
 
 ```typescript
 // src/events/eventBus.ts
@@ -447,6 +465,22 @@ real    0m0.250s
 
 ### 🐛 Debug: Simulate a Listener Failure
 
+<details>
+<summary>💡 Hint 1: Add a listener that always throws</summary>
+Register an async handler for `TicketPurchased` that throws `new Error('Analytics service is down!')`. Then buy a ticket and watch what happens — the purchase should still succeed and return 201.
+</details>
+
+<details>
+<summary>💡 Hint 2: Check the server logs for the caught error</summary>
+Your EventBus `.catch()` handler should log `[event-bus] Async handler failed for TicketPurchased: Analytics service is down!`. If you see this in the logs AND the purchase response was 201, your error isolation is working correctly.
+</details>
+
+<details>
+<summary>💡 Hint 3: Understand the trade-off — the event is lost</summary>
+The failing listener's event was not retried or persisted. If the analytics service comes back in 5 minutes, it missed this purchase entirely. This is the limitation of in-process event emitters — events live in memory only. This is exactly why M22 introduces RabbitMQ.
+</details>
+
+
 Add a failing listener:
 
 ```typescript
@@ -482,7 +516,7 @@ But there is a problem: **the analytics event was lost.** Nobody will retry it. 
 
 This is the limitation of an in-process event emitter. Events live in memory. If a listener fails, the event is gone. If the process crashes, all pending async work is lost.
 
-### 💡 Insight: This Is Why Message Queues Exist
+> **Pro tip:** This Is Why Message Queues Exist
 
 An in-process event emitter is a stepping stone. It decouples the code, but it does not decouple the process. For real durability:
 - Events should be persisted (so they survive process crashes)
@@ -601,3 +635,8 @@ After this module, TicketPulse should have:
 - Chapter 3 of the 100x Engineer Guide: Section 5 (Event-Driven Patterns)
 - Node.js built-in `EventEmitter` documentation (our EventBus is a simplified version of this pattern)
 - Udi Dahan, [Domain Events Salvation](https://udidahan.com/2009/06/14/domain-events-salvation/) — The original blog post on domain events
+---
+
+## What's Next
+
+In **Introduction to Message Queues** (L1-M22), you'll build on what you learned here and take it further.

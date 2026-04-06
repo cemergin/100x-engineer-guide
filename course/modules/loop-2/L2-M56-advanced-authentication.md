@@ -365,7 +365,25 @@ res.redirect('/dashboard');
 
 ## Part 3: Build It
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Implement the Full OAuth2 Flow
+
+<details>
+<summary>💡 Hint 1</summary>
+The PKCE flow has two parts: before the redirect, generate a `code_verifier` (random 32 bytes, base64url-encoded) and compute `code_challenge = SHA256(code_verifier)` (also base64url-encoded). Store the `code_verifier` in the server-side session -- it must survive the redirect round-trip to Google and back.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+In the callback handler, exchange the authorization code by POSTing to `https://oauth2.googleapis.com/token` with `grant_type=authorization_code`, the `code` from the query string, and the `code_verifier` from the session. Google verifies that `SHA256(code_verifier) === code_challenge` from step 1 -- this is how PKCE prevents authorization code interception by a malicious app on the same device.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Validate the `id_token` JWT by fetching Google's public keys from `https://www.googleapis.com/oauth2/v3/certs` (JWKS endpoint). Verify the `iss` is `accounts.google.com`, the `aud` matches your `GOOGLE_CLIENT_ID`, and `exp` is in the future. Store your own session JWT in an `httpOnly; Secure; SameSite=Lax` cookie -- never in `localStorage` where XSS can steal it.
+</details>
+
 
 If you do not want to set up real Google credentials (requires a Google Cloud project), use a mock OAuth provider. Here is a minimal one:
 
@@ -490,6 +508,22 @@ if (process.env.NODE_ENV === 'development') {
 2. Add the `/auth/google/callback` route that exchanges the code and creates the user
 3. Test with the mock provider (or real Google if you set up credentials)
 4. Verify the user appears in the database with `authProvider: 'google'`
+
+
+<details>
+<summary>💡 Hint 1</summary>
+Create `GET /auth/google` that generates a random `state` parameter (16 bytes hex), stores it in `req.session.oauthState`, and redirects to `https://accounts.google.com/o/oauth2/v2/auth` with query params: `client_id`, `redirect_uri`, `response_type=code`, `scope=openid email profile`, `state`, `code_challenge`, `code_challenge_method=S256`.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+In `GET /auth/google/callback`, first verify `req.query.state === req.session.oauthState` to prevent CSRF. Then POST to `https://oauth2.googleapis.com/token` with `Content-Type: application/x-www-form-urlencoded` body containing `grant_type=authorization_code`, the `code` from the query, your `client_id`, `client_secret`, `redirect_uri`, and the `code_verifier` from the session.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+After receiving tokens, decode the `id_token` JWT to get `sub` (Google user ID -- stable and unique), `email`, `name`, and `picture`. Upsert the user: `INSERT INTO users (google_id, email, name) VALUES ($1, $2, $3) ON CONFLICT (google_id) DO UPDATE SET email = $2, name = $3 RETURNING id`. Issue your own TicketPulse JWT with the user's internal ID and set it in an httpOnly cookie.
+</details>
 
 ### 🔍 Try It: Walk Through Each Redirect
 
@@ -692,6 +726,22 @@ router.post('/auth/refresh', async (req, res) => {
 
 ### 🛠️ Build: The Complete Auth Module
 
+<details>
+<summary>💡 Hint 1</summary>
+The complete auth module needs three grant types: (1) Authorization Code + PKCE for user login via Google, (2) client_credentials for service-to-service calls (purchase-service calling event-service), and (3) refresh_token for renewing expired access tokens without re-login. Each grant type uses a different token endpoint payload.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+For client_credentials (service-to-service), POST to the token endpoint with `grant_type=client_credentials`, `client_id`, and `client_secret`. The response has no `id_token` or `refresh_token` -- just an `access_token` with a short TTL. Store the service credentials in environment variables (or Kubernetes secrets), not in the codebase.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Add the database migration for OAuth support: `ALTER TABLE users ADD COLUMN auth_provider VARCHAR(20) DEFAULT 'local', ADD COLUMN google_id VARCHAR(255) UNIQUE`. Create an index on `google_id` for fast lookup during login. Handle the edge case where a user registered with email/password and later tries "Login with Google" using the same email -- link the accounts by matching on `email` and setting `google_id`.
+</details>
+
+
 Add a database migration for OAuth support:
 
 ```sql
@@ -758,6 +808,8 @@ Answer these questions in your engineering journal:
 
 ---
 
+> **What did you notice?** OAuth2 adds significant complexity but removes the burden of password management from your application. For TicketPulse, was the trade-off worth it? When would you stick with simple JWT auth?
+
 ## Checkpoint
 
 Before moving on, verify:
@@ -782,6 +834,14 @@ Before moving on, verify:
 | **Authorization code** | A short-lived code exchanged for tokens during the OAuth 2.0 authorization code flow. |
 | **Access token** | A credential that grants the bearer permission to access specific resources on behalf of a user. |
 | **ID token** | A JWT issued by an OIDC provider that contains claims about the authenticated user's identity. |
+
+---
+
+## What's Next
+
+In **TLS & Encryption Deep Dive** (L2-M57), you'll understand the cryptography that secures every HTTPS connection and implement end-to-end encryption in TicketPulse.
+
+---
 
 ## Further Reading
 

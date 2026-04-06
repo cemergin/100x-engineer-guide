@@ -17,11 +17,15 @@ System design interviews are the highest-signal interview format for senior engi
 
 The three systems in this module exercise different muscles: URL Shortener tests data modeling and scaling, Chat System tests real-time communication and ordering guarantees, Notification Service tests multi-channel delivery and reliability. Together, they cover the patterns you will encounter in 80% of system design interviews.
 
-> 💡 **Insight**: "The best system design answers are not the most complex. They are the most clearly reasoned. An interviewer would rather hear 'I am choosing PostgreSQL because the access pattern is read-heavy with complex joins, and I am accepting the scaling limitation because our estimated QPS fits on a single primary with read replicas' than hear 'Let me use Cassandra, DynamoDB, and Redis for different parts of the system.'"
+> **Pro tip:** The best system design answers are not the most complex. They are the most clearly reasoned. An interviewer would rather hear "I am choosing PostgreSQL because the access pattern is read-heavy with complex joins, and I am accepting the scaling limitation because our estimated QPS fits on a single primary with read replicas" than hear "Let me use Cassandra, DynamoDB, and Redis for different parts of the system."
 
 ---
 
 ## The Framework (Review)
+
+### 🤔 Prediction Prompt
+
+Before working through the three design problems, think: which system design pattern (queues, caching, database choice, or scaling) do you reach for first by default? Being aware of your instincts helps you catch when you are pattern-matching instead of reasoning.
 
 Every design follows 7 steps. Time-box each one.
 
@@ -679,3 +683,8 @@ SYSTEM DESIGN INTERVIEW DON'Ts
 - **"System Design Interview" by Alex Xu**: the most comprehensive interview prep book
 - **"Designing Data-Intensive Applications" by Martin Kleppmann**: the theory behind the patterns
 - **highscalability.com**: real architecture breakdowns from companies like Instagram, Uber, Netflix
+---
+
+## What's Next
+
+In **Architecture Decision Records** (L3-M77), you'll build on what you learned here and take it further.

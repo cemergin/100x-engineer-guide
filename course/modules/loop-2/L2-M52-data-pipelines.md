@@ -4,6 +4,8 @@
 >
 > **Source:** Chapters 3, 22, 25, 32, 13 of the 100x Engineer Guide
 
+> **Before you continue:** TicketPulse stores ticket sales in Postgres, search data in Elasticsearch, and events in Kafka. The analytics team wants all of this in a data warehouse for reporting. How would you move data from multiple operational systems into a single analytics store reliably?
+
 ---
 
 ## The Goal
@@ -540,6 +542,69 @@ SELECT * FROM daily_revenue ORDER BY day DESC LIMIT 7;
 
 ---
 
+> **What did you notice?** Building a data pipeline requires thinking about idempotency, exactly-once semantics, and backfill strategies. How does this compare to the "just write a SQL query" approach from M39?
+
+## Exercises
+
+### 🛠️ Build: Add a Backfill Pipeline
+
+The CDC consumer has been running for a week, but it missed the first 3 months of historical orders (from before Debezium was set up). Build a batch ETL job that backfills the `order_facts` table from the production database.
+
+<details>
+<summary>💡 Hint 1</summary>
+This is an ELT pattern (Extract-Load-Transform): extract raw rows from the source Postgres, load them into the analytics DB, then transform with SQL. Use a simple `SELECT * FROM orders WHERE created_at < '2026-01-15'` (the date Debezium started) with `COPY TO` / `COPY FROM` for efficient bulk transfer rather than row-by-row INSERTs.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+The key difference between ETL and ELT: in ETL, you transform in-flight (the CDC consumer denormalizes as it writes). In ELT, you load raw data first, then run a SQL `INSERT INTO order_facts SELECT ... FROM raw_orders JOIN raw_events ... JOIN raw_users ...` to denormalize in the analytics DB. ELT is better for backfills because you can re-run the transform step without re-extracting.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Make the backfill idempotent with `ON CONFLICT (order_id) DO UPDATE SET ...`. Run it in batches of 10,000 rows using `WHERE id > $last_processed_id ORDER BY id LIMIT 10000` to avoid holding a single long transaction. Monitor the analytics DB's CPU and connection count during the backfill -- throttle with a `pg_sleep(0.1)` between batches if load spikes.
+</details>
+
+### 🐛 Debug: Missing Events in the Analytics DB
+
+The `daily_revenue` materialized view shows $0 for yesterday, but the production database has 200 orders. The CDC consumer is running with lag = 0.
+
+<details>
+<summary>💡 Hint 1</summary>
+Lag = 0 means the consumer is caught up, but it does not mean it processed messages correctly. Check the consumer logs for `handleOrderChange` errors -- a common cause is a schema change in the source table (e.g., a new column added to `orders`) that causes the Debezium change event to have an unexpected shape, and the consumer silently skips it.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Query `order_facts` directly: `SELECT COUNT(*) FROM order_facts WHERE ordered_at >= CURRENT_DATE - INTERVAL '1 day'`. If this returns 0 but `daily_revenue` also returns 0, the problem is in the consumer. If `order_facts` has rows but `daily_revenue` does not, the materialized view has not been refreshed -- run `REFRESH MATERIALIZED VIEW CONCURRENTLY daily_revenue` and check if the cron job is failing.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Check the Debezium connector status: `curl http://localhost:8083/connectors/ticketpulse-connector/status | jq .`. If the connector's task state is `FAILED`, it stopped reading the WAL. Common cause: the replication slot was dropped or the Postgres server restarted and the slot was not recreated. Restart the connector task with `POST /connectors/ticketpulse-connector/tasks/0/restart`.
+</details>
+
+### 📐 Design: ETL vs ELT for TicketPulse Analytics
+
+The data team wants to add user cohort analysis (group users by signup month, track purchasing behavior over time). Should this use the existing CDC stream (ETL) or a batch ELT job that runs nightly?
+
+<details>
+<summary>💡 Hint 1</summary>
+Cohort analysis aggregates data across months of history -- it does not need real-time freshness. A nightly batch job that queries the analytics DB (already populated by CDC) is simpler and cheaper than adding a new real-time consumer. The CDC stream feeds `order_facts`; the cohort analysis is a downstream transformation of `order_facts`.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+ELT is the right pattern here: the data is already loaded (by CDC into `order_facts`), so the Transform step is a SQL query: `SELECT date_trunc('month', u.created_at) AS cohort, date_trunc('month', o.ordered_at) AS activity_month, COUNT(DISTINCT o.user_id), SUM(o.total_cents) FROM order_facts o JOIN users u ON o.user_id = u.id GROUP BY 1, 2`. Materialize this as a view refreshed by the same hourly cron job that refreshes `daily_revenue`.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+The decision framework: use streaming (ETL) when freshness matters (live availability, real-time dashboards during a ticket rush). Use batch (ELT) when freshness is hours or days (reports, cohort analysis, ML training data). Cohort analysis looks at months of data -- a nightly refresh is more than sufficient, and it avoids adding Kafka consumer complexity.
+</details>
+
+---
+
 ## Checkpoint
 
 Before continuing, verify:
@@ -575,6 +640,14 @@ The same principle applies at TicketPulse's scale. Without CDC, adding analytics
 | **ETL** | Extract, Transform, Load; a traditional data integration pattern that moves data between systems. |
 | **Stream processing** | The continuous, real-time processing of data records as they arrive, rather than in batches. |
 | **Connector** | A component that integrates an external system (database, API, file) with a data pipeline or event platform. |
+
+---
+
+## What's Next
+
+In **Feature Flags** (L2-M53), you'll ship code to production without releasing it to users — and control rollouts with fine-grained targeting.
+
+---
 
 ## Further Reading
 

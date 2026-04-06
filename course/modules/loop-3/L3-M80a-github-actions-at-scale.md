@@ -20,9 +20,13 @@ Last week, someone updated the Docker build step in the order-service workflow b
 
 This is what happens when CI/CD does not scale with the platform. The workflow files that were "good enough" at 3 services become a liability at 12. The GitHub-hosted runners that were fast enough at 50 builds/day are now queuing at 300 builds/day. The manual deployment approvals that one person handled are now a bottleneck across 3 time zones.
 
-> 💡 **Insight**: "Shopify has 400+ engineers committing to a monorepo with 40,000+ CI minutes per day. Their investment in custom actions, self-hosted runners, and CI observability is what makes that possible. You do not need to be Shopify to feel the pain -- it starts around 10 services and 100 builds/day."
+> **Pro tip:** "Shopify has 400+ engineers committing to a monorepo with 40,000+ CI minutes per day. Their investment in custom actions, self-hosted runners, and CI observability is what makes that possible. You do not need to be Shopify to feel the pain -- it starts around 10 services and 100 builds/day."
 
 ---
+
+### 🤔 Prediction Prompt
+
+Before reading further, think about what happens when your team has 12 services each with their own CI workflow file. Where do you expect the drift, duplication, and operational pain to concentrate?
 
 ## Prereq Check
 
@@ -1174,6 +1178,10 @@ Total: commit → all regions: ~60-90 min
 | **Reusable workflow** | A workflow defined with `workflow_call` that can be invoked from other workflows, even across repositories. |
 | **DORA metrics** | Four metrics (deployment frequency, lead time, change failure rate, MTTR) that measure software delivery performance. |
 
+### 🤔 Reflection Prompt
+
+After building reusable actions and cross-repo workflows, what was the biggest time savings you identified? How does centralizing CI/CD logic change the operational burden as you add new services?
+
 ## Further Reading
 
 - **Chapter 33**: CI/CD at Scale -- the full theoretical foundation for this module
@@ -1183,3 +1191,8 @@ Total: commit → all regions: ~60-90 min
 - **"Accelerate" by Nicole Forsgren, Jez Humble, Gene Kim**: the research behind DORA metrics and high-performing teams
 - **GitHub Blog: "How we use GitHub Actions at GitHub"**: engineering.github.com -- lessons from running Actions at massive scale
 - **Shopify Engineering: "CI at Scale"**: how Shopify manages 40,000+ CI minutes/day with custom tooling
+---
+
+## What's Next
+
+In **Durable Execution** (L3-M81), you'll build on what you learned here and take it further.

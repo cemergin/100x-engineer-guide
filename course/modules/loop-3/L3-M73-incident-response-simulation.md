@@ -18,7 +18,9 @@ You will be on-call. You will get paged at the worst possible time. The differen
 
 TicketPulse is a global ticketing platform. When purchases fail, users lose access to events they care about. Every minute of downtime is real money and real trust. This module simulates that pressure so your first real incident is not your first time practicing the response.
 
-> 💡 **Insight**: "Google's SRE teams run Disaster Recovery Testing (DiRT) exercises annually. They intentionally break production systems to practice their response. The chaos is planned; the learning is real."
+**From the guide:** Chapter 26 tells the story of the Cloudflare regex that took down 10% of the internet in 2019. A single WAF rule deployed to every edge server simultaneously — no canary, no CPU isolation, no rollback path that wasn't itself degraded. The whole incident lasted 27 minutes. What's striking in the postmortem isn't the technical failure; it's the response friction. Engineers were trying to diagnose a fire using tools that were being consumed by the same fire. The incident you're about to run has that same shape: your Kafka consumer lag is building, your purchase success rate is at 85%, and the Grafana dashboard you'd normally reach for is throwing 502s because the service backing it is overloaded. Remember the Cloudflare story as you work through this — the parallels are not accidental. And remember Knight Capital: a $440 million loss in 45 minutes because nobody had a kill switch and nobody had practiced using it. You'll have both today.
+
+> **The bigger picture:** Google's SRE teams run Disaster Recovery Testing (DiRT) exercises annually. They intentionally break production systems to practice their response. The chaos is planned; the learning is real.
 
 ---
 
@@ -78,7 +80,21 @@ Alert 3: Kafka consumer lag at 45,000
 └── Something downstream of order creation is backed up
 ```
 
+### 🤔 Prediction Prompt
+
+Before investigating, form a hypothesis: given the symptoms (purchase success rate at 85%, Kafka consumer lag building, order service latency high), what is the most likely root cause category -- a bad deploy, a traffic spike, or an external dependency failure?
+
 ### 📐 Design: Your Detection Checklist
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Start with the timeline. What changed around 3:55 PM? Correlate the symptom onset with deployments, traffic patterns, and external dependency health.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Check the deploy log first. If nothing deployed at 3:55 PM, look at traffic graphs. If traffic is normal, check external dependencies (database, Kafka, payment provider). The answer is usually in the correlation between timing and changes.
+</details>
 
 Before opening any dashboard, write down what you know and what you need to find out.
 
@@ -96,7 +112,20 @@ UNKNOWN:
 - Where in the purchase flow is the failure occurring?
 ```
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: First Grafana Investigation
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Correlate the symptom onset time (3:55 PM) against the deployment log, traffic graphs, and external dependency health checks -- the answer is almost always in the timing.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Check the deploy log first. A deployment 7 minutes before impact is never a coincidence. If nothing deployed, check traffic spikes, then external dependencies (database, Kafka, payment provider).
+</details>
+
 
 Open the purchase success rate dashboard. You see:
 
@@ -198,6 +227,17 @@ SEV-4: Cosmetic or low-impact issue
 **Declare SEV-2.** Not all purchases are failing, but 15% failure rate with revenue impact and public visibility (Twitter) qualifies.
 
 ### 🛠️ Build: First Status Page Update
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+As Communications Lead, your job is to acknowledge the user-visible symptoms without speculating about cause. Describe what users experience, not your internal architecture.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Three elements: (1) acknowledge the problem exists, (2) describe the user-facing symptom in plain language, (3) set an expectation for the next update. Do NOT mention gRPC endpoints or Kafka consumer lag.
+</details>
+
 
 Write this NOW. Do not wait until you know the root cause.
 
@@ -318,6 +358,17 @@ ROOT CAUSE: Missing index on transactions table
 
 ### 🛠️ Build: The Investigation Timeline
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The Incident Commander owns the timeline, not the investigation. Write timestamps as you go -- this artifact becomes the backbone of the blameless postmortem.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Start from the deployment timestamp (3:48 PM) and fill in every state change: when the migration failed, when slow queries appeared, when connection pools saturated, when alerts fired. Gaps in the timeline are gaps in your understanding.
+</details>
+
+
 Write the timeline as you go. This becomes part of the postmortem.
 
 ```
@@ -379,6 +430,17 @@ Option D: Rollback + apply index in parallel
 
 ### 📐 Design: Choose Your Mitigation
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The IC's job is to stop the bleeding first, fix root cause second. Ask: which option restores service fastest with the lowest risk of making things worse?
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Rollback and index creation are independent actions -- you can run them in parallel. Rollback gives immediate relief (3-5 min), while CREATE INDEX CONCURRENTLY runs in the background without blocking reads.
+</details>
+
+
 **The right answer is D: rollback immediately, apply index concurrently.**
 
 Reasoning:
@@ -400,6 +462,17 @@ SQL
 ```
 
 ### 🛠️ Build: Status Page Updates During Mitigation
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Each update should advance the status (Investigating -> Identified -> Mitigating -> Resolved) and set the expectation for the next update. Users need a timeline, not technical details.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+The "Identified" update names the cause at a user-relevant level ("a database performance issue") and gives an ETA. The "Mitigating" update confirms the fix is in progress and tells users what to do ("retry your purchase").
+</details>
+
 
 **Update 2: Identified**
 
@@ -482,6 +555,17 @@ Beyond the status page, you need to communicate internally.
 
 ### 🛠️ Build: Resolution Status Page Update
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The resolution update is the one users screenshot and share. It should answer: what happened, who was affected, what to do now, and that you are preventing recurrence.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Include the impact window (3:55-4:25 PM), the user-facing symptom (purchase failures), the reassurance (no duplicate charges), and the action for affected users (retry now). Keep it under 100 words.
+</details>
+
+
 ```markdown
 ## Purchase Failures - Resolved
 **Status: Resolved**
@@ -559,6 +643,17 @@ DEPLOY CHECKLIST (before re-deploy)
 
 ### 🛠️ Build: The Blameless Postmortem
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Use the blameless postmortem template: Summary, Impact, Timeline, Root Cause, Contributing Factors, What Went Well, What Went Wrong, Action Items. Every contributing factor maps to a systemic fix, never to a person.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+For each "What Went Wrong" item, ask "Why did the system allow this?" -- not "Who should have caught this?" Action items must be concrete ("Make migration failures block deployments"), have an owner, a priority, and a due date. "Be more careful" is never an action item.
+</details>
+
+
 Write the complete postmortem document. This is the most important artifact from the incident.
 
 ```markdown
@@ -569,6 +664,9 @@ Write the complete postmortem document. This is the most important artifact from
 **Severity:** SEV-2
 **Author:** [Your name]
 **Status:** Action items in progress
+
+
+> **What did you notice?** Consider how this connects to systems you've worked on. Where have you seen similar patterns — or missed opportunities to apply them?
 
 ## Summary
 
@@ -747,6 +845,10 @@ Total                  75 min
 
 5. **Would you have handled this differently if it were 2 AM instead of 4 PM Friday?** If yes, what does that tell you about your team's incident readiness?
 
+### 🤔 Reflection Prompt
+
+Compare your initial hypothesis from the detection phase with the actual root cause. How many investigation steps did it take to get from symptom to cause? What would have shortened that path?
+
 ---
 
 ## Key Terms
@@ -766,3 +868,9 @@ Total                  75 min
 - **Google's SRE Book, Chapter 15**: "Postmortem Culture: Learning from Failure"
 - **PagerDuty's Incident Response Guide**: https://response.pagerduty.com/
 - **Etsy's Debriefing Facilitation Guide**: how to run effective postmortem meetings
+
+---
+
+## What's Next
+
+Next up: **[L3-M74: War Stories Analysis](L3-M74-war-stories-analysis.md)** -- you will dissect real-world outages from Cloudflare, GitHub, and Knight Capital, extracting engineering lessons and building a vulnerability checklist for TicketPulse.

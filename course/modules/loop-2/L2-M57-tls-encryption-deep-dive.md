@@ -219,7 +219,25 @@ Data flows before the handshake completes. But there is a catch:
 
 ## Part 3: Certificates for TicketPulse
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Generate a Self-Signed Certificate
+
+<details>
+<summary>💡 Hint 1</summary>
+Use `openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes`. The `-x509` flag produces a self-signed certificate (not a CSR). The `-nodes` flag means no passphrase on the private key -- fine for development, never for production private keys.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Add Subject Alternative Names (SANs) with `-addext "subjectAltName=DNS:localhost,DNS:*.ticketpulse.local,IP:127.0.0.1"`. Modern browsers and clients validate the domain against the SAN extension, not the CN field. Without SANs, your certificate will fail validation even if the CN matches.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Verify the certificate chain with `openssl x509 -in cert.pem -noout -text | head -30`. Check the SAN with `openssl x509 -in cert.pem -noout -ext subjectAltName`. For a self-signed cert, the issuer and subject are identical. Browsers will show a warning -- this is expected. In production, use Let's Encrypt with cert-manager in Kubernetes for automatic issuance and rotation.
+</details>
+
 
 ```bash
 # Generate a self-signed certificate for local development
@@ -259,7 +277,39 @@ openssl x509 -in ticketpulse-cert.pem -noout -ext subjectAltName
 openssl rsa -in ticketpulse-key.pem -check -noout
 ```
 
+
+<details>
+<summary>💡 Hint 1</summary>
+The certificate contains the public key and identity (subject, SANs). The private key file is the secret that proves you own the certificate. Never commit `key.pem` to version control -- add `*.pem` to `.gitignore`.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Inspect the generated certificate with `openssl x509 -in cert.pem -noout -text`. Look for: Subject (who the cert is for), Issuer (who signed it -- same as Subject for self-signed), Validity (Not Before / Not After dates), Subject Alternative Name (the domains this cert covers), and Public Key Algorithm (RSA 4096-bit).
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Test the certificate with curl: `curl -v --cacert cert.pem https://localhost:3000/api/health`. The `-v` flag shows the TLS handshake. The `--cacert` flag tells curl to trust your self-signed cert. Without it, curl rejects the connection because the cert is not signed by a CA in the system trust store.
+</details>
+
 ### 🛠️ Build: Configure HTTPS on the API Gateway
+
+<details>
+<summary>💡 Hint 1</summary>
+Use `https.createServer({ key: fs.readFileSync('key.pem'), cert: fs.readFileSync('cert.pem'), minVersion: 'TLSv1.2' }, app)` in your Express server. The `minVersion: 'TLSv1.2'` rejects connections from clients that only support TLS 1.0/1.1 (which have known vulnerabilities). TLS 1.3 clients will negotiate 1.3 automatically.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Add an HTTP-to-HTTPS redirect middleware: `if (!req.secure) res.redirect(301, 'https://' + req.headers.host + req.url)`. In production behind a load balancer, check `req.headers['x-forwarded-proto'] === 'https'` instead of `req.secure`, because the load balancer terminates TLS and forwards plain HTTP internally.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Add the HSTS header: `res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')`. This tells browsers to always use HTTPS for the next year, even if the user types `http://`. Verify the full certificate chain by connecting with `openssl s_client -connect localhost:3000 -servername localhost` and checking that `Verify return code: 0 (ok)` appears.
+</details>
+
 
 ```typescript
 // src/server.ts
@@ -286,6 +336,22 @@ if (process.env.NODE_ENV === 'production' || process.env.ENABLE_TLS === 'true') 
   });
 }
 ```
+
+
+<details>
+<summary>💡 Hint 1</summary>
+TLS termination at the gateway means internal services communicate over plain HTTP. The gateway decrypts incoming HTTPS, inspects headers (auth, rate limiting), and proxies to `http://event-service:3001`. This simplifies internal services but means internal traffic is unencrypted -- add mTLS (Part 4) if your threat model requires encryption inside the cluster.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Watch your own handshake: run `openssl s_client -connect localhost:3000 -servername localhost` and look for `Protocol: TLSv1.3`, `Cipher: TLS_AES_128_GCM_SHA256`, and `Verify return code`. If you see `Verify return code: 18 (self-signed certificate)` that is expected for dev. In production with a proper CA-signed cert, this should be `0 (ok)`.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+For production, replace the self-signed cert with Let's Encrypt: `certbot certonly --standalone -d api.ticketpulse.com`. In Kubernetes, use cert-manager with a ClusterIssuer that points to Let's Encrypt. cert-manager automatically renews certificates 30 days before expiry and stores them as Kubernetes Secrets that your Ingress references.
+</details>
 
 ### 🔍 Try It: See Your TLS Handshake
 
@@ -340,6 +406,22 @@ This is used for:
 - **API authentication** where API keys are insufficient
 
 ### 🛠️ Build: Set Up mTLS for TicketPulse Services
+
+<details>
+<summary>💡 Hint 1</summary>
+mTLS requires three certificate artifacts: (1) a CA certificate that both sides trust, (2) a server certificate signed by the CA (presented by event-service), and (3) a client certificate signed by the same CA (presented by payment-service). Create the CA first with `openssl req -x509 -newkey rsa:4096 -keyout ca-key.pem -out ca-cert.pem -days 3650 -nodes`.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Generate the server cert: create a CSR with `openssl req -new -newkey rsa:4096 -keyout server-key.pem -out server.csr -nodes -subj "/CN=event-service.ticketpulse.local"`, then sign it with the CA: `openssl x509 -req -in server.csr -CA ca-cert.pem -CAkey ca-key.pem -CAcreateserial -out server-cert.pem -days 365 -extfile <(echo "subjectAltName=DNS:event-service.ticketpulse.local")`. Repeat for the client cert with a different CN.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Configure the Node.js HTTPS server with `requestCert: true, rejectUnauthorized: true, ca: [fs.readFileSync('ca-cert.pem')]`. This tells the server to demand a client certificate and verify it was signed by the trusted CA. Test with: `curl --cert client-cert.pem --key client-key.pem --cacert ca-cert.pem https://localhost:3001/api/health`. In production, use a service mesh (Istio/Linkerd) that handles mTLS automatically -- no application code changes needed.
+</details>
+
 
 First, create a Certificate Authority (CA) for TicketPulse:
 
@@ -456,6 +538,22 @@ spec:
 ```
 
 With this configuration, every service-to-service call within the `ticketpulse` namespace is automatically encrypted and authenticated with mTLS. No application code changes needed.
+
+
+<details>
+<summary>💡 Hint 1</summary>
+In mTLS, the server sends a `CertificateRequest` message during the TLS handshake, asking the client to present its certificate. The client responds with its certificate, and the server verifies it was signed by the trusted CA. This is the "mutual" part -- both sides prove their identity, not just the server.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Verify mTLS is working by testing without a client cert: `curl --cacert ca-cert.pem https://localhost:3001/api/health`. This should fail with a TLS handshake error because the server requires a client certificate. Then test with the client cert: `curl --cert client-cert.pem --key client-key.pem --cacert ca-cert.pem https://localhost:3001/api/health`. This should succeed.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Extract the client's CN from the certificate in your Express middleware: `const clientCN = req.socket.getPeerCertificate().subject.CN`. Use this for service-level authorization: only allow `payment-service` to call `/api/internal/charge`, only allow `event-service` to call `/api/internal/availability`. This replaces API keys with cryptographic identity.
+</details>
 
 ---
 
@@ -600,7 +698,7 @@ With connection pooling:    Request (1 RTT)                                     
 
 For a server 50ms away, that is 200-250ms vs 50ms. Connection pooling is the single largest optimization for latency.
 
-> 💡 **Insight**: "Cloudflare terminates TLS for roughly 30% of the internet's web traffic. Their TLS 1.3 implementation saved an average of 300ms per connection for users on slow networks. For TicketPulse, TLS 1.3 saves one round trip per new connection -- which adds up when you have thousands of users making their first request."
+> **The bigger picture:** "Cloudflare terminates TLS for roughly 30% of the internet's web traffic. Their TLS 1.3 implementation saved an average of 300ms per connection for users on slow networks. For TicketPulse, TLS 1.3 saves one round trip per new connection -- which adds up when you have thousands of users making their first request."
 
 ---
 
@@ -668,6 +766,8 @@ Answer these questions:
 
 ---
 
+> **What did you notice?** TLS involves a surprising amount of ceremony (certificates, CAs, key management) for something we take for granted every time we see the lock icon in a browser. How does mTLS between services change your security model?
+
 ## Checkpoint
 
 Before moving on, verify:
@@ -693,6 +793,14 @@ Before moving on, verify:
 | **Handshake** | The initial negotiation between client and server that establishes encryption parameters for a TLS session. |
 | **Cipher suite** | A named combination of algorithms for key exchange, encryption, and message authentication used in a TLS session. |
 | **Let's Encrypt** | A free, automated certificate authority that issues TLS certificates trusted by major browsers. |
+
+---
+
+## What's Next
+
+In **Debugging in Production** (L2-M58), you'll learn the tools and techniques for diagnosing problems in live systems without taking them down.
+
+---
 
 ## Further Reading
 

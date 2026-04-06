@@ -23,6 +23,9 @@ By the end of this module, TicketPulse will have a proper API gateway with cross
 
 ---
 
+> **Before you continue:** The nginx proxy from M31 does basic routing. What cross-cutting concerns (auth, logging, rate limiting) are currently duplicated across services that should be centralized in one place?
+
+
 ## 0. Why Not Just nginx? (5 minutes)
 
 The nginx config from M31 does basic path-based routing. Here is what it cannot do:
@@ -46,6 +49,22 @@ In production, use a battle-tested gateway (Kong, Envoy, Traefik). Building your
 ## 1. Build: The API Gateway (20 minutes)
 
 ### 🛠️ Create the Gateway Service
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about what the gateway needs to do before forwarding: authenticate the user, attach a correlation ID, check rate limits. What order should these run in?
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Use Express middleware layers in order: strip headers, correlation ID, logging, auth, rate limiting. Use http-proxy-middleware for routing to backend services.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The BFF aggregates data from multiple internal services into a single mobile-optimized response. Use Promise.all for parallel fetches and transform the result to include only mobile-relevant fields.
+</details>
+
 
 ```bash
 mkdir -p services/gateway/src
@@ -455,6 +474,22 @@ CMD ["node", "dist/server.js"]
       - payment-service
 ```
 
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The gateway is an Express server that applies middleware in a specific order: strip external headers, add correlation ID, log, authenticate, rate limit, then proxy.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Use `http-proxy-middleware` for proxying and `jsonwebtoken` for JWT validation. Create separate middleware files for each concern. The order of `app.use()` calls determines the processing pipeline.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Security critical: delete all incoming `x-user-*` headers first to prevent identity spoofing. After JWT validation, set `x-user-id` and `x-user-email` headers for downstream services. Use different rate limit configs for purchases (10/min) versus general reads (100/min).
+</details>
+
 ---
 
 ## 2. Try It: Gateway in Action (10 minutes)
@@ -536,6 +571,22 @@ docker compose logs payment-service | grep "abc-123"
 
 ### 📐 The Problem
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The web app downloads 5KB per event (full descriptions, artist bios, venue maps). The mobile app only needs ~500 bytes (title, date, venue city, lowest price, availability status, thumbnail). Both hit the same generic API.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Create a `GET /api/mobile/events` endpoint in the gateway that fetches from the event service and availability service in parallel using `Promise.all()`, then transforms the combined data into a mobile-optimized shape.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Compute availability status from remaining percentage: >20% = "available", >0% = "few_left", 0% = "sold_out". Truncate descriptions to 200 chars. Append image size params for thumbnails: `?w=200&h=200&fit=crop`. Build a Map from the availability response for O(1) lookups.
+</details>
+
+
 TicketPulse has two clients:
 - **Web app** — large screen, fast connection, needs detailed event pages with full descriptions, artist bios, venue maps, and reviews
 - **Mobile app** — small screen, potentially slow connection, needs a compact event card with title, date, price, and availability
@@ -579,6 +630,22 @@ The mobile app's home screen shows a list of upcoming events. Each card needs:
 2. Which services does the BFF call internally?
 3. What does the response look like?
 4. How do you minimize latency (parallel calls)?
+
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Design backwards from the mobile UI. The home screen card needs: title, date, venue name/city, lowest price, availability status, and a thumbnail. That is far less data than the full API returns.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+The BFF endpoint should make parallel calls (Promise.all) to the event service and availability service, then transform the combined data into a mobile-optimized shape — no full descriptions, thumbnail URLs, and a simple availability enum.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+`GET /api/mobile/events` returns ~500 bytes per event instead of ~5KB. Build a Map from the availability response for O(1) lookups. Compute availability status from remaining percentage: >20% = "available", >0% = "few_left", 0% = "sold_out". Append image size params for thumbnails.
+</details>
 
 ### 🤔 Pause: Write your design.
 
@@ -762,6 +829,8 @@ The mobile app makes one call and gets everything it needs. The web app can use 
 
 ---
 
+> **What did you notice?** With the gateway handling auth and rate limiting, downstream services got simpler. But the gateway itself became a single point of failure. How would you make it resilient?
+
 ## 5. Checkpoint
 
 After this module, TicketPulse should have:
@@ -803,6 +872,14 @@ After this module, TicketPulse should have:
 | **Cross-cutting concern** | A concern that affects multiple services: authentication, logging, rate limiting, error handling. Belongs in the gateway, not in every service. |
 | **502 Bad Gateway** | HTTP status code indicating the gateway received an invalid response from an upstream service. |
 | **429 Too Many Requests** | HTTP status code indicating the client has been rate limited. The response should include a Retry-After header. |
+
+---
+
+---
+
+## What's Next
+
+In **PostgreSQL Internals** (L2-M37), you'll look under the hood at how PostgreSQL actually works — MVCC, WAL, vacuum, and the machinery that keeps TicketPulse's data safe.
 
 ---
 

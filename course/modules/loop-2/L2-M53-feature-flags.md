@@ -4,6 +4,8 @@
 >
 > **Source:** Chapters 3, 22, 25, 32, 13 of the 100x Engineer Guide
 
+> **Before you continue:** You have a risky new feature — a dynamic pricing algorithm for tickets. How would you deploy it to production without exposing it to all users at once? What if you wanted to test it with 5% of traffic first, then gradually increase?
+
 ---
 
 ## The Goal
@@ -458,6 +460,69 @@ spec:
 
 ---
 
+> **What did you notice?** Feature flags decouple deployment from release — you can ship code to production without exposing it. But flag cleanup is a real maintenance burden. How would you track which flags are stale?
+
+## Exercises
+
+### 🛠️ Build: Migrate to LaunchDarkly/Unleash SDK
+
+Replace the hand-rolled Redis flag system with an SDK from LaunchDarkly or Unleash. The SDK handles local caching, streaming updates, and evaluation without a Redis round-trip on every request.
+
+<details>
+<summary>💡 Hint 1</summary>
+Install the Unleash client: `npm install unleash-client`. Initialize with `const unleash = initialize({ url: 'http://localhost:4242/api', appName: 'ticketpulse', customHeaders: { Authorization: '<API-token>' } })`. Replace `isEnabled('dynamic_pricing', userId)` with `unleash.isEnabled('dynamic_pricing', { userId })`. The SDK maintains an in-memory cache and streams flag changes via SSE -- no Redis needed.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Map your existing flag features to Unleash concepts: `rolloutPercent` becomes a "Gradual Rollout" activation strategy with `stickiness: userId`. `targetUserIds` becomes a "UserIDs" strategy. The deterministic bucketing you built with SHA-256 is handled automatically by Unleash's MurmurHash-based bucketing -- same user always gets the same variant.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Run both systems in parallel during migration: evaluate the flag from both Redis and Unleash, log disagreements, and alert if the results diverge for more than 0.1% of evaluations. Once you confirm parity, remove the Redis-based system. This is the same expand-and-contract pattern from L2-M54, applied to feature flag infrastructure.
+</details>
+
+### 🐛 Debug: Users Flickering Between Variants
+
+Some users report seeing dynamic pricing on one page load but not the next. The flag is at 10% rollout and should be deterministic.
+
+<details>
+<summary>💡 Hint 1</summary>
+Deterministic bucketing requires a stable `userId`. If the user is not logged in and you are using a session ID or cookie value that changes, the bucket changes on every request. Check what value is being passed as `userId` to `isEnabled()` -- if it is `undefined` or `null` for anonymous users, the hash is not stable.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Add logging to the flag evaluation: `console.log(\`[flag] user=${userId} flag=dynamic_pricing bucket=${deterministicBucket(userId, 'dynamic_pricing')} result=${result}\`)`. If the same userId produces different buckets across requests, the hash input is changing. If the bucket is stable but the result changes, the flag config is being updated between requests (check if someone is adjusting `rolloutPercent` via the admin API).
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+For anonymous users, assign a stable device-level ID stored in a first-party cookie with a long expiry (e.g., `tp_device_id`). Use this as the bucketing key: `isEnabled('dynamic_pricing', req.cookies.tp_device_id || req.user?.id)`. This ensures deterministic evaluation even before login. LaunchDarkly and Unleash both support this pattern natively via "context" keys.
+</details>
+
+### 📐 Design: Flag Governance for a Growing Team
+
+TicketPulse now has 5 teams and 40 flags. Three flags reference code paths that were deleted months ago. Two flags have the same name prefix (`checkout_v2` and `checkout_v2_pricing`) and nobody knows which controls what.
+
+<details>
+<summary>💡 Hint 1</summary>
+Require every flag to have an owner (team or individual), a description, and a mandatory `expiresAt` date at creation time. The flag hygiene cron job (Section 6) should alert the owner when `expiresAt` passes, and auto-disable flags that are 30 days past expiration. LaunchDarkly and Unleash both support flag metadata and ownership fields.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Add a naming convention: `<team>.<feature>.<purpose>` (e.g., `payments.dynamic-pricing.experiment`, `checkout.prisma-migration.infrastructure`). Enforce the convention in the admin API's `PUT /flags/:name` endpoint by rejecting names that do not match the pattern. This prevents the `checkout_v2` vs `checkout_v2_pricing` ambiguity.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Use `grep -r "isEnabled\|useFlag\|feature_flag" --include="*.ts" --include="*.tsx"` to find all flag references in the codebase. Compare this list to the flags in Redis/Unleash. Flags in the system but not in the code are candidates for deletion. Flags in the code but not in the system are bugs (the flag was deleted but the branch was not cleaned up). Run this check in CI as a weekly job.
+</details>
+
+---
+
 ## Checkpoint
 
 Before continuing, verify:
@@ -483,6 +548,228 @@ The canonical example: Knight Capital lost $440 million in 45 minutes because ol
 
 ---
 
+---
+
+## 7. Extended Walkthrough: Gradual Rollout With Guardrails (20 min)
+
+The dynamic pricing flag is live at 10%. Now simulate a real rollout decision process — the kind that happens in production every week.
+
+### Step 1: Define Your Success Criteria Before Expanding
+
+Before you touch the rollout percentage, write down what "success" means in concrete, measurable terms:
+
+```markdown
+# Dynamic Pricing Rollout Criteria
+
+## Experiment Hypothesis
+Enabling dynamic pricing for 10% of users will increase average revenue per ticket
+by at least 8% without reducing conversion rate by more than 2%.
+
+## Success Metrics (measured over the rollout window)
+| Metric                        | Baseline (disabled) | Threshold (enabled must beat) |
+|-------------------------------|---------------------|-------------------------------|
+| Avg ticket price (cents)      | 5,000               | >= 5,400 (+8%)                |
+| Checkout conversion rate      | 62%                 | >= 60.76% (no worse than -2%) |
+| Purchase failure rate         | 0.3%                | <= 0.5%                       |
+| p99 purchase latency (ms)     | 280ms               | <= 350ms                      |
+
+## Rollout Schedule (if metrics pass)
+Day 1-3:   10% rollout, monitor
+Day 4-6:   25% rollout, monitor
+Day 7-10:  50% rollout, monitor
+Day 11-14: 75% rollout, monitor
+Day 15:    100% rollout and schedule flag cleanup
+```
+
+Writing this BEFORE you look at the data prevents you from moving goalposts after the fact. This is how you make flag decisions defensible.
+
+### Step 2: Query the Split Metrics
+
+After 48 hours of 10% rollout, query Prometheus to compare variants:
+
+```promql
+# Conversion rate: enabled variant
+rate(purchases_total{flag_dynamic_pricing="enabled"}[24h])
+  /
+rate(checkout_started_total{flag_dynamic_pricing="enabled"}[24h])
+
+# Conversion rate: disabled variant (control)
+rate(purchases_total{flag_dynamic_pricing="disabled"}[24h])
+  /
+rate(checkout_started_total{flag_dynamic_pricing="disabled"}[24h])
+```
+
+Run these Grafana queries and record:
+
+```
+Enabled  variant: conversion = __%, avg price = __¢, failure rate = __%
+Disabled variant: conversion = __%, avg price = __¢, failure rate = __%
+```
+
+### Step 3: Make the Rollout Decision
+
+Apply your success criteria:
+
+```bash
+# If enabled variant beats the threshold: expand the rollout
+curl -X PUT http://localhost:3000/admin/flags/dynamic_pricing \
+  -H 'Content-Type: application/json' \
+  -d '{"rolloutPercent": 25}'
+
+# If conversion rate dropped more than 2%: pause and investigate
+curl -X PUT http://localhost:3000/admin/flags/dynamic_pricing \
+  -H 'Content-Type: application/json' \
+  -d '{"enabled": false}'
+
+# Log the decision with reasoning
+curl -X PUT http://localhost:3000/admin/flags/dynamic_pricing \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "rolloutPercent": 25,
+    "description": "Day 4: Expanding to 25%. Conversion held at 61.8% (threshold: 60.76%). Avg price up 11.3% (threshold: +8%). Proceeding.",
+    "updatedBy": "alice@ticketpulse.com"
+  }'
+```
+
+### Step 4: Add an Automatic Kill Switch
+
+Build an automated guard that disables the flag if metrics cross a threshold without human intervention:
+
+```typescript
+// src/flags/flag-guardian.ts
+
+import { isEnabled } from './feature-flags';
+import { queryPrometheus } from '../monitoring/prometheus-client';
+
+interface GuardianConfig {
+  flagName: string;
+  // Prometheus query that returns a value (e.g., conversion rate)
+  metric: string;
+  // If metric drops below this, disable the flag
+  threshold: number;
+  // Evaluation window
+  windowMinutes: number;
+}
+
+const GUARDIANS: GuardianConfig[] = [
+  {
+    flagName: 'dynamic_pricing',
+    metric: `
+      rate(purchases_total{flag_dynamic_pricing="enabled"}[30m])
+      /
+      rate(checkout_started_total{flag_dynamic_pricing="enabled"}[30m])
+    `,
+    threshold: 0.55,   // Kill if conversion drops below 55% (was 62%)
+    windowMinutes: 30,
+  },
+];
+
+export async function runFlagGuardians(): Promise<void> {
+  for (const guardian of GUARDIANS) {
+    const value = await queryPrometheus(guardian.metric);
+
+    if (value !== null && value < guardian.threshold) {
+      console.error(
+        `[guardian] KILLING FLAG: ${guardian.flagName} — metric value ${value} is below threshold ${guardian.threshold}`
+      );
+
+      // Disable the flag
+      await redis.hset('flags', guardian.flagName, JSON.stringify({
+        ...(JSON.parse(await redis.hget('flags', guardian.flagName) || '{}')),
+        enabled: false,
+        disabledAt: new Date().toISOString(),
+        disabledReason: `Auto-killed: metric ${value} < threshold ${guardian.threshold}`,
+      }));
+
+      // Alert the team
+      await sendSlackAlert(
+        `🚨 Feature flag '${guardian.flagName}' was automatically disabled.\n` +
+        `Metric value: ${value} (threshold: ${guardian.threshold})\n` +
+        `Check Grafana for details.`
+      );
+    }
+  }
+}
+
+// Run every 5 minutes
+setInterval(runFlagGuardians, 5 * 60 * 1000);
+```
+
+This is an automated circuit breaker for your feature rollout. If conversion rate collapses, the flag dies automatically — no engineer needs to be on call to disable it.
+
+---
+
+## 8. Real-World Pattern: Flags for Infrastructure Changes (10 min)
+
+Feature flags are not just for product features. Use them for risky infrastructure migrations too.
+
+### Example: Migrating from pg-pool to Prisma
+
+You want to migrate TicketPulse's raw SQL queries in the event service to use Prisma. This is risky — Prisma generates different SQL, has different connection behavior, and might have subtle behavioral differences.
+
+```typescript
+// src/services/event.service.ts
+
+import { isEnabled } from '../flags/feature-flags';
+
+export async function getEvent(eventId: string, userId: string) {
+  // Flag controls which data layer is used — not a product feature at all
+  if (await isEnabled('event_service_prisma', userId)) {
+    // New implementation: Prisma
+    return prisma.event.findUnique({
+      where: { id: eventId },
+      include: { venue: true, organizer: true },
+    });
+  }
+
+  // Old implementation: raw SQL
+  const result = await db.query(`
+    SELECT e.*, v.name AS venue_name, o.name AS organizer_name
+    FROM events e
+    JOIN venues v ON e.venue_id = v.id
+    JOIN organizers o ON e.organizer_id = o.id
+    WHERE e.id = $1
+  `, [eventId]);
+
+  return result.rows[0];
+}
+```
+
+Rollout strategy for infrastructure migrations:
+1. Start at 1% (canary) — watch for query count differences, latency, error rates.
+2. Compare `db_query_duration_ms` for old vs new implementation in your metrics.
+3. If Prisma is producing the same results with comparable performance, expand.
+4. If Prisma has a problem (N+1 regression, slow generated SQL), disable instantly with no user impact.
+5. At 100%, schedule the flag cleanup and remove the old code path.
+
+This pattern makes infrastructure migrations as safe as feature releases.
+
+---
+
+## 9. Reflect: The Knight Capital Lesson (5 min)
+
+In 2012, Knight Capital lost $440 million in 45 minutes. A feature flag was the trigger.
+
+Knight activated a dormant flag called `SMARS` to deploy a new order routing system on 7 out of 8 servers. The 8th server still had old code associated with that flag name — code that executed a "Power Peg" algorithm that was meant to have been deactivated years earlier. With the flag enabled, that server started buying and immediately selling millions of shares at market prices, creating massive losses.
+
+The failure had multiple layers: old code that was never deleted, a flag name reused for a different purpose, no automated validation that all servers were running the same code version, and no kill switch to stop the runaway algorithm.
+
+Reflect on these questions:
+
+1. **How does your flag hygiene system prevent the "old code associated with a flag name" scenario?** What if you delete a flag and then reuse its name 6 months later for a different feature?
+
+2. **If your `dynamic_pricing` flag was enabled on 7 of 8 pods — and the 8th pod had a different code path that crashed on flag evaluation — how would you detect this?** What monitoring would catch "flag enabled but pod health inconsistent"?
+
+3. **Should feature flags have a mandatory description field? An owner?** What governance would you add to your flag system to prevent silent flag reuse?
+
+> These are not rhetorical. Write your answers down. They will inform how you design flag systems at your next company.
+
+---
+
+> **Want the deep theory?** See Ch 22 of the 100x Engineer Guide: "Deployment Safety Patterns" — covers feature flags, canary releases, blue/green deployments, and progressive delivery with rollback strategies.
+
+---
+
 ## Key Terms
 
 | Term | Definition |
@@ -492,6 +779,14 @@ The canonical example: Knight Capital lost $440 million in 45 minutes because ol
 | **Canary** | A release strategy where a change is deployed to a small subset of users before a full rollout. |
 | **A/B test** | An experiment that compares two variants of a feature to measure which performs better. |
 | **Flag hygiene** | The practice of regularly cleaning up old or fully-rolled-out feature flags to reduce code complexity. |
+
+---
+
+## What's Next
+
+In **Zero-Downtime Migrations** (L2-M54), you'll change TicketPulse's database schema and API contracts without any downtime or breaking existing clients.
+
+---
 
 ## Further Reading
 

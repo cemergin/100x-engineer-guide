@@ -14,6 +14,10 @@ Now it is time to look back at what you know, look forward at what comes next, a
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before starting the self-assessment, predict which domain you will rate "Strong" and which "Gap." Then do the assessment honestly. The distance between your prediction and reality reveals your blind spots.
+
 ## Part 1: The Knowledge Map (30 minutes)
 
 ### Self-Assessment
@@ -182,6 +186,109 @@ For each deep-dive, you should be able to:
 
 ---
 
+## Part 2b: Architecture Review Exercise (30 minutes)
+
+<details>
+<summary>💡 Hint 1: Frame every design decision as a fitness function with a measurable threshold</summary>
+Instead of "we chose Kafka for reliability," say "our architecture fitness function is: order events must be delivered exactly once with p99 latency under 500ms at 10K events/second. Kafka meets this; Redis Streams did not at our projected scale." Quantified fitness functions make the review defensible.
+</details>
+
+A major TicketPulse event just went live — a Taylor Swift reunion concert selling 80,000 tickets. You are doing the post-launch architecture review. Use the prompts below to examine the system you built across the course.
+
+This is structured like a real architecture review board presentation. Work through each section as if you are presenting to a panel of Staff Engineers who have not seen TicketPulse before.
+
+### Section 1: System Overview (5 minutes)
+
+Draw or describe the current TicketPulse architecture. Do not look at previous modules. From memory:
+
+```
+Draw the following on paper or a whiteboard:
+1. The services (boxes)
+2. The communication paths (arrows and protocols)
+3. The data stores (cylinders)
+4. The external dependencies (shaded boxes)
+5. The user entry points (arrows from outside)
+
+You should have approximately:
+- 4-6 services
+- 2-3 data stores
+- 2-3 message queue paths
+- 1-2 external APIs (Stripe, FCM/APNs)
+```
+
+After drawing it, compare to what you actually built. Where did your memory fail? The gaps in your mental model are the parts of the system you are least confident operating in production.
+
+### Section 2: Failure Mode Analysis (10 minutes)
+
+For each component in your diagram, complete this table:
+
+| Component | What happens when it fails? | Current mitigation | Remaining risk |
+|-----------|----------------------------|-------------------|----------------|
+| PostgreSQL primary | | | |
+| Redis cache | | | |
+| Kafka broker | | | |
+| Payment service | | | |
+| Order service | | | |
+| FCM/APNs | | | |
+| CDN | | | |
+
+**Minimum expected answers** (check your understanding):
+
+- **PostgreSQL primary fails**: Read replicas can serve reads; writes fail. Mitigation: Multi-AZ RDS failover (automatic, ~30s). Remaining risk: In-flight transactions at failover time may be lost.
+- **Redis cache fails**: Cache misses flood the database. Mitigation: Circuit breaker in caching layer falls back to DB queries. Remaining risk: DB cannot absorb full traffic — need to shed load.
+- **Kafka broker fails**: Event publishing fails; consumers stop. Mitigation: Multi-broker cluster (3 brokers, replication factor 3). Remaining risk: Consumer lag backlog drains after recovery — downstream services may be overwhelmed.
+
+Fill in the rest honestly. If you cannot answer for a component, that is your review finding.
+
+### Section 3: The Concert Day Scenario (10 minutes)
+
+The Taylor Swift sale starts in 10 minutes. You have these signals on your dashboards:
+
+```
+09:50 AM: Normal traffic, 200 requests/second
+09:55 AM: Traffic spike to 2,000 requests/second (10x)
+09:58 AM: Kafka consumer lag rising — order events not being processed
+09:59 AM: Database CPU at 95%
+10:00 AM: Ticket sale opens
+10:00 AM: Traffic at 15,000 requests/second (75x normal)
+10:00:30: Redis hit rate drops from 95% to 60%
+10:01 AM: Payment service error rate 8% (normally <0.1%)
+```
+
+Work through these questions:
+
+1. **At 09:58 AM**: Kafka consumer lag is rising. What is your first hypothesis? What is your first action?
+
+2. **At 10:00:30**: Redis hit rate drops from 95% to 60%. What does this mean? What is happening to the database?
+
+3. **At 10:01 AM**: Payment service error rate at 8%. Is this a payment service problem or a symptom of something upstream?
+
+4. **What is the load shedding strategy?** If the system cannot handle 15,000 RPS, what do you shed first? (Hint: what is more important — letting new users join the queue, or processing already-queued purchases?)
+
+5. **What is the communication plan?** What do you tell the team? What do you tell users?
+
+This scenario has no single correct answer. The goal is to reason systematically through a cascading failure — the same skill that distinguishes a senior incident responder from a junior one.
+
+### Section 4: Review Findings
+
+Write three findings from this architecture review:
+
+```
+FINDING 1: [Component or pattern]
+SEVERITY: Critical | High | Medium | Low
+DESCRIPTION: [What is the risk or gap?]
+RECOMMENDATION: [What would you change?]
+EFFORT: [1-3 months, 1 sprint, 1 week]
+
+FINDING 2: ...
+
+FINDING 3: ...
+```
+
+Good architecture reviews produce findings. If you found nothing, you were not looking hard enough.
+
+---
+
 ## Part 3: What Would You Do Differently? (20 minutes)
 
 ### Reflections
@@ -217,6 +324,120 @@ When a junior engineer is stuck, the 100x engineer does not give them the answer
 When the team is deciding between two architectures, the 100x engineer is not the one who insists on their favorite. They are the one who articulates the trade-offs clearly enough that the team makes a good decision together.
 
 It is breadth that enables depth. It is knowing enough about databases to know when you need a database expert. It is knowing enough about security to know when you need a security audit. It is knowing enough about everything to never be the bottleneck, and to accelerate everyone around you.
+
+---
+
+## Part 3b: Structured Retrospective (20 minutes)
+
+This retrospective follows the same format used by high-performing engineering teams after major projects. It is structured to produce insight, not just feelings.
+
+### Format: The Four Questions
+
+Spend 5 minutes on each question. Write your answers — do not just think them. Writing forces specificity.
+
+**Question 1: What went well that we should do more of?**
+
+Do not list the generic things ("we deployed features"). List the specific practices, decisions, or habits that produced better outcomes than expected.
+
+```
+Prompt: "Think about a moment in the last 90 modules where things
+clicked — where the system was clear, the decision was right, or
+the implementation was clean. What made that possible?"
+
+Examples worth capturing:
+- "Writing the ADR before implementing CQRS forced me to articulate
+   why I was making the choice, not just what I was doing. The ADR
+   caught an assumption I had not examined."
+- "Starting the backfill script with a --dry-run flag saved me from
+   running an untested operation against a 10M-row table."
+- "The circuit breaker pattern required me to think about failure modes
+   before writing happy-path code."
+
+Your answers:
+1. _______________________________________________
+2. _______________________________________________
+3. _______________________________________________
+```
+
+**Question 2: What went poorly that we should stop doing?**
+
+This is the hardest question. Resist the urge to make everything sound like a "learning opportunity." Some things were just mistakes.
+
+```
+Prompt: "Think about a moment where you wasted time, shipped something
+that needed immediate rework, or had a misunderstanding that cost you
+multiple modules to unwind. What was the root cause?"
+
+Examples worth capturing:
+- "I skipped the design exercise in M47 and went straight to implementation.
+   I had to redo it twice because my first implementation did not account
+   for the offline case."
+- "I trusted the AI-generated code without reviewing the concurrency section.
+   The race condition only showed up under load."
+- "I built the feature before reading the requirements carefully. The
+   'at most once delivery' assumption was wrong."
+
+Your answers:
+1. _______________________________________________
+2. _______________________________________________
+3. _______________________________________________
+```
+
+**Question 3: What are we puzzled about that deserves more investigation?**
+
+Every retrospective should surface the things that are unclear — not as failures, but as open questions. These become the input to your learning roadmap.
+
+```
+Prompt: "Complete this sentence: 'I still do not fully understand how
+[X] works under [Y] condition.' Write three of them."
+
+Examples worth capturing:
+- "I still do not fully understand how Kafka handles consumer group
+   rebalancing when a consumer crashes mid-batch."
+- "I still do not fully understand when to prefer CQRS over a simpler
+   read replica approach."
+- "I still do not fully understand what the right failure mode is when
+   the durable execution engine itself becomes unavailable."
+
+Your answers:
+1. _______________________________________________
+2. _______________________________________________
+3. _______________________________________________
+```
+
+**Question 4: What is the single most important change to make next?**
+
+Retrospectives that produce lists of 10 action items produce no change. Retrospectives that produce one clear action item produce change.
+
+```
+Prompt: "If you could only make ONE change to your engineering practice
+based on everything you learned in this course, what would it be?
+It must be specific, measurable, and achievable in 30 days."
+
+Examples:
+- "Add a design exercise to every feature before writing code:
+   spend 15 minutes sketching the data model, API, and failure modes."
+- "Write tests for every non-trivial function I add, in the same PR,
+   before requesting review."
+- "Start a brag document entry for every significant task I complete,
+   within 48 hours, before I forget the details."
+
+Your answer:
+_______________________________________________
+
+Commitment: I will do [specific action] by [specific date].
+```
+
+### Retrospective on the Retrospective
+
+After writing your answers, look at the pattern:
+
+- Are your "went well" items things you will actually continue? Or are they too vague to operationalize?
+- Are your "went poorly" items honest? Or did you soften the real critique?
+- Are your "puzzled" items genuine gaps? Or are they things you avoided studying?
+- Is your "one change" genuinely specific? Or is it aspirational and unmeasurable?
+
+The best retrospectives are uncomfortable. If yours felt easy, go deeper.
 
 ---
 
@@ -414,12 +635,38 @@ That is the real graduation: not knowing everything, but having the scaffold to 
 
 **Welcome to the other side. Now go build something.**
 
+---
+
+## Cross-References
+
+This module draws on all chapters of the 100x Engineer Guide, but these are most directly relevant to the exercises here:
+
+- **Chapter 3** (Architecture Patterns): The architecture review exercise in Part 2b uses the failure mode analysis framework from this chapter.
+- **Chapter 9** (Engineering Leadership): ADRs, RFCs, and structured decision-making — the capstone architecture review is an opportunity to write retrospective ADRs documenting decisions you would change.
+- **Chapter 14** (The AI-Augmented Engineer): AI pair programming was a core workflow throughout the course; the retrospective asks you to evaluate its impact honestly.
+- **Chapter 29** (Career Engineering): The brag document from L3-M89 feeds directly into the knowledge map and showcase sections of this module.
+
+---
+
 ## Key Terms
 
 | Term | Definition |
 |------|-----------|
-| **Retrospective** | A structured team reflection on what went well, what didn't, and what to improve in the next iteration. |
+| **Retrospective** | A structured team reflection on what went well, what did not, and what to improve in the next iteration. |
 | **Knowledge map** | A visual inventory of topics and skills showing your current proficiency and areas for growth. |
 | **Elevator pitch** | A concise (30-60 second) summary of a project, design, or idea that communicates its core value. |
 | **Learning roadmap** | A prioritized plan of topics and skills to study next, informed by your knowledge map and career goals. |
 | **Portfolio project** | A substantial personal or capstone project that demonstrates your engineering skills to employers or peers. |
+| **Architecture review** | A structured examination of a system's design with the goal of identifying risks, failure modes, and improvement opportunities. |
+| **Failure mode analysis** | The practice of systematically identifying what happens when each component of a system fails. |
+| **Review finding** | A documented observation from an architecture or code review, including severity, description, and recommendation. |
+
+### 🤔 Reflection Prompt
+
+Looking at your completed knowledge map, what is the single most valuable thing you learned in this entire course? Not the most technically impressive -- the one that changed how you think about engineering.
+
+---
+
+## What's Next
+
+The main course is complete. But if you want to go further, the **Beast Mode** series (L3-M91) will test your operational readiness with simulated first-day-on-the-job scenarios.

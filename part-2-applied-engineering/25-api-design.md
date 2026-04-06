@@ -12,7 +12,11 @@
 
 > **Part II — Applied Engineering** | Prerequisites: Chapter 3 | Difficulty: Intermediate
 
-Designing APIs that developers love — from consistent error handling to pagination patterns to webhook design. Great APIs are the difference between a product developers adopt eagerly and one they avoid.
+There is a moment every developer has had. You crack open a new API, read the first endpoint, and feel a small spark of delight — everything just makes sense. Then there is the other moment: forty minutes of trial and error, four different error messages, zero useful docs, and the quiet rage of someone who just wants to create a user account and go home.
+
+The difference between those two experiences is not magic. It is craft. API design is one of the highest-leverage skills an engineer can develop because your API is a product that other developers use every day, for years. A poorly designed API multiplies frustration across every team that integrates with you. A well-designed one lets your users build things you never imagined.
+
+This chapter is about designing APIs that people are genuinely glad to use — from consistent error handling to pagination patterns to webhook verification. Not specification compliance, but craft.
 
 ### In This Chapter
 - API Design Principles
@@ -34,14 +38,19 @@ Designing APIs that developers love — from consistent error handling to pagina
 - Ch 5 (authentication/authorization)
 - Ch 21 (HTTP protocol details)
 - Ch 23 (system design case studies)
+- Ch 34 (spec-driven development — write the OpenAPI contract first)
 
 ---
 
 ## 25.1 API Design Principles
 
-The best APIs feel invisible. Developers pick them up quickly, make fewer mistakes, and rarely need to consult the docs after the first session. That does not happen by accident — it comes from a small set of principles applied relentlessly.
+A great API is like a well-designed tool — you pick it up and immediately know how to use it. A hammer does not need a manual. Neither should your `POST /users` endpoint.
+
+The best APIs feel invisible. Developers pick them up quickly, make fewer mistakes, and rarely need to consult the docs after the first session. That does not happen by accident — it comes from a small set of principles applied relentlessly, starting before you write a single line of implementation code.
 
 ### Consistency Is the Foundation
+
+Imagine learning to drive a car where the turn signal sometimes controls the windshield wipers, and the gas pedal sometimes applies the brakes. That is what an inconsistent API feels like. Every inconsistency is a surprise, and surprises in APIs cost developers time and trust.
 
 Every endpoint should feel like it belongs to the same API. If you use `created_at` on one resource, do not switch to `createdAt` on another. If `GET /users` returns a list with a `data` wrapper, then `GET /orders` should do the same.
 
@@ -52,7 +61,7 @@ Consistency applies to:
 - **URL patterns** — pluralized nouns, consistent nesting depth
 - **Query parameter names** — `limit` everywhere, not `limit` on one endpoint and `page_size` on another
 
-A style guide written before the first endpoint is built pays for itself a hundred times over.
+A style guide written before the first endpoint is built pays for itself a hundred times over. Think of it as the constitution of your API — everything that comes after must be consistent with it, not because you like rules, but because your users deserve predictability.
 
 ### Predictability
 
@@ -74,11 +83,13 @@ PATCH  /orders/:id
 DELETE /orders/:id
 ```
 
-The moment you break the pattern (one resource uses `PUT` instead of `PATCH`, another uses `/create` instead of `POST`), developers lose trust and start double-checking everything.
+This is not laziness on the developer's part — it is the best sign that your API design is working. Predictability means the mental model they built from the first resource transfers to every other resource instantly. That is free knowledge you gave them.
+
+The moment you break the pattern — one resource uses `PUT` instead of `PATCH`, another uses `/create` instead of `POST` — developers lose trust and start double-checking everything. Every exception is a tiny tax on every developer who touches your API, forever.
 
 ### Resource-Oriented Design
 
-Design around nouns, not verbs. Resources are things; HTTP methods are the verbs.
+Think of your API as a collection of things in the world, not a list of operations the server knows how to perform. Resources are nouns; HTTP methods are the verbs.
 
 ```
 # Good — resources are nouns, HTTP method is the verb
@@ -94,7 +105,9 @@ POST   /updateUser
 POST   /deleteUser
 ```
 
-There are exceptions — actions that don't map cleanly to CRUD. For these, use a verb as a sub-resource:
+The verb-in-URL style is a legacy of RPC thinking — it treats every operation as a remote function call. REST thinking treats every operation as a state change on a resource. REST wins for public APIs because HTTP clients already understand what `GET`, `POST`, `PATCH`, and `DELETE` mean. You are not inventing a new protocol; you are participating in one that already exists.
+
+There are exceptions — actions that do not map cleanly to CRUD. For these, use a verb as a sub-resource:
 
 ```
 POST /orders/:id/cancel
@@ -102,7 +115,7 @@ POST /users/:id/verify-email
 POST /payments/:id/refund
 ```
 
-Keep these to a minimum. If you find yourself creating many action endpoints, your resource model probably needs rethinking.
+Keep these to a minimum. If you find yourself creating many action endpoints, your resource model probably needs rethinking. "Cancel" belongs on the order; "refund" belongs on the payment. If you have ten action endpoints for one resource, you probably have ten resources hiding inside what you called one.
 
 ### HATEOAS — In Theory and Practice
 
@@ -131,7 +144,11 @@ In practice, almost no one implements full HATEOAS. Why:
 
 ### API-First Design
 
-Design the API before writing a single line of implementation code. The sequence:
+Here is the discipline that separates APIs people love from APIs people endure: design the API before writing a single line of implementation code.
+
+This is not theoretical. When you write the implementation first, you end up with an API that reflects your database schema, your internal method names, and the order in which you wrote things. That API serves your implementation, not your users. API-first flips this: your API serves your users, and your implementation serves your API.
+
+The sequence (and read Ch 34 for the spec-driven workflow in depth):
 
 1. Write the OpenAPI spec (or at minimum, sketch the endpoints, request/response shapes, and error codes on paper)
 2. Review the spec with API consumers (frontend team, partner developers, your future self)
@@ -139,11 +156,13 @@ Design the API before writing a single line of implementation code. The sequence
 4. Implement the server
 5. Validate the implementation against the spec in CI
 
-API-first catches design mistakes when they are cheap to fix — before anyone has written code against a bad contract.
+API-first catches design mistakes when they are cheap to fix — before anyone has written code against a bad contract. A bad API design you discover in a spec review takes five minutes to fix. The same mistake discovered after three teams have integrated against it takes months of migration work and breaks developer trust in the process.
 
 ### Backward Compatibility Is the Number One Rule
 
 Once an API is in production, breaking it is the most expensive thing you can do. Every breaking change forces every consumer to update their code, test, and redeploy. Multiply that by hundreds of integrators and you understand why Stripe has not broken their API in over a decade.
+
+That is not an accident of history. Stripe made a deliberate engineering decision that backward compatibility was not optional — it was a core product value. Every new engineer learns this on day one. The result is that developers trust Stripe's API in a way that is almost impossible to achieve with APIs that break their contracts.
 
 **Non-breaking changes** (always safe):
 - Adding a new optional field to a response
@@ -158,11 +177,13 @@ Once an API is in production, breaking it is the most expensive thing you can do
 - Changing the meaning of an existing field
 - Removing an endpoint
 
-When in doubt, it is a breaking change. Treat it as one.
+When in doubt, it is a breaking change. Treat it as one. The cost of being too cautious here is zero. The cost of being too aggressive is paid by every developer who integrates with you.
 
 ---
 
 ## 25.2 REST API Conventions
+
+REST conventions are not arbitrary rules. They are the accumulated wisdom of thousands of APIs and millions of developer-hours spent figuring out what works. When you follow them, developers can bring their existing mental model to your API. When you break them, you force every user to learn your exceptions.
 
 ### URL Structure
 
@@ -177,6 +198,8 @@ Rules:
 - **Identifiers**: After the resource name (`/users/usr_123`)
 - **Sub-resources**: Nested under their parent (`/users/usr_123/orders`)
 - **Max nesting depth**: Two levels. `/users/:id/orders/:id` is fine. `/users/:id/orders/:id/items/:id/variants/:id` is not — flatten it
+
+Deep nesting is a smell. If you find yourself building `/companies/:id/departments/:id/teams/:id/members/:id`, you probably want a `/team-members` resource that you filter by `team_id`. Flat is better than nested, beyond two levels.
 
 ### HTTP Methods
 
@@ -196,7 +219,7 @@ Rules:
 - `PUT /users/123` — client sends the **complete** user object. Any fields not included are reset to defaults or nulled
 - `PATCH /users/123` — client sends **only the fields to change**. Everything else stays the same
 
-In practice, most APIs use `PATCH` for updates because clients rarely want to send the full object.
+In practice, most APIs use `PATCH` for updates because clients rarely want to send the full object. A user settings page should not have to know about every field on the user record just to update the display name. `PATCH` respects this; `PUT` does not.
 
 ### Naming Conventions
 
@@ -214,6 +237,8 @@ GET /api/v1/user-accounts?sort_by=created_at&page_size=20
 ```
 
 The right answer is: whatever your ecosystem expects. If your primary consumers are JavaScript developers, `camelCase` in JSON bodies is idiomatic. If they are Python developers, `snake_case`. URL paths tend toward `kebab-case` or `snake_case` — never `camelCase` (URLs are case-insensitive by convention in many systems).
+
+There is no universally correct answer here, just the answer that is right for your audience. The important thing is consistency — not which style you pick, but that you pick one and never deviate from it.
 
 ### Filtering
 
@@ -291,7 +316,7 @@ Response:
 }
 ```
 
-This is especially valuable for mobile clients on slow connections.
+This is especially valuable for mobile clients on slow connections, and for dashboards that need to display a list of records without loading every field. A user list showing name, email, and avatar does not need to transfer the user's billing address, metadata blob, and preferences on every row.
 
 ### Bulk Operations
 
@@ -324,6 +349,8 @@ Key design decisions for bulk endpoints:
 - **Limits**: Cap the batch size (e.g., max 100 items per request)
 - **HTTP status**: Return `200` or `207 Multi-Status` for the overall response, even if some items failed — the per-item status tells the real story
 
+The partial success decision deserves emphasis: if a developer sends 50 records and one is invalid, failing the whole batch is cruel. They have to figure out which one failed, fix it, and resubmit. Return per-item results and let them handle failures surgically.
+
 ### Sub-Resources vs Query Parameters
 
 ```
@@ -342,11 +369,17 @@ Use query parameters when:
 - The resource is independent and you're just filtering
 - You need to filter by multiple dimensions simultaneously
 
+The sub-resource pattern has a hidden implication: it tells the client that the resource lives in a hierarchy. If an order can be retrieved in any context — by user, by date, by status — make it a top-level resource you filter. If an order genuinely cannot exist without belonging to a user, the nesting communicates that relationship explicitly.
+
 ---
 
 ## 25.3 Error Handling
 
-Error handling is where most APIs fail. A good error response tells the developer exactly what went wrong, where, and how to fix it. A bad one returns `500 Internal Server Error` with no body.
+Here is where most APIs fail their developers. Not in the happy path — the happy path usually works fine. In the error cases, when the developer is already frustrated and confused, your API either helps them or twists the knife.
+
+Think about the experience from the developer's side: they are staring at a response, it is not what they expected, and the clock is ticking. A great error response is like a helpful colleague — it tells you exactly what went wrong, where, and how to fix it. A bad one is a `500 Internal Server Error` with no body, a cryptic code nobody explains, or a raw database exception pasted into JSON.
+
+The quality of your error messages is directly proportional to how much developers trust your API.
 
 ### The Standard Error Format
 
@@ -376,15 +409,17 @@ Every error response from your API should follow the same structure:
 ```
 
 Breaking this down:
-- **`code`**: Machine-readable error code. Clients switch on this, not the HTTP status
-- **`message`**: Human-readable summary for developers reading logs
-- **`details`**: Array of specific issues (especially for validation errors)
+- **`code`**: Machine-readable error code. Clients switch on this, not the HTTP status. Design these codes like an enum — stable, clear, documented
+- **`message`**: Human-readable summary for developers reading logs. Write it for a person who is having a bad day
+- **`details`**: Array of specific issues (especially for validation errors) — cover all of them, not just the first
 - **`request_id`**: Unique ID for this request — essential for debugging. Include it in every response, success or error
-- **`doc_url`**: Link to documentation for this error type (Twilio does this brilliantly)
+- **`doc_url`**: Link to documentation for this error type (Twilio does this brilliantly — see 25.12)
+
+The `doc_url` field is criminally underused. Linking an error directly to its documentation turns a frustrating moment into a solved problem. The developer does not have to search; they just click.
 
 ### HTTP Status Code Usage
 
-Use status codes correctly. This is not optional.
+Use status codes correctly. This is not optional — it is part of the HTTP protocol contract, and developers who know HTTP will be confused and annoyed when you violate it.
 
 **2xx — Success**:
 
@@ -417,14 +452,18 @@ Use status codes correctly. This is not optional.
 | `504 Gateway Timeout` | Upstream timeout | Dependency took too long |
 
 **Common mistakes**:
-- Using `200` for everything and putting the real status in the body — clients cannot use HTTP-level error handling
+- Using `200` for everything and putting the real status in the body — clients cannot use HTTP-level error handling, monitoring is broken, and retry logic cannot function
 - Using `500` for validation errors — that is your bug, not the client's
 - Using `403` when you mean `401` — "you aren't logged in" is `401`, "you're logged in but can't do this" is `403`
 - Using `404` to mean "this feature isn't built yet" — that is `501 Not Implemented`
 
+The `401` vs `403` confusion has real consequences. A client that receives `403` might assume it has the right credentials and start rotating keys or asking users to re-authenticate. The right behavior on `401` (re-authenticate) is completely different from the right behavior on `403` (request elevated permissions or accept access is denied). Confusing them breaks client error handling logic.
+
 ### Return ALL Validation Errors
 
-Never return only the first validation error. The developer will fix it, resubmit, get the next error, fix that, resubmit, and hate your API by the third round trip.
+Never return only the first validation error. This is the most common and most infuriating mistake in API design. The developer will fix it, resubmit, get the next error, fix that, resubmit, and hate your API by the third round trip.
+
+Every round trip is 30 seconds of wasted time, compounding frustration, and eroding trust. Just tell them everything that is wrong, all at once, up front.
 
 ```json
 {
@@ -451,6 +490,8 @@ That is bad. This is good:
 }
 ```
 
+The good response takes the same amount of server work (you validated all the fields anyway) and saves the developer multiple round trips. This is free goodwill you are leaving on the table if you do not implement it.
+
 ### Rate Limit Errors
 
 Always include `Retry-After` so clients know when to retry:
@@ -472,6 +513,8 @@ X-RateLimit-Reset: 1706284800
   }
 }
 ```
+
+Without `Retry-After`, clients have two bad options: hammer your API with retries (making the problem worse) or implement arbitrary backoff logic (fragile and inconsistent). Give them the information they need to do the right thing.
 
 ### Internal Error Handling
 
@@ -511,11 +554,15 @@ Cause: One or more fields in the request body failed validation.
 Fix: Check the details array for specific field errors and correct them.
 ```
 
+The error documentation is often the most-read page in your developer docs, because developers read it when something is broken and they are motivated. Make it excellent.
+
 ---
 
 ## 25.4 Pagination Patterns
 
-Any endpoint that returns a list needs pagination. No exceptions. Even if you think "there will never be more than a few" — you are wrong.
+Any endpoint that returns a list needs pagination. No exceptions. "There will never be more than a few" is the most dangerous lie in software engineering — data grows, users grow, time passes, and the query that returned 12 records in 2025 returns 120,000 in 2027.
+
+Pagination is not just a performance feature. It is a contract with your API consumers about how data access works. The pagination style you choose has real consequences for usability, performance, and correctness that compound over time.
 
 ### Offset Pagination
 
@@ -559,9 +606,11 @@ Response:
 - **Unstable** — if a record is inserted or deleted between page requests, items shift and you get duplicates or gaps
 - **`total_count` is expensive** — `SELECT COUNT(*)` on large tables is slow in many databases
 
+The instability problem is subtle but real: imagine a user loading page 2 of results while someone else deletes a record. The item that was at the top of page 2 just shifted to page 1, and page 2 now shows what was previously page 2's second item. The user either sees a duplicate or misses an item entirely — and they have no way to know. For UI that requires stable, consistent paging under concurrent writes, offset pagination is a trap.
+
 ### Cursor-Based (Keyset) Pagination
 
-The production-grade approach:
+The production-grade approach — and the one you should reach for by default:
 
 ```
 GET /users?limit=20
@@ -606,6 +655,8 @@ Response:
 - Cursor is opaque — clients must use it as given
 - Multi-column sort requires more complex cursors
 
+The opaque cursor is a feature, not a bug. By encoding the cursor as base64 and treating it as a black box, you preserve the freedom to change your pagination implementation without breaking clients. Start with a simple `{ id: "usr_120" }` cursor; upgrade to a more complex implementation later, clients never know the difference.
+
 ### When to Use Which
 
 | Scenario | Use |
@@ -616,6 +667,8 @@ Response:
 | Data export / sync | Cursor |
 | Small dataset (fewer than 10K rows) | Either works fine |
 | Large dataset (more than 100K rows) | Cursor (offset will degrade) |
+
+The general rule: cursor pagination for public APIs and anything data-intensive, offset pagination for internal admin interfaces where the data is small and simplicity matters more than performance.
 
 ### Cursor for Multi-Column Sort
 
@@ -639,6 +692,8 @@ WHERE (created_at, id) < ('2025-06-15T10:30:00Z', 'usr_120')
 ORDER BY created_at DESC, id DESC
 LIMIT 21;
 ```
+
+The `id` is included as a tiebreaker — if two records share the same `created_at` timestamp, you need a unique field to establish a stable order. Always include your primary key as the final sort column for this reason.
 
 ### Relay-Style Connections (GraphQL)
 
@@ -675,7 +730,9 @@ This is verbose but allows each edge to carry its own cursor, enabling fine-grai
 
 ## 25.5 Versioning Strategies
 
-APIs change. The question is how you manage those changes without breaking existing clients.
+APIs change. Features evolve, mistakes get corrected, business requirements shift. The question is not whether your API will change, but how you manage those changes without breaking the developers who built their products on top of yours.
+
+Versioning is a design decision with real consequences for the trust relationship between you and your API consumers. Get it right and developers build confidently on your platform knowing you will not pull the rug out from under them. Get it wrong and every release is a gamble that breaks someone's integration.
 
 ### URL Versioning
 
@@ -688,7 +745,7 @@ GET /v2/users
 
 **Cons**: Clients must update URLs to adopt a new version. You maintain multiple route handlers.
 
-This is the right default choice for most APIs.
+This is the right default choice for most APIs. URL versioning is obvious — anyone can tell which version they are calling by looking at the URL. That clarity makes it easy to deprecate old versions (just turn off the route), communicate which version you are building against (the URL is in every code snippet), and route traffic to the right implementation.
 
 ### Header Versioning
 
@@ -708,6 +765,8 @@ API-Version: 2
 
 **Cons**: Harder to test (you cannot just paste a URL into a browser). Many API tools don't make it obvious which version you are calling. Easy to forget to set the header.
 
+Header versioning is beloved in REST purist circles and used in practice mostly by developers who regret it. The inability to paste a versioned URL into a browser or share it in a Slack message is a bigger daily friction point than it sounds.
+
 ### Query Parameter Versioning
 
 ```
@@ -720,7 +779,7 @@ GET /users?version=2
 
 ### Date-Based Versioning (Stripe's Approach)
 
-This is the gold standard for APIs with many consumers.
+This is the gold standard for APIs with many consumers — and the approach that most elegantly solves the problem of keeping existing integrations stable while allowing the API to evolve.
 
 ```http
 GET /v1/users
@@ -755,6 +814,8 @@ Response sent to client
 - Complex to implement — the compatibility transform layer is non-trivial
 - Only worth it for APIs with hundreds of consumers
 
+The payoff of Stripe's approach is visible in their developer community: integrations from 2012 still work. Developers who learned the API in 2015 can still use their existing knowledge. That stability is a competitive moat that is extraordinarily hard to replicate once you've broken trust.
+
 ### Breaking vs Non-Breaking Changes
 
 | Change | Breaking? |
@@ -770,7 +831,11 @@ Response sent to client
 | Change error code format | Yes |
 | Change URL structure | Yes |
 
+The "new enum value" case is worth calling out: if your clients are using exhaustive switches or if-else chains and do not have a default/unknown case, adding a new enum value breaks them. Good SDK design handles this by always including an `UNKNOWN` fallback, but API design has to account for clients that do not.
+
 ### Deprecation Workflow
+
+Deprecating an endpoint well is as much an art as deprecating it at all. Rush it and you burn developer trust. Handle it with care and you maintain it.
 
 1. **Announce**: Publish the deprecation in your changelog, API docs, and developer newsletter
 2. **Sunset header**: Add a `Sunset: Sat, 01 Mar 2026 00:00:00 GMT` header to deprecated endpoint responses
@@ -786,11 +851,17 @@ Deprecation: true
 Link: <https://docs.example.com/migration/v2>; rel="successor-version"
 ```
 
+The `Sunset` header (RFC 8594) is underused and wonderful. It gives developers programmatic access to the deprecation timeline. A well-written HTTP client can log warnings when it sees `Deprecation: true` and tell developers exactly when the endpoint will stop working. This turns a vague "we're deprecating this someday" into an actionable reminder with a deadline.
+
 ---
 
 ## 25.6 Idempotency & Safety
 
-Understanding idempotency prevents duplicated charges, double-sent emails, and corrupted data.
+Idempotency is one of those concepts that sounds academic until you are debugging why a customer got charged twice. Then it becomes very concrete, very fast.
+
+The story plays out the same way every time: a client sends a payment request, the network times out before the response arrives, the client retries (as it should), and the payment processes twice. The customer sees two charges. Support gets a ticket. Engineers investigate. Everyone is unhappy. The fix requires one well-placed database insert and a design decision made before you ship.
+
+Understanding idempotency is what separates APIs that handle failure gracefully from APIs that cause data corruption when the network misbehaves.
 
 ### Safe vs Unsafe Methods
 
@@ -800,9 +871,11 @@ Understanding idempotency prevents duplicated charges, double-sent emails, and c
 **Unsafe methods** modify server state:
 - `POST`, `PUT`, `PATCH`, `DELETE`
 
+Safety is a promise to clients: "calling this endpoint will never change anything." Clients can cache safe methods, retry them without worry, and call them from preflight requests. Never use `GET` to modify state — it breaks this promise and breaks any infrastructure (caches, load balancers, monitoring) that treats `GET` as safe.
+
 ### Idempotent Methods
 
-An operation is idempotent if doing it twice produces the same result as doing it once.
+An operation is idempotent if doing it twice produces the same result as doing it once. Think of it as: the second call is safe, the outcome is the same as if you only called it once.
 
 ```
 GET  /users/123       -> Always returns user 123. Idempotent.
@@ -813,11 +886,13 @@ POST /users           -> Creates a new user. Do it twice, you get two users. NOT
 POST /payments        -> Charges a card. Do it twice, you charge twice. NOT idempotent.
 ```
 
+Idempotency is not the same as returning the same response — it means producing the same server-side outcome. `DELETE /users/123` called twice might return `200` the first time and `404` the second, but the server state after both calls is identical: user 123 does not exist.
+
 ### The Idempotency-Key Pattern
 
-`POST` is neither safe nor idempotent. But clients retry failed requests (network timeout, no response received). Without protection, retries cause duplicates.
+`POST` is neither safe nor idempotent. But clients retry failed requests — network timeouts happen, load balancers drop connections, services restart mid-request. Without protection, retries cause duplicates.
 
-Stripe popularized the `Idempotency-Key` header:
+Stripe popularized the `Idempotency-Key` header, and it is the right pattern for any POST that creates resources or triggers side effects like payments, emails, or notifications:
 
 ```http
 POST /v1/payments
@@ -838,6 +913,8 @@ Content-Type: application/json
 3. **First time**: Execute the operation, store `key -> response` mapping in the database
 4. **Retry**: Return the stored response without re-executing the operation
 5. **Keys expire** after 24-48 hours (old enough that retries have stopped, young enough to not fill the database)
+
+The key insight: the server remembers what it did and gives clients the same answer. The client cannot tell whether the operation executed or whether it got a cached response — and it does not need to know. From the client's perspective, the payment either went through or it did not, and the server says which.
 
 ### Implementation
 
@@ -928,9 +1005,13 @@ async function handlePayment(req, res) {
 - Store error responses too — a failed request should return the same error on retry, not re-execute
 - Set a TTL on keys (48 hours is standard)
 
+The locking detail matters: without it, two parallel retries arriving simultaneously can both see "key not found," both attempt to create the record, and race to execute the operation. The `ON CONFLICT DO NOTHING` pattern means only one wins; the other gets a `409` and knows to wait for the first to complete.
+
 ---
 
 ## 25.7 Authentication Patterns for APIs
+
+Authentication is the front door to your API. If it is confusing, insecure, or painful to implement, developers will get stuck before they even see your endpoints. Make it effortless and secure.
 
 ### API Keys
 
@@ -942,7 +1023,7 @@ Authorization: Bearer sk_live_abc123def456
 ```
 
 Design principles:
-- **Prefixed keys**: `sk_live_` (secret, live), `sk_test_` (secret, test), `pk_live_` (publishable, live). The prefix tells developers immediately what the key is for and prevents accidental misuse
+- **Prefixed keys**: `sk_live_` (secret, live), `sk_test_` (secret, test), `pk_live_` (publishable, live). The prefix tells developers immediately what the key is for and prevents accidental misuse. If a key leaks in a screenshot or a commit, the prefix tells you at a glance how bad the situation is
 - **Scoped keys**: Allow creating keys with limited permissions
 
 ```json
@@ -966,7 +1047,7 @@ Response:
 }
 ```
 
-**Important**: The full key is only shown once (at creation time). Store the hash, not the plaintext.
+**Important**: The full key is only shown once (at creation time). Store the hash, not the plaintext. Tell developers explicitly that this is their only chance to copy it — do not make them discover it the hard way.
 
 ### Key Rotation Without Downtime
 
@@ -985,7 +1066,7 @@ Support two active keys simultaneously during rotation:
 }
 ```
 
-Both keys work during the grace period. The client updates to the new key, then the old key expires.
+Both keys work during the grace period. The client updates to the new key, then the old key expires. Without this pattern, key rotation requires a maintenance window where nothing works — which means developers avoid rotating keys, which means your security posture degrades over time. Make the secure path easy.
 
 ### OAuth 2.0 for Delegated Access
 
@@ -1028,7 +1109,7 @@ Token response:
 }
 ```
 
-**Always use PKCE** (Proof Key for Code Exchange) for authorization code flow — even for confidential clients, it adds a layer of protection against code interception.
+**Always use PKCE** (Proof Key for Code Exchange) for authorization code flow — even for confidential clients, it adds a layer of protection against code interception. PKCE is not optional in 2026; it is the baseline.
 
 ### JWT Access Tokens
 
@@ -1061,13 +1142,15 @@ Short-lived (15 minutes), stateless verification:
 5. Check `aud` — must match your API
 6. Check `scope` — must include the required scope for this endpoint
 
-No database lookup needed — that is the point of JWTs. The trade-off is that you cannot revoke a specific JWT before it expires (unless you add a blocklist, which defeats the purpose).
+No database lookup needed — that is the point of JWTs. The trade-off is that you cannot revoke a specific JWT before it expires (unless you add a blocklist, which defeats the purpose). This is why short expiry times matter: a 15-minute token that leaks is much less dangerous than a 30-day token that leaks.
 
 ---
 
 ## 25.8 Webhook Design
 
-Webhooks are how your API pushes events to consumers instead of consumers polling.
+Webhooks are how your API pushes events to consumers instead of consumers polling. They shift the burden from consumer to producer: instead of a thousand clients making a thousand API calls every minute asking "did anything change?", your server proactively tells them when something does.
+
+Done well, webhooks feel like magic — your integration just knows when things happen. Done poorly, they are a reliability nightmare of dropped events, missed deliveries, and race conditions.
 
 ### Payload Design
 
@@ -1091,9 +1174,9 @@ Webhooks are how your API pushes events to consumers instead of consumers pollin
 ```
 
 Design rules:
-- **Include an event ID** (`evt_abc123`) — consumers use it for deduplication
-- **Include the event type** (`order.completed`) — consumers route on this
-- **Include enough data to act on** — do not force consumers to make a follow-up API call for basic information
+- **Include an event ID** (`evt_abc123`) — consumers use it for deduplication, and it is essential for your own debugging
+- **Include the event type** (`order.completed`) — consumers route on this, like a switch statement over a network
+- **Include enough data to act on** — do not force consumers to make a follow-up API call for basic information. If you send `order.completed` with just an order ID, every consumer has to make another API call to get the order details. That doubles the latency and complexity on their end
 - **Do not include sensitive data** unless necessary — webhooks go over the public internet. Include IDs and let consumers fetch sensitive details via authenticated API calls if needed
 - **Include the API version** — so consumers know which schema to expect
 
@@ -1127,9 +1210,11 @@ Let consumers subscribe to specific events:
 }
 ```
 
+Per-event subscriptions let consumers receive only what they care about. A billing service should not have to process every `customer.updated` event just to catch `payment.failed`. Selective subscriptions also reduce the load on your delivery infrastructure — fewer events delivered to consumers who would ignore them anyway.
+
 ### Signature Verification
 
-Every webhook request must be signed so consumers can verify it came from you.
+Every webhook request must be signed so consumers can verify it came from you. An unsigned webhook endpoint is a security hole — anyone who discovers the URL can send fake events and trigger actions in your consumer's system.
 
 **Server (sending)**:
 
@@ -1191,7 +1276,9 @@ function verifyWebhookSignature(secret, signatureHeader, rawBody) {
 }
 ```
 
-**Important**: Use `crypto.timingSafeEqual` (constant-time comparison) to prevent timing attacks.
+**Important**: Use `crypto.timingSafeEqual` (constant-time comparison) to prevent timing attacks. A naive string comparison leaks information about how many characters matched before the comparison failed — over many requests, an attacker can reconstruct the expected signature bit by bit. Constant-time comparison removes this information channel.
+
+The timestamp in the signature is also not decoration. Without it, an attacker can capture a valid webhook payload and replay it later. The 5-minute timestamp window means replayed events are rejected — they are too old.
 
 ### Delivery Guarantees and Retries
 
@@ -1210,7 +1297,7 @@ Give up, mark as failed.
 
 A successful delivery is any `2xx` response. Anything else (including `3xx` redirects) is a failure that triggers a retry.
 
-**Consumer-side idempotency**: Because consumers may receive the same event multiple times, they must deduplicate by event ID:
+**Consumer-side idempotency**: Because consumers may receive the same event multiple times (at-least-once means exactly that), they must deduplicate by event ID:
 
 ```javascript
 app.post('/webhooks/example', async (req, res) => {
@@ -1237,6 +1324,8 @@ app.post('/webhooks/example', async (req, res) => {
 });
 ```
 
+This pattern is the webhook equivalent of idempotency keys on the send side. The event ID is your deduplication key; the `processed_events` table is your memory. A well-behaved webhook consumer is idempotent — receiving the same event twice produces the same outcome as receiving it once.
+
 ### Failure Handling
 
 After exhausting retries:
@@ -1253,6 +1342,8 @@ POST /v1/webhooks/:id/replay
 }
 ```
 
+Event replay is one of the highest-value webhook features you can build. When a consumer's server was down for maintenance and missed events, or when a bug in their handler caused silent failures, replay lets them recover without any manual data reconciliation. It turns a disaster into a minor inconvenience.
+
 ### Webhook Testing
 
 Make webhooks easy to develop against:
@@ -1260,15 +1351,19 @@ Make webhooks easy to develop against:
 - **Event log**: Dashboard showing recent deliveries, response status, response body, and timing
 - **CLI tool**: `example-cli listen` opens a tunnel from localhost to receive webhooks during development (like `stripe listen`)
 
+The local development story for webhooks is often the most painful part of the experience. A developer working on their laptop needs a way to receive webhooks without deploying to a public server first. If your CLI tool solves this problem (the way `stripe listen` does), it removes a significant barrier to getting started with your API.
+
 ---
 
 ## 25.9 Rate Limiting & Quotas
 
-Rate limiting protects your API from abuse and ensures fair usage across consumers.
+Rate limiting protects your API from abuse and ensures fair usage across consumers. Done right, it is nearly invisible — developers build within their limits and never hit them accidentally. Done poorly, it is a constant source of friction, mysterious failures, and angry support tickets.
+
+The key insight: rate limiting is only as good as the information you give clients about it. If they cannot see their limits and remaining allowance, they cannot build against them intelligently.
 
 ### Rate Limit Headers
 
-Include these headers on **every** response, not just `429` responses:
+Include these headers on **every** response, not just `429` responses — this is the detail most APIs get wrong:
 
 ```http
 HTTP/1.1 200 OK
@@ -1283,6 +1378,8 @@ X-RateLimit-Reset: 1706284800
 | `X-RateLimit-Remaining` | Requests remaining in the current window |
 | `X-RateLimit-Reset` | Unix timestamp when the window resets |
 | `Retry-After` | Seconds until the client should retry (only on 429) |
+
+Sending these headers on every successful response (not just on 429) lets clients pace themselves. A well-written SDK can monitor `X-RateLimit-Remaining` and add a small delay when it drops below a threshold, preventing a 429 entirely. That is only possible if the headers are always present.
 
 ### When Rate Limited
 
@@ -1340,6 +1437,8 @@ Not all endpoints are equal. Write operations are more expensive than reads:
 }
 ```
 
+Expose these per-endpoint limits in your documentation so developers know what to expect before they hit the wall.
+
 ### Rate Limiting Algorithms
 
 **Token Bucket** (most common):
@@ -1383,7 +1482,7 @@ Allow short bursts above the sustained rate. A limit of "100 requests/minute wit
 - Sustained: 100 requests evenly spread over a minute
 - Burst: Up to 20 requests in a single second, as long as you are under the per-minute limit
 
-Token bucket naturally supports this — the bucket size is the burst limit, the fill rate is the sustained limit.
+Token bucket naturally supports this — the bucket size is the burst limit, the fill rate is the sustained limit. This distinction matters for real usage patterns: most legitimate API clients make bursts of requests (loading a dashboard, processing a batch), then go quiet for a while. Allowing short bursts without penalizing them reflects how good developers actually write integrations.
 
 ### Graceful Degradation
 
@@ -1393,11 +1492,13 @@ When your API is under extreme load, consider degrading gracefully instead of ha
 - Reduce payload size (skip optional fields)
 - Increase latency (add a delay) instead of rejecting
 
+A slow response is often better than a rejected one — at least it confirms the request was received and gives the client something to work with.
+
 ---
 
 ## 25.10 SDK & Client Library Design
 
-A great API with a terrible SDK still feels terrible to use.
+A great API with a terrible SDK still feels terrible to use. The SDK is the API from the developer's perspective — most developers never call your REST endpoints directly. They install your SDK, read a few examples, and go. If the SDK is bad, the API is bad, no matter how well-designed the underlying HTTP contract is.
 
 ### Generate, Then Customize
 
@@ -1434,9 +1535,11 @@ Auto-generated code gives you the skeleton. Manually add:
 - Retry logic
 - Request/response logging
 
+The generated code handles the mechanical work — request construction, response parsing, authentication headers. The manual work is what makes the SDK feel native. A Python SDK that forces you to do `response['data'][0]['name']` instead of `user.name` is a generated SDK that was not finished.
+
 ### Language-Idiomatic Design
 
-The SDK should feel native to the language.
+The SDK should feel native to the language. A developer using your Python SDK should feel like they are writing Python, not translating REST calls into Python syntax.
 
 **Python SDK**:
 
@@ -1469,6 +1572,8 @@ except example.RateLimitError as e:
 except example.APIError as e:
     print(f"API error: {e.code} - {e.message}")
 ```
+
+Notice the typed exceptions — `NotFoundError`, `RateLimitError`, `AuthenticationError`. This lets developers catch specific error types instead of parsing error codes from a generic exception. The pattern maps directly to how good Python and TypeScript developers write error handling, so it feels natural rather than foreign.
 
 **TypeScript SDK**:
 
@@ -1531,6 +1636,8 @@ Attempt 3: 1000ms + random(0-500ms)
 Attempt 4: 2000ms + random(0-1000ms)
 ```
 
+The jitter is not decoration — it prevents thundering herd problems where every SDK client retries simultaneously after a server hiccup, amplifying the problem rather than giving the server time to recover.
+
 ### Configuration
 
 ```typescript
@@ -1558,17 +1665,19 @@ When enabled, log requests and responses so developers can debug integration iss
 [Example SDK] Response body: {"id":"usr_789","name":"Alice",...}
 ```
 
-Off by default. Enabled by passing a logger or setting an environment variable (`EXAMPLE_LOG=debug`).
+Off by default. Enabled by passing a logger or setting an environment variable (`EXAMPLE_LOG=debug`). This single feature cuts debugging time dramatically — when something is not working, a developer can enable request logging and see exactly what the SDK is sending and receiving. Without it, they have to intercept network traffic or write print statements.
 
 ---
 
 ## 25.11 API Documentation
 
-Documentation is the UI of your API. If developers cannot figure out how to use your API in five minutes, they will use a competitor's.
+Documentation is the UI of your API. If developers cannot figure out how to use your API in five minutes, they will use a competitor's. This is not hyperbole — developer time is expensive, attention is finite, and if the first five minutes of experience with your API are frustrating, most developers will not give it five more.
+
+The best documentation does not just describe the API — it teaches developers how to think about it. What are the core concepts? What are the typical workflows? What are the gotchas? It anticipates questions and answers them before they arise.
 
 ### OpenAPI as Source of Truth
 
-Your OpenAPI spec should be the single source of truth that generates:
+Your OpenAPI spec should be the single source of truth that generates everything else — and this connects directly to the spec-driven workflow in Ch 34, where the spec comes first and the implementation follows:
 - Interactive documentation (Swagger UI, Redoc, Stoplight)
 - Client SDKs
 - Server stubs
@@ -1674,6 +1783,8 @@ curl https://api.example.com/v1/users \
   -H "Authorization: Bearer sk_test_abc123"
 ```
 
+The quick start is the most important page in your documentation. Most developers read it before anything else. If they can get a successful API call in five minutes, they are invested. If they cannot, they leave.
+
 2. **Authentication guide**: How to get an API key, how to authenticate, test vs live mode
 
 3. **Code examples for every endpoint** in at least 3 languages (cURL, Python, TypeScript, Ruby, Go, Java)
@@ -1690,7 +1801,7 @@ curl https://api.example.com/v1/users \
 
 9. **Status page**: Current API status and historical uptime
 
-10. **SDKs and libraries**: Installation instructions and links, prominently placed
+10. **SDKs and libraries**: Installation instructions and links, prominently placed — not buried in the footer
 
 ### API Collections
 
@@ -1738,15 +1849,19 @@ Provide pre-built collections for popular API clients:
 }
 ```
 
+A Postman or Insomnia collection lets developers explore your API interactively without writing a single line of code. For many developers, this is how they first understand the API's structure and test their understanding. Lower the barrier to exploration and more developers will invest in your platform.
+
 ---
 
 ## 25.12 Real-World API Analysis
 
+The best way to develop taste in API design is to study APIs that have earned the love of developers. Each of the examples below has been battle-tested at massive scale. There is something to learn from each one.
+
 ### Stripe: The Gold Standard
 
-Stripe is widely considered the best-designed API in the industry. What they get right:
+Stripe is widely considered the best-designed API in the industry. Not just "pretty good" — genuinely excellent, in a way that has shaped how the whole industry thinks about API design. The things they get right are worth studying carefully.
 
-**Date-based versioning**: Every breaking change gets a date-based version. Your API key defaults to the version when it was created. You upgrade when you are ready.
+**Date-based versioning**: Every breaking change gets a date-based version. Your API key defaults to the version when it was created. You upgrade when you are ready — not when Stripe decides it is time. This single design decision is responsible for the trust that allows Stripe to power payments for millions of businesses without those businesses worrying that an API update will break their checkout flow.
 
 ```http
 POST /v1/charges
@@ -1754,7 +1869,7 @@ Stripe-Version: 2025-01-15
 Authorization: Bearer sk_live_abc123
 ```
 
-**Idempotency keys**: Every mutating operation supports idempotency, preventing double charges:
+**Idempotency keys**: Every mutating operation supports idempotency, preventing double charges. This is not a nice-to-have for a payments API — it is the engineering foundation that makes Stripe safe:
 
 ```http
 POST /v1/payments
@@ -1776,7 +1891,7 @@ Idempotency-Key: unique-request-id-123
 }
 ```
 
-Every error includes a `doc_url` linking directly to documentation for that specific error.
+Every error includes a `doc_url` linking directly to documentation for that specific error. A developer who sees a card declined error knows immediately what it means, why it happened, and how to handle it. That is not an accident — it is the result of deliberate investment in the developer experience.
 
 **Expandable objects**: Instead of N+1 API calls, expand related objects inline:
 
@@ -1784,7 +1899,7 @@ Every error includes a `doc_url` linking directly to documentation for that spec
 GET /v1/charges/ch_123?expand[]=customer&expand[]=invoice
 ```
 
-**Test mode**: Every feature works identically in test mode with `sk_test_` keys, including webhooks.
+**Test mode**: Every feature works identically in test mode with `sk_test_` keys, including webhooks. You can test your entire integration end-to-end without touching production. This is harder to build than it sounds — maintaining full feature parity between test and live modes requires significant engineering discipline — and it pays off in developer confidence.
 
 ### GitHub: Best-in-Class Pagination and Rate Limiting
 
@@ -1796,7 +1911,7 @@ Link: <https://api.github.com/user/repos?page=3&per_page=100>; rel="next",
       <https://api.github.com/user/repos?page=50&per_page=100>; rel="last"
 ```
 
-Clients parse the `Link` header for `next`, `prev`, `first`, and `last` URLs. No URL construction needed.
+Clients parse the `Link` header for `next`, `prev`, `first`, and `last` URLs. No URL construction needed. GitHub was following an existing RFC here rather than inventing something new, which is exactly the right instinct — use standards when they exist.
 
 **Rate limiting transparency**:
 
@@ -1807,7 +1922,7 @@ X-RateLimit-Reset: 1706284800
 X-RateLimit-Resource: core
 ```
 
-GitHub separates rate limits by resource type (`core`, `search`, `graphql`) with different limits per category.
+GitHub separates rate limits by resource type (`core`, `search`, `graphql`) with different limits per category. This matters for tools that need to make both search queries and core API calls — they can budget each independently.
 
 **Webhooks with fine-grained events**: Over 200 event types, each triggerable individually. The webhook configuration UI shows recent deliveries with full request/response details for debugging.
 
@@ -1820,6 +1935,8 @@ If-None-Match: "abc123"
 HTTP/1.1 304 Not Modified
 X-RateLimit-Remaining: 4987
 ```
+
+The 304 not counting against rate limits is a subtle but powerful incentive for clients to implement proper caching. Good design aligns incentives: the behavior that is good for GitHub (reduced server load) is also good for API consumers (rate limit preservation). When your API design makes the right thing easy and rewarding, developers will do the right thing.
 
 ### Twilio: Error Documentation Links
 
@@ -1840,7 +1957,7 @@ The documentation page for each error code includes:
 - Step-by-step fix instructions
 - Related errors
 
-This is one of the highest-ROI investments in developer experience — it turns a frustrating error into a solvable problem.
+This is one of the highest-ROI investments in developer experience — it turns a frustrating error into a solvable problem with a clear path forward. Compare this to the alternative: a cryptic error code, a frantic search through documentation, a Stack Overflow search, maybe a support ticket. The linked doc URL collapses all of that into a single click.
 
 **Webhook verification**: Twilio provides helper methods in every SDK:
 
@@ -1850,6 +1967,8 @@ from twilio.request_validator import RequestValidator
 validator = RequestValidator(auth_token)
 is_valid = validator.validate(url, post_vars, signature)
 ```
+
+The SDK handling webhook verification is another example of the same principle: put the complexity in the library, not in every integration that uses it.
 
 ### Slack: Event Subscriptions and Interactive Components
 
@@ -1871,7 +1990,7 @@ You respond with:
 }
 ```
 
-**Socket Mode**: For development, Slack offers WebSocket-based event delivery — no public URL needed. This eliminates the ngrok/tunnel setup that makes webhook development painful.
+**Socket Mode**: For development, Slack offers WebSocket-based event delivery — no public URL needed. This eliminates the ngrok/tunnel setup that makes webhook development painful. Any developer who has spent an afternoon fighting ngrok to test a webhook handler will immediately appreciate this. Socket Mode removes an entire class of setup friction from the development experience.
 
 **Interactive components**: Slack's API design allows composing rich UI (buttons, menus, modals) that send payloads back to your server. The payload includes the full interaction context:
 
@@ -1980,9 +2099,11 @@ You respond with:
 
 GraphQL is not a replacement for REST — it is an alternative with different tradeoffs. When those tradeoffs align with your needs (multiple client types, complex data relationships, rapid frontend iteration), GraphQL shines. When they do not, it adds complexity for no gain. This section covers the depth you need to use GraphQL well.
 
+The architecture decision between REST and GraphQL lives in Ch 3. This section assumes you've made the choice and want to do GraphQL right.
+
 ### Schema Design Best Practices
 
-The schema is the contract between your backend and every client that consumes it. Getting it right matters more than any resolver optimization.
+The schema is the contract between your backend and every client that consumes it. Getting it right matters more than any resolver optimization. A poorly designed schema is technically correct and practically painful; a well-designed schema makes writing client code feel natural.
 
 **Schema-first vs code-first approach.**
 
@@ -2107,7 +2228,7 @@ Custom scalars add validation at the schema level and communicate intent clearly
 
 ### The N+1 Problem and DataLoader
 
-The N+1 problem is GraphQL's most notorious performance pitfall. Consider a query that fetches a list of orders, each with its associated user:
+The N+1 problem is GraphQL's most notorious performance pitfall — and the most common reason GraphQL APIs become slow. Consider a query that fetches a list of orders, each with its associated user:
 
 ```graphql
 query {
@@ -2124,7 +2245,9 @@ query {
 
 A naive implementation resolves `orders` with one query (fetching 50 orders), then resolves `user` for each order individually — 50 separate queries. That is 1 + 50 = 51 database calls for what should be 2.
 
-**The DataLoader pattern** solves this by batching and deduplicating requests within a single tick of the event loop. Instead of resolving each `user` field immediately, DataLoader collects all the user IDs requested in the current execution frame, makes a single batched query, and distributes the results.
+The first time you encounter this in production, it is usually because a query that ran fine in development with 10 records starts timing out in production with 10,000. The fix is architectural, not incidental.
+
+**The DataLoader pattern** solves this by batching and deduplicating requests within a single tick of the event loop. Instead of resolving each `user` field immediately, DataLoader collects all the user IDs requested in the current execution frame, makes a single batched query, and distributes the results. Instead of resolving each `user` field immediately, DataLoader collects all the user IDs requested in the current execution frame, makes a single batched query, and distributes the results.
 
 ```javascript
 const DataLoader = require('dataloader')
@@ -2284,7 +2407,7 @@ query { users(first: 20, after: "aWQ6dXNyXzIw") { edges { node { id name } curso
 
 ### Federation & Schema Stitching
 
-As your GraphQL API grows, a single monolithic schema becomes a bottleneck — one team's changes block another's deployments, the codebase becomes unwieldy, and ownership boundaries blur.
+As your GraphQL API grows, a single monolithic schema becomes a bottleneck — one team's changes block another's deployments, the codebase becomes unwieldy, and ownership boundaries blur. This is the same architectural pressure that drives microservices in REST APIs, and the solution in GraphQL is federation.
 
 **Schema Stitching (legacy approach).** Schema stitching merges multiple GraphQL schemas into one at the gateway level. The gateway downloads each sub-schema, merges them (resolving conflicts manually), and exposes a unified graph. This was the first solution to the "big schema" problem, but it has serious downsides:
 - **Brittle**: adding a field in one service can conflict with another
@@ -2344,7 +2467,7 @@ Key directives:
 
 ### Security
 
-GraphQL's flexibility is a double-edged sword. Clients can construct arbitrary queries, which means a malicious or careless client can easily overwhelm your server.
+GraphQL's flexibility is a double-edged sword. Clients can construct arbitrary queries, which means a malicious or careless client can easily overwhelm your server. REST has natural limits — every endpoint does a bounded amount of work. GraphQL has no such limits by default, which means you have to add them explicitly.
 
 **Query depth limiting.** Deeply nested queries can cause exponential database load:
 
@@ -2502,4 +2625,23 @@ Not every API should be GraphQL, and not every API should be REST. Use this fram
 
 ---
 
-**Key Takeaway**: The best APIs are boring. They are predictable, consistent, and well-documented. Every endpoint works the way you expect it to after learning the first one. Invest in error messages, pagination, and SDK quality — these are what developers interact with every day, and they determine whether developers choose your product or a competitor's.
+**Key Takeaway**: The best APIs are not the ones with the most features — they are the ones that make developers productive immediately and keep working reliably for years. That means investing in the things that are easy to skip: error messages, pagination, idempotency, SDK quality, documentation. These are what developers interact with every day. They determine whether developers build on your platform or someone else's, whether they recommend your API or complain about it, whether they come back for your next product or look elsewhere.
+
+Design every API like it will outlive you. Because it will.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L1-M11: REST API Design](../course/modules/loop-1/L1-M11-rest-api-design.md)** — Design and implement TicketPulse's core REST API with proper resource modeling, versioning, and pagination
+- **[L1-M12: Error Handling That Doesn't Suck](../course/modules/loop-1/L1-M12-error-handling.md)** — Build an error response format for TicketPulse that gives clients enough context to recover without exposing internals
+- **[L2-M36: API Gateway & BFF](../course/modules/loop-2/L2-M36-api-gateway-and-bff.md)** — Add an API gateway in front of TicketPulse's services and build a Backend-for-Frontend tailored to the mobile client
+- **[L3-M72: GraphQL API](../course/modules/loop-3/L3-M72-graphql-api.md)** — Expose TicketPulse's event and ticket data through a GraphQL API and learn where GraphQL's trade-offs hurt you in production
+
+### Quick Exercises
+
+1. **Audit one of your existing API endpoints against the Richardson Maturity Model: does it use nouns for resources, HTTP verbs correctly, and hypermedia links? Write down which level it's at and what it would take to reach Level 3.**
+2. **Add idempotency keys to one write endpoint: generate a key on the client, store it server-side with the result, and verify that replaying the same request returns the cached response instead of creating a duplicate.**
+3. **Review your error responses — pick three recent 4xx or 5xx errors from your logs and ask: would a developer who has never seen this API know what went wrong and how to fix it? Rewrite the ones that fail this test.**

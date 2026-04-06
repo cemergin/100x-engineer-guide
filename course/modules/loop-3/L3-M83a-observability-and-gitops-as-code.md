@@ -26,6 +26,10 @@ GitOps extends this further: instead of running `kubectl apply` manually, ArgoCD
 
 > **Version Note:** This module pins specific software versions that were current at writing (March 2026). Before running, check for the latest stable releases -- Docker images, package versions, and tool versions evolve frequently. The concepts and patterns remain the same regardless of version.
 
+### 🤔 Prediction Prompt
+
+Before reading further, think: if your Grafana instance disappeared right now, how long would it take to recreate your dashboards and alerts? If the answer is "hours" or "I don't know," that is exactly the problem observability-as-code solves.
+
 ## Prereq Check
 
 You need the Prometheus operator and Grafana from L2-M45 running, plus ArgoCD and Sloth installed.
@@ -1108,6 +1112,11 @@ This is where GitOps proves its value. Without GitOps, manual changes to a clust
 
 ### Exercise: Break It and Watch ArgoCD Fix It
 
+<details>
+<summary>💡 Hint 1: selfHeal interval determines how fast the revert happens</summary>
+ArgoCD's default self-heal check runs every ~5 seconds. If your manual `kubectl scale` is not reverted within 10-15 seconds, check that `selfHeal: true` is set in the Application's `syncPolicy.automated` block. Without it, ArgoCD detects drift but does not fix it.
+</details>
+
 **Step 1: Check the current state.**
 
 ```bash
@@ -1158,6 +1167,11 @@ The point is clear: the only way to change the number of replicas in production 
 This exercise ties together everything in this module: dashboards-as-code, alerting rules, SLOs, and GitOps. You will make three changes in one commit and watch them propagate through ArgoCD to both the application and the monitoring stack.
 
 ### Exercise: End-to-End GitOps
+
+<details>
+<summary>💡 Hint 1: Use an ArgoCD ApplicationSet if you manage multiple environments</summary>
+Instead of duplicating Application manifests for staging and production, an ApplicationSet with a list generator produces one Application per environment from a single template. The `path` field uses `overlays/{{name}}` to select the right Kustomize overlay per cluster.
+</details>
 
 **Preparation:** Create an ArgoCD Application for the monitoring directory as well:
 
@@ -1329,3 +1343,13 @@ After this module, you should have:
 | **Kustomize** | A Kubernetes-native configuration management tool that uses base manifests and overlays to customize resources per environment without templating. |
 | **Drift** | When the actual state of a system differs from the declared state in Git, usually caused by manual changes. |
 | **Pull-Based GitOps** | A GitOps model where an in-cluster agent pulls changes from Git, rather than CI pushing to the cluster. More secure because the cluster does not need to expose write access. |
+
+### 🤔 Reflection Prompt
+
+After moving dashboards and alerts into Git, what changed about your confidence in the monitoring stack? How does "delete everything and re-apply from Git" change your disaster recovery posture?
+
+---
+
+## What's Next
+
+In **Platform Engineering & Crossplane** (L3-M83b), you'll build on what you learned here and take it further.

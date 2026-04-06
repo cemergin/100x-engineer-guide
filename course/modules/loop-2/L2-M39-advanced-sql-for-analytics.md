@@ -120,6 +120,22 @@ ANALYZE;
 
 ### 🛠️ Build: Query 1 — Revenue by Venue with Rolling Window
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+You need a window function -- specifically `SUM() OVER (PARTITION BY venue ORDER BY day ROWS BETWEEN 29 PRECEDING AND CURRENT ROW)`. This computes a rolling 30-day sum without collapsing rows. GROUP BY alone cannot do this.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Use a CTE to first compute `daily_venue_revenue` with GROUP BY (venue_name, day). Then apply window functions on top of the CTE result. This separates the aggregation from the windowing for clarity.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Add a second window function for the 7-day average: `AVG(daily_revenue) OVER (PARTITION BY venue_name ORDER BY day ROWS BETWEEN 6 PRECEDING AND CURRENT ROW)`. The first rows will "warm up" with incomplete windows -- that is expected behavior.
+</details>
+
+
 ```sql
 -- Revenue by venue with a 30-day rolling sum
 WITH daily_venue_revenue AS (
@@ -171,6 +187,9 @@ Run the query. You should see each venue's daily revenue alongside its 30-day ro
 
 ---
 
+> **Before you continue:** The product team wants a rolling 30-day revenue total per venue. Could you compute this with GROUP BY alone? What SQL feature lets you compute aggregates across rows without collapsing them?
+
+
 ## Part 2: Top Events by Conversion Rate — CTEs (8 min)
 
 ### The Dashboard Requirement
@@ -178,6 +197,22 @@ Run the query. You should see each venue's daily revenue alongside its 30-day ro
 "Show the top 10 events by conversion rate (tickets sold / tickets available)."
 
 ### 🛠️ Build: Query 2 — Conversion Rate with CTE
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Use `COUNT(*) FILTER (WHERE status = 'sold')` to count sold tickets without a separate subquery. The FILTER clause is a PostgreSQL extension that applies a WHERE condition to a single aggregate.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+First CTE: `ticket_stats` groups by `event_id` with total, sold, and available counts. Second CTE: `conversion` joins to events and venues and computes `sold / total * 100`. Filter out events with fewer than 10 tickets to avoid noise.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Use `NULLIF(ts.total_tickets, 0)` in the denominator to avoid division by zero. Cast to numeric before dividing: `ts.sold_tickets::numeric / NULLIF(ts.total_tickets, 0) * 100`. ORDER BY conversion_rate DESC LIMIT 10 for the top performers.
+</details>
+
 
 ```sql
 WITH ticket_stats AS (
@@ -220,7 +255,7 @@ JOIN events e ON ...
 JOIN venues v ON ...
 ```
 
-> **Note**: In PostgreSQL 12+, the planner can inline CTEs (optimize them as subqueries). In older versions, CTEs are **optimization fences** — the CTE is materialized before the outer query runs. If you need the old behavior, use `WITH ticket_stats AS MATERIALIZED (...)`.
+> **Ecosystem note:** In PostgreSQL 12+, the planner can inline CTEs (optimize them as subqueries). In older versions, CTEs are **optimization fences** — the CTE is materialized before the outer query runs. If you need the old behavior, use `WITH ticket_stats AS MATERIALIZED (...)`.
 
 ---
 
@@ -231,6 +266,22 @@ JOIN venues v ON ...
 "Show daily revenue with the day-over-day change and percentage change."
 
 ### 🛠️ Build: Query 3 — LAG for Trend Analysis
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+`LAG(revenue) OVER (ORDER BY day)` returns the previous row's revenue value. Subtract it from today's revenue to get the day-over-day change. The first row's LAG is NULL because there is no previous day.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Use a CTE for `daily_revenue` (GROUP BY day, SUM amount, COUNT orders). Then apply LAG in the outer SELECT. Compute percentage change as `(today - yesterday) / yesterday * 100`.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Avoid division by zero with `NULLIF(LAG(revenue) OVER (ORDER BY day), 0)`. The first row will show NULL for change and pct_change -- use `COALESCE(..., 0)` if you want 0 instead. `LEAD()` does the opposite (looks at the next row) if you need forward-looking analysis.
+</details>
+
 
 ```sql
 WITH daily_revenue AS (
@@ -281,6 +332,22 @@ The first row's LAG is NULL because there's no previous row. Handle this with `C
 
 ### 🛠️ Build: Query 4 — NTILE for Distribution Analysis
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+`NTILE(4) OVER (PARTITION BY category ORDER BY total_revenue DESC)` divides events within each category into 4 roughly equal groups ranked by revenue. Quartile 1 is the top 25%.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+First CTE: compute total_revenue per event with LEFT JOIN orders. Then apply NTILE in the outer query. Use a CASE statement to map quartile numbers to labels: 1='Top 25%', 2='Above Average', 3='Below Average', 4='Bottom 25%'.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+NTILE handles uneven divisions gracefully -- if you have 5 events in a category, quartile 1 gets 2 events and quartiles 2-4 get 1 each. Use LEFT JOIN for orders to include events with zero revenue (they land in quartile 4). ORDER BY category, revenue_quartile, total_revenue DESC.
+</details>
+
+
 ```sql
 WITH event_revenue AS (
     SELECT
@@ -321,6 +388,22 @@ ORDER BY category, revenue_quartile, total_revenue DESC;
 "Of the customers who placed their first order in month X, what percentage placed another order in the following months?"
 
 ### 🛠️ Build: Query 5 — Cohort Retention Analysis
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+A cohort is defined by the month of a customer's first purchase: `DATE_TRUNC('month', MIN(ordered_at))`. Each subsequent month, you check if they placed another order. Month 0 is always 100% (that is when they joined).
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Use four CTEs that build on each other like a pipeline: (1) `customer_cohort` -- each customer's first-purchase month, (2) `customer_activity` -- all months each customer was active, (3) `cohort_retention` -- count of active customers per cohort per month offset, (4) `cohort_sizes` -- total customers per cohort for percentage.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Calculate months since cohort start with `EXTRACT(YEAR FROM age(...)) * 12 + EXTRACT(MONTH FROM age(...))`. Join retention counts to cohort sizes to get `retention_pct = active / cohort_size * 100`. Filter `months_since_first <= 6` to keep the output readable.
+</details>
+
 
 ```sql
 -- Step 1: Identify each customer's cohort (month of first purchase)
@@ -398,6 +481,22 @@ Month 0 is always 100% (that's when they joined). The drop-off in subsequent mon
 
 ### 🛠️ Build: Query 6 — JSON Aggregation
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Use `json_build_object()` to construct nested JSON directly in SQL. This returns a complete API-ready response from a single query -- no application-level data assembly needed.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Use correlated subqueries inside `json_build_object()` for nested data: one subquery for ticket stats (`COUNT(*) FILTER (WHERE status = 'sold')`) and another for recent orders (`json_agg(... ORDER BY ordered_at DESC) LIMIT 5`).
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Wrap the orders subquery in `COALESCE(..., '[]'::json)` so events with no orders return an empty array instead of NULL. Use a subselect with LIMIT 5 inside the `json_agg()` to avoid aggregating thousands of orders. The result is one JSON object per event that your API handler can return directly.
+</details>
+
+
 ```sql
 SELECT json_build_object(
     'event', json_build_object(
@@ -469,6 +568,22 @@ One query, zero application-level data assembly. Your API handler becomes a thin
 
 ### 🛠️ Build: LATERAL JOIN
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+LATERAL lets a subquery reference columns from preceding tables -- like a SQL "for-each loop." For each venue, run a subquery that returns the top 3 events by revenue. This is the cleanest way to express "top N per group."
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Use `CROSS JOIN LATERAL (SELECT ... FROM events e JOIN orders o ... WHERE e.venue_id = v.id GROUP BY e.id ORDER BY total_revenue DESC LIMIT 3) top_events`. The key: `WHERE e.venue_id = v.id` references the outer venue.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The alternative is a window function approach: `ROW_NUMBER() OVER (PARTITION BY v.id ORDER BY SUM(o.amount) DESC)` then filter `WHERE rn <= 3`. Both produce the same result. LATERAL is more intuitive for small N; the window function approach is more efficient when N is large relative to the total rows.
+</details>
+
+
 ```sql
 SELECT v.name AS venue_name, top_events.*
 FROM venues v
@@ -526,6 +641,22 @@ These analytics queries are expensive. Running them on every dashboard page load
 
 ### 🛠️ Build: Create a Materialized View
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+A materialized view stores the query result on disk, so the dashboard reads precomputed data instead of running expensive JOINs on every page load. Create it with `CREATE MATERIALIZED VIEW dashboard_daily_stats AS ...`.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Include all dimensions the dashboard needs: day, venue_name, category, revenue, unique_customers, order_count. Create a unique index on (day, venue_name, category) -- this is required for `REFRESH MATERIALIZED VIEW CONCURRENTLY`.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Use `CONCURRENTLY` for refresh -- without it, the refresh takes an ACCESS EXCLUSIVE lock that blocks all reads. With CONCURRENTLY, old data remains readable during refresh. Schedule it with pg_cron: `SELECT cron.schedule('*/5 * * * *', $$REFRESH MATERIALIZED VIEW CONCURRENTLY dashboard_daily_stats$$)`.
+</details>
+
+
 ```sql
 -- Create the materialized view (runs the query once, stores the result)
 CREATE MATERIALIZED VIEW dashboard_daily_stats AS
@@ -575,6 +706,22 @@ The materialized view query should be dramatically faster — it's reading from 
 
 ### 🛠️ Build: Automated Refresh with pg_cron
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+pg_cron is a PostgreSQL extension that schedules SQL jobs using cron syntax. Install it with `CREATE EXTENSION IF NOT EXISTS pg_cron`. It must be listed in `shared_preload_libraries` in postgresql.conf.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Schedule the refresh: `SELECT cron.schedule('refresh-dashboard-stats', '*/5 * * * *', $$REFRESH MATERIALIZED VIEW CONCURRENTLY dashboard_daily_stats$$)`. This runs every 5 minutes. Check `cron.job_run_details` for success/failure history.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+For TicketPulse's analytics dashboard, 5-minute staleness is fine -- the product team does not need real-time accuracy for revenue trends. If you need fresher data, reduce the interval or consider streaming aggregation via Kafka and ksqlDB for true real-time dashboards.
+</details>
+
+
 ```sql
 -- Install pg_cron extension (must be in shared_preload_libraries)
 CREATE EXTENSION IF NOT EXISTS pg_cron;
@@ -607,6 +754,8 @@ SELECT * FROM cron.job_run_details ORDER BY start_time DESC LIMIT 10;
 For TicketPulse's analytics dashboard, a materialized view refreshed every 5 minutes is the right trade-off. The dashboard doesn't need real-time accuracy — seeing revenue from 5 minutes ago is fine.
 
 ---
+
+> **What did you notice?** The cohort retention query uses four CTEs that build on each other like pipeline stages. Compare this to how you would have computed the same thing in application code. Which is more maintainable?
 
 ## 🏁 Module Summary
 

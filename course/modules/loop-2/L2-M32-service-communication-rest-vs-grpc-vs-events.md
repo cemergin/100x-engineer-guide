@@ -22,6 +22,9 @@ By the end, you will have all three patterns running in TicketPulse, real latenc
 
 ---
 
+> **Before you continue:** For internal service-to-service calls, what disadvantages does REST have compared to a binary protocol? Think about serialization, type safety, and connection overhead.
+
+
 ## 0. The Problem with REST for Internal Calls (5 minutes)
 
 Look at the payment client from M31:
@@ -449,11 +452,30 @@ The latency difference is modest for a single call. The real wins emerge at scal
 
 ---
 
+> **Before you continue:** If the notification service does not serve HTTP requests, how should it learn about new ticket purchases? What communication pattern fits a "react to events" model?
+
+
 ## 3. Build: The Notification Service as an Event Consumer (15 minutes)
 
 Not every service needs an HTTP API. The notification service does not serve requests — it reacts to events. Nobody calls "please send a notification." Instead, things happen (ticket purchased, event updated, order refunded) and notifications are a side effect.
 
 ### 🛠️ Build: A Service with No HTTP API
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The notification service has no HTTP API -- it only consumes events. Think about how to structure a message consumer that reacts to different event types.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Use amqplib to connect to RabbitMQ, set prefetch(1) for one-at-a-time processing, and map event types to handler functions with a Record lookup.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Parse message JSON, look up a handler by event.type, call it, then ack the message. On error, nack with requeue only on first failure. Handle SIGTERM for graceful shutdown.
+</details>
+
 
 ```bash
 mkdir -p services/notification-service/src
@@ -618,6 +640,22 @@ Add to docker compose:
     restart: unless-stopped
 ```
 
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The notification service has no HTTP API — it only consumes events from a message broker. Think of it as a background worker that reacts to things that happen elsewhere in the system.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Use `amqplib` to connect to RabbitMQ, set `prefetch(1)` to process one message at a time, and `ack` each message after successful handling. Map event types to handler functions with a Record lookup.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Parse the message JSON, look up a handler by `event.type`, call it, then `channel.ack(msg)`. On error, use `channel.nack(msg, false, !msg.fields.redelivered)` to requeue only on the first failure. Handle SIGTERM for graceful shutdown.
+</details>
+
 ### 🔍 Try It
 
 ```bash
@@ -763,6 +801,8 @@ You now have three services: the monolith (REST + gRPC client), the payment serv
 
 ---
 
+> **What did you notice?** You now have three communication patterns running in TicketPulse. Which one felt the most natural? Which introduced the most complexity? Would you use a single pattern for everything if you could?
+
 ## 7. Checkpoint
 
 After this module, TicketPulse should have:
@@ -803,6 +843,14 @@ After this module, TicketPulse should have:
 | **Server streaming RPC** | A gRPC call where the server sends a stream of responses to a single request. |
 | **Event consumer** | A service that reads and processes events from a message broker. It does not expose an HTTP API — it reacts to events. |
 | **Fire-and-forget** | A communication pattern where the sender does not wait for or expect a response. The message is sent and the sender moves on. |
+
+---
+
+---
+
+## What's Next
+
+In **Kafka Deep Dive** (L2-M33), you'll replace RabbitMQ's simple task queue with Kafka's distributed event log, enabling multiple services to independently consume the same events.
 
 ---
 

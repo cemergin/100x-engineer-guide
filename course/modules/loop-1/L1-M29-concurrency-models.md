@@ -504,6 +504,249 @@ kill %1 %2 %3 %4 2>/dev/null  # Stop background processes
 
 ---
 
+---
+
+## 8. Guided Walkthrough: Build a Concurrent Ticket Reservation System (20 min)
+
+The N+1 problem from L2-M41 is a database concurrency issue. This module's equivalent is a different kind of race: what happens when 10,000 users simultaneously try to reserve the last 100 tickets for a Taylor Swift concert?
+
+### The Race Condition You Need to Understand
+
+```typescript
+// BROKEN: This code has a race condition at high concurrency
+router.post('/api/tickets/reserve', async (req, res) => {
+  const { eventId, userId, quantity } = req.body;
+
+  // Step 1: Read current availability
+  const result = await db.query(
+    'SELECT available_tickets FROM events WHERE id = $1',
+    [eventId]
+  );
+  const available = result.rows[0].available_tickets;
+
+  // Step 2: Check if enough tickets
+  if (available < quantity) {
+    return res.status(409).json({ error: 'Not enough tickets' });
+  }
+
+  // ⚠️ RACE WINDOW: Between the check and the update, another request
+  // can read the same availability count and also proceed to reserve.
+  // If 50 concurrent requests all read available=100, all see "100 >= 2",
+  // all try to reserve 2, and you end up with 0 tickets but 100 reservations.
+
+  // Step 3: Decrement availability
+  await db.query(
+    'UPDATE events SET available_tickets = available_tickets - $1 WHERE id = $2',
+    [quantity, eventId]
+  );
+
+  res.json({ reserved: true });
+});
+```
+
+This is the classic **Check-Then-Act** race condition. Under normal load, it might seem fine. Under a ticket drop, it fails catastrophically.
+
+### Step 1: Reproduce the Race Condition
+
+```bash
+# First, set up an event with exactly 10 tickets
+docker exec -it ticketpulse-postgres psql -U ticketpulse -c \
+  "UPDATE events SET available_tickets = 10 WHERE id = 1;"
+
+# Now fire 20 concurrent reservation requests (each wanting 1 ticket)
+# We should only succeed 10 times, failing 10 times with 409
+for i in {1..20}; do
+  curl -s -X POST http://localhost:3000/api/tickets/reserve \
+    -H 'Content-Type: application/json' \
+    -d '{"eventId": 1, "userId": "user_'$i'", "quantity": 1}' &
+done
+wait
+
+# Check how many tickets remain
+docker exec -it ticketpulse-postgres psql -U ticketpulse -c \
+  "SELECT available_tickets FROM events WHERE id = 1;"
+```
+
+Expected (broken): `available_tickets` is negative. You over-sold.
+
+### Step 2: Fix With Atomic Database Operations
+
+The fix eliminates the race window by combining check and update into one atomic operation:
+
+```typescript
+// FIXED: Atomic compare-and-set — no race window
+router.post('/api/tickets/reserve-atomic', async (req, res) => {
+  const { eventId, userId, quantity } = req.body;
+
+  // Atomic: decrement only if there are enough tickets
+  // If available_tickets - quantity would go below 0, the WHERE clause
+  // prevents the update, and we know it failed because rows_affected = 0
+  const result = await db.query(`
+    UPDATE events
+    SET available_tickets = available_tickets - $1
+    WHERE id = $2
+      AND available_tickets >= $1    -- Atomic check + update
+    RETURNING available_tickets
+  `, [quantity, eventId]);
+
+  if (result.rowCount === 0) {
+    // The WHERE clause was false: not enough tickets
+    return res.status(409).json({ error: 'Not enough tickets available' });
+  }
+
+  const remaining = result.rows[0].available_tickets;
+  res.json({
+    reserved: true,
+    ticketsRemaining: remaining,
+  });
+});
+```
+
+Why this works: PostgreSQL executes the UPDATE with a row-level lock. If 10,000 requests hit this simultaneously, they queue up behind each other at the database level. Each sees the `available_tickets` count as it stands AFTER all previous requests completed — not the stale value from the beginning of the request flood.
+
+### Step 3: Run the Race Again
+
+```bash
+# Reset to 10 tickets
+docker exec -it ticketpulse-postgres psql -U ticketpulse -c \
+  "UPDATE events SET available_tickets = 10 WHERE id = 1;"
+
+# Fire 20 concurrent requests to the fixed endpoint
+for i in {1..20}; do
+  curl -s -X POST http://localhost:3000/api/tickets/reserve-atomic \
+    -H 'Content-Type: application/json' \
+    -d '{"eventId": 1, "userId": "user_'$i'", "quantity": 1}' &
+done
+wait
+
+# Check remaining tickets
+docker exec -it ticketpulse-postgres psql -U ticketpulse -c \
+  "SELECT available_tickets FROM events WHERE id = 1;"
+```
+
+Expected (fixed): exactly 0 tickets remaining. Exactly 10 requests succeeded. 10 got 409.
+
+### Step 4: Add a Benchmark at High Concurrency
+
+Now see how each language's concurrency model handles the load:
+
+```bash
+# Benchmark the atomic endpoint at 1000 concurrent users (ticket drop simulation)
+echo "=== TypeScript (Event Loop) ==="
+wrk -t4 -c1000 -d15s -s <(echo 'wrk.method="POST"; wrk.body='"'"'{"eventId":1,"userId":"bench","quantity":1}'"'"'; wrk.headers["Content-Type"]="application/json"') \
+  http://localhost:3000/api/tickets/reserve-atomic
+
+# Reset tickets between runs
+docker exec -it ticketpulse-postgres psql -U ticketpulse -c \
+  "UPDATE events SET available_tickets = 100000 WHERE id = 1;"
+```
+
+What to observe:
+- Are there any 5xx errors? (Indicates server-side failure under load)
+- What is the p99 latency? (The slowest 1% of requests — the ones that waited longest for the DB lock)
+- Does the requests/sec number drop compared to the non-DB benchmark? (It will — DB lock contention is the new bottleneck)
+
+---
+
+## 9. The Four Concurrency Patterns Applied to TicketPulse (10 min)
+
+Now that you have seen the race condition problem, map each concurrency model to TicketPulse's real architectural choices:
+
+### Pattern Mapping
+
+| TicketPulse Component | Concurrency Pattern Used | Why |
+|---|---|---|
+| Express API handlers | Event loop (Node.js) | I/O-bound: waiting on DB, Kafka, Redis. Event loop ideal. |
+| Kafka consumer (order processing) | Worker threads / separate process | Each message is independent; parallel processing with backpressure |
+| Real-time seat map updates | WebSocket + event emitter | Event-driven: seat events pushed to connected clients |
+| PDF ticket generation | Worker thread pool | CPU-bound: PDF rendering blocks the event loop |
+| Database migrations | Sequential single thread | Must execute in order; parallelism would cause conflicts |
+
+### The Right Tool for Each Problem
+
+```bash
+# Test: what happens when the event loop is busy with a Fibonacci computation
+# while a WebSocket client is trying to receive a seat update?
+# (Run this from M28's CPU-heavy endpoint)
+
+# Terminal 1: Start a WebSocket listener
+wscat -c ws://localhost:3000/api/seat-updates?event=evt_1
+
+# Terminal 2: Block the event loop
+curl http://localhost:3000/api/cpu-heavy &
+
+# Terminal 3: Trigger a seat update (this should reach the WebSocket client instantly)
+curl -X POST http://localhost:3000/internal/seat-sold \
+  -H 'Content-Type: application/json' \
+  -d '{"eventId": "evt_1", "seat": "A12"}'
+```
+
+Observation: While `cpu-heavy` is running, the WebSocket message is delayed. This demonstrates why real-time systems (WebSocket servers, streaming pipelines) must never run CPU-intensive work on the same event loop as network I/O.
+
+The fix: Move PDF generation, report generation, and any CPU-bound work to worker threads or separate services. Keep the main event loop clean for I/O.
+
+---
+
+## 10. Reflection: Concurrency Decisions You Will Face (10 min)
+
+Work through these scenarios and write your answers before reading the guidance.
+
+### Scenario 1: The Thundering Herd
+
+Taylor Swift announces a concert. At 10 AM, 500,000 users simultaneously hit the purchase endpoint. Your Node.js server handles 5,000 requests/second under normal load. The flood is 100x your normal peak.
+
+What happens to:
+- The Node.js event loop? (Is it I/O-bound or CPU-bound at this point?)
+- The PostgreSQL connection pool? (What happens at 500K concurrent DB requests?)
+- The ticket availability counter? (What concurrency pattern prevents overselling?)
+
+> **Guided answers**: 
+> - Event loop: mostly I/O-bound (waiting on DB). The event loop handles the queue fine; the bottleneck is the DB.
+> - Connection pool: exhausted. With a pool of 20 connections and 500K requests, 499,980 requests are queued waiting for a connection. This creates backpressure — which is actually good (the server doesn't crash, it just gets slow). PgBouncer in front of Postgres with transaction-level pooling handles this correctly.
+> - Ticket counter: atomic UPDATE (as you built above) with a row-level lock. Each request waits its turn. Last remaining ticket goes to exactly one buyer.
+
+### Scenario 2: The Async Trap
+
+A junior engineer writes a Kafka consumer that processes order events:
+
+```javascript
+consumer.on('message', async (message) => {
+  const order = JSON.parse(message.value);
+  await processOrder(order);  // Takes 200-500ms per order
+  await consumer.commitOffset(message);
+});
+```
+
+At 100 orders/second, is this handler fast enough? What if `processOrder` blocks for 800ms?
+
+> **Guided answer**: This handler processes orders sequentially — one at a time. At 200-500ms each, it can handle 2-5 orders/second. At 100 orders/second input, the lag grows continuously: 95-98 messages per second accumulate in the Kafka partition. Within an hour, you have a 350,000-message lag.
+> 
+> Fix: Process messages in parallel with a bounded concurrency limit:
+> ```javascript
+> const pLimit = require('p-limit');
+> const limit = pLimit(10);  // Max 10 concurrent processOrder calls
+> 
+> consumer.on('message', (message) => {
+>   limit(async () => {
+>     const order = JSON.parse(message.value);
+>     await processOrder(order);
+>     await consumer.commitOffset(message);
+>   });
+> });
+> ```
+
+### Scenario 3: The Right Language Choice
+
+A data scientist on your team says: "We need to run ML inference on user behavior every 30 minutes to update the recommendation engine. The inference script is already written in Python using scikit-learn. Should we rewrite it in Go for performance?"
+
+> **Guided answer**: Almost certainly no. Scikit-learn is C under the hood — Python is not the bottleneck for numerical computation (numpy, pandas, scikit-learn all release the GIL and call optimized C/Fortran). The overhead of rewriting in Go (which lacks ML ecosystem) far exceeds any performance gain. Instead: profile the Python script, look for inefficient data loading (not computation), use multiprocessing for parallelism, and if performance is still inadequate, consider PyPy or Cython for the hot path. Never rewrite to a new language before profiling proves the language is the bottleneck.
+
+---
+
+> **Want the deep theory?** See Ch 6 of the 100x Engineer Guide: "Concurrency Models and Runtime Design" — covers the actor model, CSP, memory models, and how different languages compile async code to machine instructions.
+
+---
+
 ## What's Next
 
 You have built, secured, logged, measured, and benchmarked TicketPulse across multiple languages. The capstone brings everything together: architecture review, load testing, and a plan for what comes next in Loop 2.

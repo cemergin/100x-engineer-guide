@@ -26,6 +26,8 @@ You should have completed L2-M59 (Technical Writing). You wrote an RFC there -- 
 
 You will need Node.js 18+ and npm installed. Several CLI tools will be installed via npx.
 
+> **Before you continue:** Most APIs are built code-first: write the handler, then document it later (if ever). What if you wrote the API specification first and generated code, docs, and tests from it? What would that change about your development workflow?
+
 ---
 
 ## Part 1: Contract-First API Design with OpenAPI
@@ -1391,6 +1393,69 @@ Answer these questions:
 
 ---
 
+> **What did you notice?** Spec-driven development inverts the usual workflow: design the contract first, then implement. How would adopting this approach have changed any of the APIs you built earlier in Loop 2?
+
+## Exercises
+
+### 🛠️ Build: Add the Waitlist Endpoint to the OpenAPI Spec
+
+Extend the TicketPulse OpenAPI spec with `POST /api/events/{eventId}/waitlist` (join), `DELETE /api/events/{eventId}/waitlist` (leave), and `GET /api/events/{eventId}/waitlist/position` (check position). Generate types and a mock server from the extended spec.
+
+<details>
+<summary>💡 Hint 1</summary>
+Define the `WaitlistEntry` schema in `components.schemas` with fields: `id` (uuid), `eventId` (uuid), `userId` (uuid), `position` (integer, minimum 1), `status` (enum: waiting, notified, purchased, expired), `joinedAt` (date-time). The POST endpoint returns 201 with the entry; the GET endpoint returns the position and estimated wait time.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Run `npx openapi-typescript ticketpulse-events.openapi.yaml -o src/types/event-api.ts` after adding the waitlist paths. The generated types should include `operations["joinWaitlist"]` and `components["schemas"]["WaitlistEntry"]`. Run `npx @stoplight/prism-cli mock ticketpulse-events.openapi.yaml --port 3001` and test with `curl -X POST http://localhost:3001/api/events/<uuid>/waitlist -H "Authorization: Bearer fake"`.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Add a contract test that validates the real implementation against the spec: `const response = await fetch(\`\${BASE_URL}/api/events/\${eventId}/waitlist/position\`); const body = await response.json(); expect(body).toHaveProperty('position'); expect(typeof body.position).toBe('number');`. Run this against both the Prism mock and the real server -- if both pass, the contract holds.
+</details>
+
+### 🐛 Debug: AsyncAPI Schema Drift
+
+The purchase-service adds a `discountCode` field to the `TicketPurchased` Kafka message, but the AsyncAPI spec is not updated. The notification-service (consumer) starts throwing `TypeError: Cannot read property 'length' of undefined` on the new field.
+
+<details>
+<summary>💡 Hint 1</summary>
+The root cause is that the AsyncAPI spec is not enforced at publish time. Add a CI step that validates produced messages against the AsyncAPI schema: use `@asyncapi/parser` to load the spec, then validate each message payload with `ajv` (JSON Schema validator) before publishing. Fail the build if the payload does not match the spec.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Add the `discountCode` field to the AsyncAPI spec as an optional property: `discountCode: { type: string, description: "Promo code applied at checkout" }`. Do NOT add it to the `required` array -- existing consumers that do not expect this field must continue working. This is backward-compatible schema evolution (additive changes only).
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Prevent future drift with a CI check: generate TypeScript types from the AsyncAPI spec using `@asyncapi/generator`, then use those types in the producer code. If the producer sends a field not in the spec, the TypeScript compiler catches it. If a consumer reads a field not in the spec, the generated types show it as `undefined`, forcing explicit handling. The spec becomes the single source of truth for both sides.
+</details>
+
+### 📐 Design: RFC Backed by Executable Specs
+
+Write an RFC for the waitlist feature where the "Proposed Solution" section references an OpenAPI spec (for the REST API), an AsyncAPI spec (for the Kafka events), and Gherkin scenarios (for acceptance criteria) instead of describing behavior in prose.
+
+<details>
+<summary>💡 Hint 1</summary>
+In the RFC's Proposed Solution section, write: "The REST API contract is defined in `specs/waitlist.openapi.yaml` (attached). The event contract is defined in `specs/waitlist.asyncapi.yaml` (attached). Acceptance criteria are defined in `specs/waitlist.feature` (attached)." Use an ADR template for each key decision: data store choice, notification strategy, purchase window duration.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Write three Gherkin scenarios: (1) `Scenario: User joins waitlist for a sold-out event / Given event "Summer Jazz" is sold out / When user "Alice" joins the waitlist / Then Alice's position is 1 / And Alice receives a confirmation email`. (2) `Scenario: Tickets become available / Given 3 users are on the waitlist / When 2 tickets become available / Then the first 2 users are notified / And each has a 15-minute purchase window`. (3) `Scenario: Purchase window expires / Given user "Alice" was notified / When 15 minutes pass without a purchase / Then Alice's waitlist entry is marked "expired" / And the next user in line is notified`.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+The power of spec-backed RFCs: reviewers can generate a mock server from the OpenAPI spec and test the proposed API with curl before approving. They can read the Gherkin scenarios to understand the exact behavior without interpreting ambiguous prose. They can validate the AsyncAPI spec to ensure the Kafka contract is backward-compatible. The RFC becomes reviewable with tools, not just eyes.
+</details>
+
+---
+
 ## Checkpoint
 
 Before moving on, verify:
@@ -1418,6 +1483,14 @@ Before moving on, verify:
 | **Executable specification** | A specification that can be run as a test. Gherkin scenarios connected to step definitions are executable specs: they verify the system matches the specification. |
 | **Code generation** | Automatically producing source code (types, clients, validators) from a machine-readable specification. Eliminates drift between spec and implementation. |
 | **Contract testing** | Automated tests that verify an API implementation conforms to its specification. Catches mismatches between what the spec promises and what the code delivers. |
+
+---
+
+## What's Next
+
+In **Loop 2 Capstone** (L2-M60), you'll bring everything together in the Loop 2 capstone — a comprehensive project that tests your mastery of distributed systems.
+
+---
 
 ## Further Reading
 

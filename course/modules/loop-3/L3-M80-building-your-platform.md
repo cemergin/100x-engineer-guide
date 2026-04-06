@@ -20,9 +20,13 @@ A new engineer joins the team. They spend 2 days getting the local environment r
 
 At 5 engineers, this was fine. Everyone knew how everything worked. At 20, it does not scale. At 50, it would be fatal.
 
-> 💡 **Insight**: "Spotify built Backstage because they had 2,000+ microservices and engineers spent 40% of their time on infrastructure. After Backstage, it dropped to below 10%. You do not need 2,000 microservices to feel this pain -- it starts around 10 services and 15 engineers."
+> **Pro tip:** "Spotify built Backstage because they had 2,000+ microservices and engineers spent 40% of their time on infrastructure. After Backstage, it dropped to below 10%. You do not need 2,000 microservices to feel this pain -- it starts around 10 services and 15 engineers."
 
 ---
+
+### 🤔 Prediction Prompt
+
+Before reading, estimate: how long does it take a new engineer on your team to go from "laptop opened" to "first PR merged"? What percentage of that time is spent on infrastructure setup vs actual coding?
 
 ## Part 1: Measuring Developer Experience
 
@@ -142,7 +146,20 @@ For a team of 100: paved road + strong guardrails.
 For a team of 500+: full internal platform with self-service.
 ```
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Service Template
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The template should give you a deployable, monitored service in 30 seconds. Include: structured logging, OpenTelemetry tracing, Prometheus metrics, health checks, Dockerfile, CI pipeline, K8s manifests, and a Grafana dashboard -- all pre-configured.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Start from the order-service as a reference. Strip the business logic, keep the infrastructure: middleware (logging, tracing, error handling, auth), health endpoint, graceful shutdown, Dockerfile with multi-stage build, and the CI workflow. Parameterize the service name with `{{SERVICE_NAME}}` placeholders.
+</details>
+
 
 Create a service template that a new service can be scaffolded from in 30 seconds.
 
@@ -187,6 +204,17 @@ ticketpulse-service-template/
 ```
 
 ### 🛠️ Build: The create-service Script
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The script should: copy the template, replace placeholders (service name, port), initialize package.json, optionally create Kafka topics, and print clear "next steps" instructions. An internal developer platform API starts with scripts like this.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Use `sed` to replace `{{SERVICE_NAME}}` across all template files. Generate a random port in the 3010-3099 range to avoid collisions. The output should tell the engineer exactly what to do next: `cp .env.example .env`, `docker-compose up -d`, `npm run dev`, `curl localhost:PORT/health`.
+</details>
+
 
 ```bash
 #!/bin/bash
@@ -323,6 +351,17 @@ database instead" (which creates coupling).
 
 ### 📐 Design: Self-Service Capabilities
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Tier your self-service menu: Tier 1 (no approval) for dev resources, Tier 2 (auto-approved) for production resources with cost alerts, Tier 3 (human review) for network/security changes. The goal is to eliminate "file a ticket and wait 3 days" for common operations.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+At 20 engineers, Tier 1 should include: create service from template, create dev/staging database, create Kafka topics, add feature flags, view any service's logs/metrics/traces. Each of these should be a single command, not a multi-day approval process.
+</details>
+
+
 What can engineers provision without filing a ticket?
 
 ```
@@ -355,6 +394,17 @@ Tier 3: Requires Approval (human review, 1 business day SLA)
 ## Part 4: The Internal Developer Platform
 
 ### 📐 Design: What Would TicketPulse's Platform Look Like?
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+At 20 engineers, you need four things: a service catalog (YAML file listing services, owners, dashboards, runbooks), a template library (create-service scripts), a documentation hub (docs/ in the monorepo), and an observability portal (Grafana home dashboard with links).
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+You do not need Backstage at 20 engineers. A YAML service catalog, a `create-service.sh` script, and a docs/ directory get you 80% of the value. Graduate to Backstage or an internal CLI (`tp create service`, `tp deploy`, `tp logs`) when you hit 50 engineers.
+</details>
+
 
 At 20 engineers, you do not need Backstage. But you need the kernel of what Backstage provides.
 
@@ -528,6 +578,10 @@ The answers drive the roadmap. Not the tools you think are cool. Not what other 
 | **Service catalog** | A registry of available internal services and components, including documentation and ownership information. |
 | **DevEx** | Developer Experience; the overall satisfaction and productivity developers feel when using internal tools and platforms. |
 
+### 🤔 Reflection Prompt
+
+After designing the platform, where is the line between "helpful standardization" and "annoying rigidity" for your team size? What is the smallest platform investment that would give the biggest developer experience improvement?
+
 ## Further Reading
 
 - **Backstage by Spotify**: backstage.io -- the open-source developer portal
@@ -536,3 +590,8 @@ The answers drive the roadmap. Not the tools you think are cool. Not what other 
 - **"Team Topologies" by Matthew Skelton & Manuel Pais**: platform teams, stream-aligned teams, and the interaction modes between them
 - **Humanitec Platform Maturity Model**: a framework for evaluating where your platform is on the maturity curve
 - **"An Elegant Puzzle" by Will Larson**: engineering management, including platform team sizing and investment
+---
+
+## What's Next
+
+In **GitHub Actions at Scale** (L3-M80a), you'll build on what you learned here and take it further.

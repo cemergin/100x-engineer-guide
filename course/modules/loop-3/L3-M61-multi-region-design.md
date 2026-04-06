@@ -63,6 +63,16 @@ Choose three regions for TicketPulse's initial global deployment. For each regio
 - Which venues (and their ticket inventory) live here?
 - What is the latency improvement for the primary user population?
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about where the biggest concentration of events AND users overlap. Start with the three broadest geographic clusters.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Map major concert cities to cloud provider regions. The Americas, Europe, and Asia-Pacific are the standard three -- but which specific region within each matters for latency.
+</details>
+
 **Reference Selection (compare with yours):**
 
 | Region | Cloud Region | Primary Users | Primary Venues |
@@ -108,6 +118,16 @@ This means: cross-region purchases are inherently slower. A London user buying a
 ### 📐 Design Exercise: Draw Both
 
 Before reading the comparison, draw both architectures for TicketPulse. Label the data flows, the replication directions, and where writes happen.
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The key difference is where writes are accepted. In one model, writes go to one place. In the other, writes happen locally in each region.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+For active-passive, draw a single primary with DNS failover. For active-active, draw each region with its own database and cross-region replication arrows. Label which data each region "owns."
+</details>
 
 ### Active-Passive
 
@@ -189,6 +209,17 @@ Before reading the comparison, draw both architectures for TicketPulse. Label th
 
 ### 📐 Design Decision: Which Is Better for TicketPulse?
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered which data has natural geographic ownership? Ticket inventory is tied to a physical venue -- that locality should drive your write topology.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Active-active with regional data ownership lets each region own its venue inventory (strong consistency for writes) while replicating user profiles eventually. The cross-region purchase is the hard case -- route it to the inventory-owning region.
+</details>
+
+
 Consider these facts:
 - TicketPulse has clear data locality (events belong to venues, venues are in regions).
 - Ticket purchases require strong consistency (no overselling).
@@ -254,6 +285,17 @@ Routing rules:
 
 ### 📐 Design Exercise: Request Routing
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered the difference between reads (route to nearest region with a replica) and writes (route to the region that owns the inventory)? The routing layer must distinguish these.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+A Paris user browsing Tokyo events reads from the EU-West replica (eventual consistency is fine for browsing). But a Paris user purchasing a NYC ticket must be proxied to US-East where the inventory lives -- that cross-region hop of ~80ms is physics, not a bug.
+</details>
+
+
 Trace the complete request path for these scenarios:
 
 1. **User in Paris browses events in Paris.** Which region handles this? How many network hops?
@@ -304,7 +346,13 @@ Between regions, you use asynchronous replication:
 - Replication lag: typically 100ms-2s depending on distance and load.
 - Conflict resolution: last-write-wins for user profiles, no conflicts for append-only data (orders, ledger entries).
 
-### 💡 Insight: How Google Spanner Solved This
+### 🤔 Prediction Prompt
+
+Before reading about Spanner below, ask yourself: if you needed globally consistent reads across three continents, what would you need from the clock system? What trade-off would you pay on every write?
+
+> **The bigger picture:** The consistency model you choose per data type is the single most consequential architecture decision in a multi-region system. Get it wrong and you either oversell tickets or add 200ms to every request for no reason.
+
+### How Google Spanner Solved This
 
 Google Spanner achieved externally consistent (linearizable) reads and writes across globally distributed data. How?
 
@@ -319,6 +367,17 @@ Google Spanner achieved externally consistent (linearizable) reads and writes ac
 ## 5. Data Replication Design (10 minutes)
 
 ### 📐 Design Exercise: Replication Topology
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered that different data types need different replication topologies? User profiles can use a single global primary (or per-user-home-region primary), while ticket inventory should only be writable in the venue's region.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Use async CDC (Kafka or logical replication) for cross-region event/ticket read replicas. For the global user table, evaluate whether CockroachDB or Aurora Global Database simplifies multi-region writes versus managing conflict resolution yourself.
+</details>
+
 
 Design the replication topology for TicketPulse's three regions. For each data type, specify:
 - Where the primary (writable) copy lives.
@@ -454,6 +513,9 @@ After this module, you should have:
 
 ---
 
+
+> **What did you notice?** Consider how this connects to systems you've worked on. Where have you seen similar patterns — or missed opportunities to apply them?
+
 ## Module Summary
 
 | Concept | Key Takeaway |
@@ -478,6 +540,232 @@ After this module, you should have:
 | **PACELC** | Extension of CAP: during Partition choose Availability/Consistency; Else choose Latency/Consistency. |
 | **TrueTime** | Google's globally synchronized clock system using GPS and atomic clocks, enabling global strong consistency in Spanner. |
 | **Replication lag** | The delay between a write on the primary and its appearance on a replica. |
+
+---
+
+---
+
+## 9. Hands-On: Trace a Cross-Region Purchase End-to-End (20 min)
+
+You cannot build multi-region infrastructure in a local lab in 20 minutes, but you can develop the muscle of tracing requests precisely — which is what you will do constantly when debugging cross-region issues in production.
+
+### Step 1: Set Up a Local Multi-Region Simulation
+
+Use Docker Compose with latency injection to simulate cross-region behavior:
+
+```yaml
+# docker-compose.multi-region-sim.yml
+version: '3.9'
+services:
+  # Simulate US-East region (your "primary" local region)
+  us-east-api:
+    image: ticketpulse/api:latest
+    environment:
+      REGION: us-east
+      DB_URL: postgresql://ticketpulse:password@us-east-db:5432/ticketpulse
+    ports:
+      - "3001:3000"
+
+  # Simulate EU-West region
+  eu-west-api:
+    image: ticketpulse/api:latest
+    environment:
+      REGION: eu-west
+      DB_URL: postgresql://ticketpulse:password@eu-west-db:5432/ticketpulse
+    ports:
+      - "3002:3000"
+
+  # Latency proxy: adds 80ms to all connections through it (simulates trans-Atlantic)
+  eu-west-proxy:
+    image: alpine/socat
+    command: "TCP-LISTEN:3080,fork,reuseaddr TCP:us-east-api:3000"
+    ports:
+      - "3080:3080"
+    # Then use tc to add delay:
+    # docker exec eu-west-proxy tc qdisc add dev eth0 root netem delay 80ms
+
+  us-east-db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: ticketpulse
+      POSTGRES_USER: ticketpulse
+      POSTGRES_PASSWORD: password
+
+  eu-west-db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: ticketpulse
+      POSTGRES_USER: ticketpulse
+      POSTGRES_PASSWORD: password
+```
+
+```bash
+docker compose -f docker-compose.multi-region-sim.yml up -d
+
+# Add simulated latency (80ms = EU-West to US-East round trip)
+docker compose -f docker-compose.multi-region-sim.yml exec eu-west-proxy \
+  sh -c "apk add iproute2 && tc qdisc add dev eth0 root netem delay 80ms"
+```
+
+### Step 2: Trace the Same Request Through Both Regions
+
+```bash
+# Request to US-East (no cross-region hop)
+time curl -s http://localhost:3001/api/events/evt_nyc_1 | jq '.venue.city'
+# Expected: "New York" in ~50ms
+
+# Same request, but routed via EU-West → needs to cross-region to fetch US inventory
+time curl -s http://localhost:3002/api/events/evt_nyc_1 | jq '.venue.city'
+# Expected: "New York" in ~130ms (50ms processing + 80ms cross-region)
+```
+
+### Step 3: Simulate a Purchase Flow Across Regions
+
+Write a script that traces each step of a cross-region purchase:
+
+```bash
+#!/bin/bash
+# scripts/trace-cross-region-purchase.sh
+
+echo "=== Cross-Region Purchase Trace ==="
+echo "User: Paris (EU-West), Event: NYC Concert (US-East)"
+echo ""
+
+# Step 1: Browse event (from EU-West — should hit local replica if available)
+echo "Step 1: Browse event details..."
+START=$(date +%s%3N)
+curl -s http://localhost:3002/api/events/evt_nyc_1 > /dev/null
+END=$(date +%s%3N)
+echo "  Browse: $((END-START))ms (served from EU-West replica)"
+
+# Step 2: Check availability (must go to US-East — it owns the inventory)
+echo "Step 2: Check ticket availability..."
+START=$(date +%s%3N)
+curl -s http://localhost:3080/api/events/evt_nyc_1/availability > /dev/null
+# 3080 is our cross-region proxy with 80ms added latency
+END=$(date +%s%3N)
+echo "  Availability check: $((END-START))ms (US-East authoritative — cross-region!)"
+
+# Step 3: Reserve ticket (US-East owns inventory, must happen there)
+echo "Step 3: Reserve ticket..."
+START=$(date +%s%3N)
+RESERVATION=$(curl -s -X POST http://localhost:3080/api/orders/reserve \
+  -H 'Content-Type: application/json' \
+  -d '{"event_id": "evt_nyc_1", "user_id": "user_paris_1", "quantity": 2}')
+END=$(date +%s%3N)
+RESERVATION_ID=$(echo $RESERVATION | jq -r '.reservation_id')
+echo "  Reserve: $((END-START))ms | Reservation: $RESERVATION_ID"
+
+# Step 4: Process payment (payment gateway is in US-East)
+echo "Step 4: Process payment..."
+START=$(date +%s%3N)
+curl -s -X POST http://localhost:3080/api/orders/pay \
+  -H 'Content-Type: application/json' \
+  -d "{\"reservation_id\": \"$RESERVATION_ID\", \"payment_method\": \"tok_visa\"}" > /dev/null
+END=$(date +%s%3N)
+echo "  Payment: $((END-START))ms (Stripe API adds ~200ms)"
+
+# Step 5: Order confirmation replicated back to EU-West
+echo "Step 5: Verify order in EU-West..."
+sleep 1  # Allow async replication to propagate
+START=$(date +%s%3N)
+curl -s "http://localhost:3002/api/users/user_paris_1/orders" | jq '.[0].status' 
+END=$(date +%s%3N)
+echo "  Confirm: $((END-START))ms (replicated to EU-West)"
+
+echo ""
+echo "=== Summary ==="
+echo "Steps involving US-East (cross-region for Paris user): 3 of 5"
+echo "Irreducible latency added: ~240ms (3 × 80ms round trips)"
+```
+
+```bash
+chmod +x scripts/trace-cross-region-purchase.sh
+./scripts/trace-cross-region-purchase.sh
+```
+
+### Step 4: Calculate and Document Your Latency Budget
+
+Fill in this table based on your trace results:
+
+| Purchase Step | Region Handling | Latency (measured) | Cross-Region? |
+|---|---|---|---|
+| Browse event | EU-West replica | __ms | No |
+| Check availability | US-East (authoritative) | __ms | Yes |
+| Reserve ticket | US-East (authoritative) | __ms | Yes |
+| Process payment | US-East + Stripe | __ms | Yes |
+| View confirmation | EU-West (replicated) | __ms | No |
+| **Total** | | __ms | |
+
+This is your **latency budget reality check**. Compare with your theoretical estimate from Section 6.
+
+### Step 5: Optimize — Reduce Cross-Region Hops
+
+The availability check and reservation can be combined into one cross-region call (instead of two):
+
+```javascript
+// services/purchase.service.js (optimized)
+
+// BEFORE: 2 separate cross-region calls
+const available = await crossRegionClient.get(`/events/${eventId}/availability`);
+if (available.tickets > 0) {
+  const reservation = await crossRegionClient.post('/orders/reserve', { eventId, userId, quantity });
+}
+
+// AFTER: 1 cross-region call — reserve-or-fail atomically
+const reservation = await crossRegionClient.post('/orders/reserve-or-fail', {
+  eventId,
+  userId,
+  quantity,
+  // If tickets not available, returns 409 Conflict (no additional round-trip)
+});
+```
+
+**Result**: 3 cross-region hops → 2 cross-region hops. Saves ~80ms for every purchase from a non-US user.
+
+---
+
+## 10. Deep Reflection: Edge Cases You Must Plan For (10 min)
+
+These scenarios will happen in production. Think through each one before they do.
+
+### Scenario 1: Replication Lag Spike
+
+Normally your cross-region replication lag is 200ms. During a traffic spike, it climbs to 45 seconds. A user in London sees an event description from 45 seconds ago — but that is fine, because event descriptions rarely change.
+
+However, your read replica availability count is also 45 seconds stale. A Paris user sees "5 tickets available" but when they try to purchase, the tickets are gone (US-East sold them 45 seconds ago).
+
+**Design question**: How does your system communicate that the availability count might be stale? What does the purchase confirmation flow look like when availability data is eventually consistent?
+
+> **Guided answer**: Use "optimistic UX" — show the availability count but add subtle indicators when you know it's from a replica (e.g., "Availability updated 2 minutes ago"). When the user clicks "Buy," always go to the authoritative region. If tickets are gone, show a clear "Sorry, tickets just sold out" message with alternatives. The key: never let a user reach the payment screen for inventory that doesn't exist.
+
+### Scenario 2: Split-Brain During Network Partition
+
+EU-West and US-East lose connectivity for 8 minutes. A London user buys a ticket for a London event (EU-West handles it entirely — this works). A New York user buys the same ticket for that London event from US-East (which cannot reach EU-West's authoritative inventory).
+
+**Design question**: What should US-East do with the NYC user's purchase request during the partition?
+
+> **Guided answer**: Return a clear error: "Purchase temporarily unavailable for this event — please try again in a few minutes." This is the CP choice (consistency over availability) for ticket purchases. Overselling a concert is worse than a temporary 503. Implement circuit breakers that detect EU-West unavailability and fail-fast with a user-friendly message rather than hanging. 
+
+### Scenario 3: Gradual Geographic Rollout
+
+You are adding a 4th region (AP-Southeast — Singapore) to serve Southeast Asian users. How do you roll it out without risking consistency?
+
+> **Guided answer**: Start AP-Southeast as read-only. Route all writes to the nearest existing region (AP-Northeast or US-East). Watch for replication lag, data correctness, and replica health for 2 weeks. Then, select a low-risk event category (e.g., small local venues in Singapore) and migrate those to AP-Southeast as the new authoritative source. Monitor purchases. Expand category by category. Never flip the entire region at once.
+
+---
+
+### 🤔 Reflection Prompt
+
+Look back at your initial data classification from the start of this module. What changed? Where did you underestimate the complexity of cross-region writes, and where did you overestimate the need for strong consistency?
+
+> **Ecosystem note:** See Ch 19 of the 100x Engineer Guide: "Distributed Systems Fundamentals" -- covers CAP, PACELC, consensus algorithms, and replication strategies with mathematical grounding.
+
+---
+
+## What's Next
+
+Next up: **[L3-M62: Cloud Provider Deep Dive](L3-M62-cloud-provider-deep-dive.md)** -- you will take these multi-region designs and deploy them on real cloud infrastructure (AWS or GCP), hitting live endpoints and understanding the cost reality.
 
 ---
 

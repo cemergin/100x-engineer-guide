@@ -74,6 +74,21 @@ Why this structure:
 
 ## 2. Build: Custom Error Classes
 
+<details>
+<summary>💡 Hint 1: Extend the Native Error Class</summary>
+Create an `AppError` base class that extends `Error`. Give it `statusCode` (number), `code` (string like `NOT_FOUND`), `message`, an optional `details` array for field-level issues, and a `requestId` (UUID). All other error classes extend `AppError` with preset values.
+</details>
+
+<details>
+<summary>💡 Hint 2: Map HTTP Status Codes to Error Types</summary>
+Each subclass should hardcode its status: `NotFoundError` = 404, `ValidationError` = 400, `ConflictError` = 409, `UnauthorizedError` = 401, `ForbiddenError` = 403. The error middleware checks `err instanceof AppError` and uses `err.statusCode` to set the response status.
+</details>
+
+<details>
+<summary>💡 Hint 3: ValidationError Carries Field Details</summary>
+`ValidationError` takes an array of `{ field: string, issue: string, value?: any }` objects. The constructor counts the details and builds a summary message like "The request body contains 3 invalid fields." This way the client gets ALL problems at once instead of one-at-a-time.
+</details>
+
 Create a set of error classes that the rest of the application can throw:
 
 ```typescript
@@ -207,6 +222,21 @@ Now every request has a `req.requestId` and every response has an `X-Request-Id`
 
 ## 4. Build: Error Handling Middleware
 
+<details>
+<summary>💡 Hint 1: Express Error Middleware Has 4 Parameters</summary>
+Express distinguishes error middleware by its signature: `(err, req, res, next)` -- exactly 4 parameters. Place it AFTER all routes with `app.use(errorHandler)`. Express will route thrown errors and `next(err)` calls to this middleware automatically.
+</details>
+
+<details>
+<summary>💡 Hint 2: Branch on Error Type</summary>
+Check `err instanceof AppError` first -- these are known application errors (4xx). For JSON parse errors, check `err.type === 'entity.parse.failed'` (Express sets this). Everything else is an unknown 500 error. Log the full stack trace server-side but NEVER send it to the client.
+</details>
+
+<details>
+<summary>💡 Hint 3: Consistent Shape for Every Error Response</summary>
+Every error response must have `{ error: { code, message, requestId } }`. For validation errors, add a `details` array. Use `req.requestId` (set by your requestId middleware) so every error can be traced in logs. Log known errors at `warn` level, unknown errors at `error` level.
+</details>
+
 This is the centerpiece. A single middleware that catches ALL errors and returns consistent responses:
 
 ```typescript
@@ -304,6 +334,21 @@ app.use(errorHandler);
 ---
 
 ## 5. Build: Validation That Reports ALL Issues
+
+<details>
+<summary>💡 Hint 1: Accumulate Errors in an Array</summary>
+Create an `errors: ErrorDetail[]` array at the top of the function. For each field, check presence and type, then push `{ field: 'title', issue: 'Required. Must be a non-empty string.', value: body.title }` into the array. Do NOT return early on the first error.
+</details>
+
+<details>
+<summary>💡 Hint 2: Chain Validations With else-if</summary>
+For each field, check required-ness first, then format. Use `else if` so you do not report both "required" and "must be at most 200 chars" for the same field. For dates, parse with `new Date()` and check `isNaN(parsed.getTime())`. For numbers, use `Number.isInteger()`.
+</details>
+
+<details>
+<summary>💡 Hint 3: Throw at the End, Not in the Middle</summary>
+After all checks, do `if (errors.length > 0) throw new ValidationError(errors, requestId)`. This single throw replaces the old pattern of `if (!title) return res.status(400)...`. The error middleware handles formatting and sending the response.
+</details>
 
 The old validation checked one thing at a time. Let us build a validator that collects every problem and returns them all:
 
@@ -625,3 +670,8 @@ After this module, TicketPulse should have:
 | **Validation error** | A 400-level error indicating the client sent invalid data. Should include details about every invalid field. |
 | **Stack trace** | The call stack at the point of an error. Contains file paths, line numbers, and function names. Never expose to clients in production. |
 | **Error code** | A machine-readable string (like `VALIDATION_ERROR`) that clients use to handle errors programmatically. More stable than HTTP status codes or messages. |
+---
+
+## What's Next
+
+In **Authentication & Authorization** (L1-M13), you'll build on what you learned here and take it further.

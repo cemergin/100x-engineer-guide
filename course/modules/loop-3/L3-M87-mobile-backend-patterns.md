@@ -24,6 +24,10 @@ This module covers the backend patterns that make mobile apps work well: push no
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before reading, think about the last time you used a mobile app on a subway or flight. What worked offline? What did not? What backend changes would have been needed to make the broken parts work?
+
 ## 1. Push Notifications: FCM/APNs Architecture
 
 ### The Flow
@@ -430,7 +434,382 @@ Good: "3 tickets sold for Summer Festival" → single push (batched over 30s win
 
 ---
 
-## 6. Reflect: Web vs Mobile Backend
+## 6. Push Notification Exercises
+
+These exercises build on the architecture in Section 1. They cover the scenarios that trip up most engineers implementing push for the first time.
+
+### Exercise 1: Implement Notification Batching
+
+<details>
+<summary>💡 Hint 1: The BFF layer is where batching belongs, not the individual services</summary>
+The mobile BFF (Backend For Frontend) aggregates notifications across services before pushing to the device. If each service pushes independently, you cannot enforce the 30-second batching window. Centralize the batching logic in the notification service that the BFF calls.
+</details>
+
+The naive implementation sends one push per event. An active user might get 30 notifications in a minute when a popular event sells out and their friends share it. Users turn off notifications entirely.
+
+Implement a batching system that aggregates notifications within a 30-second window:
+
+```typescript
+// notification-batch.service.ts
+
+interface PendingNotification {
+  userId: string;
+  type: string;
+  payload: Record<string, any>;
+  createdAt: Date;
+}
+
+class NotificationBatcher {
+  private pending: Map<string, PendingNotification[]> = new Map();
+  private timer: NodeJS.Timeout | null = null;
+  private readonly BATCH_WINDOW_MS = 30_000;
+
+  async add(notification: PendingNotification): Promise<void> {
+    const key = `${notification.userId}:${notification.type}`;
+
+    if (!this.pending.has(key)) {
+      this.pending.set(key, []);
+    }
+    this.pending.get(key)!.push(notification);
+
+    // Schedule a flush if not already scheduled
+    if (!this.timer) {
+      this.timer = setTimeout(() => this.flush(), this.BATCH_WINDOW_MS);
+    }
+  }
+
+  private async flush(): Promise<void> {
+    this.timer = null;
+    const batches = new Map(this.pending);
+    this.pending.clear();
+
+    for (const [key, notifications] of batches) {
+      await this.sendBatch(notifications);
+    }
+  }
+
+  private async sendBatch(notifications: PendingNotification[]): Promise<void> {
+    const { userId, type } = notifications[0];
+
+    if (notifications.length === 1) {
+      // Single notification — send as-is
+      await sendPushNotification({
+        userId,
+        title: this.buildTitle(notifications[0]),
+        body: this.buildBody([notifications[0]]),
+        data: notifications[0].payload,
+      });
+    } else {
+      // Multiple notifications — summarize
+      await sendPushNotification({
+        userId,
+        title: `${notifications.length} updates for you`,
+        body: this.buildBatchSummary(notifications),
+        data: {
+          notificationType: 'batch',
+          count: notifications.length,
+          types: [...new Set(notifications.map(n => n.type))],
+        },
+      });
+    }
+  }
+
+  private buildBatchSummary(notifications: PendingNotification[]): string {
+    // Exercise: implement this based on the notification types
+    // Example: "Ticket available for Summer Festival + 2 more"
+    throw new Error('Implement buildBatchSummary');
+  }
+}
+```
+
+**Your task**: Implement `buildBatchSummary`. It should:
+- Name the most recent notification specifically
+- Count the remainder
+- Keep the summary under 60 characters (push notification body limit on iOS)
+
+Test your implementation with these scenarios:
+1. Three "ticket available" notifications for the same event → should say "Ticket available: Summer Festival" (no batching needed, same event)
+2. Two "ticket available" notifications for different events → "Ticket available: Summer + 1 more event"
+3. Five notifications of mixed types → "3 tickets available + 2 price drops"
+
+### Exercise 2: Implement Delivery Confirmation Tracking
+
+Push is best-effort, but you need to know which notifications were actually delivered for analytics and support purposes. Implement a delivery receipt system:
+
+```typescript
+// notification-delivery.service.ts
+
+interface NotificationRecord {
+  id: string;
+  userId: string;
+  type: string;
+  sentAt: Date;
+  deliveredAt: Date | null;
+  openedAt: Date | null;
+  platform: 'ios' | 'android';
+  token: string;
+}
+
+// Step 1: Record every notification before sending
+async function recordAndSend(notification: PushNotification): Promise<string> {
+  const notificationId = generateId();
+
+  await db.query(
+    `INSERT INTO notification_log (id, user_id, type, sent_at, platform)
+     VALUES ($1, $2, $3, NOW(), $4)`,
+    [notificationId, notification.userId, notification.type, notification.platform]
+  );
+
+  // Include notification ID in the push data payload
+  // The app will use this to call back and confirm delivery/open
+  await sendPushNotification({
+    ...notification,
+    data: {
+      ...notification.data,
+      notificationId,  // ← app receives this
+    },
+  });
+
+  return notificationId;
+}
+
+// Step 2: App calls this endpoint when notification is received
+// POST /api/mobile/v1/notifications/:id/delivered
+app.post('/api/mobile/v1/notifications/:id/delivered', auth, async (req, res) => {
+  await db.query(
+    `UPDATE notification_log
+     SET delivered_at = NOW()
+     WHERE id = $1 AND user_id = $2`,
+    [req.params.id, req.user.id]
+  );
+  res.status(204).end();
+});
+
+// Step 3: App calls this when user taps the notification
+// POST /api/mobile/v1/notifications/:id/opened
+app.post('/api/mobile/v1/notifications/:id/opened', auth, async (req, res) => {
+  await db.query(
+    `UPDATE notification_log
+     SET opened_at = NOW()
+     WHERE id = $1 AND user_id = $2`,
+    [req.params.id, req.user.id]
+  );
+  res.status(204).end();
+});
+
+// Step 4: Analytics query — delivery and open rates by type
+const analyticsQuery = `
+  SELECT
+    type,
+    COUNT(*) AS sent,
+    COUNT(delivered_at) AS delivered,
+    COUNT(opened_at) AS opened,
+    ROUND(COUNT(delivered_at)::numeric / COUNT(*) * 100, 1) AS delivery_rate_pct,
+    ROUND(COUNT(opened_at)::numeric / NULLIF(COUNT(delivered_at), 0) * 100, 1) AS open_rate_pct
+  FROM notification_log
+  WHERE sent_at > NOW() - INTERVAL '7 days'
+  GROUP BY type
+  ORDER BY sent DESC;
+`;
+```
+
+**Discussion**: What delivery rate would you expect for push notifications? (Industry average: 60-70% on iOS, 80-90% on Android for apps with notification permissions enabled.) What would a delivery rate below 40% tell you?
+
+### Exercise 3: Token Refresh Handling
+
+Device tokens change. An app reinstall, an OS update, or an iOS migration generates a new token. If you send to the old token, FCM/APNs returns an error. Your system must detect this and update the stored token.
+
+```typescript
+// token-refresh.service.ts
+
+interface FCMErrorResponse {
+  error: {
+    code: number;
+    message: string;
+    status: string;
+    details?: Array<{ type: string; errorCode?: string }>;
+  };
+}
+
+async function handleFCMError(
+  token: string,
+  error: FCMErrorResponse,
+  userId: string
+): Promise<void> {
+  const status = error.error.status;
+
+  if (status === 'UNREGISTERED') {
+    // Token is permanently invalid — app was uninstalled
+    await db.query(
+      `DELETE FROM device_tokens WHERE token = $1`,
+      [token]
+    );
+    console.log(`Removed unregistered token for user ${userId}`);
+    return;
+  }
+
+  if (status === 'INVALID_ARGUMENT') {
+    // Token is malformed (data corruption, bug in token storage)
+    await db.query(
+      `DELETE FROM device_tokens WHERE token = $1`,
+      [token]
+    );
+    console.log(`Removed invalid token for user ${userId}`);
+    return;
+  }
+
+  // For UNAVAILABLE or INTERNAL errors: retry with exponential backoff
+  // (don't delete the token — FCM is temporarily having issues)
+  if (status === 'UNAVAILABLE' || status === 'INTERNAL') {
+    throw new RetryableError(`FCM temporarily unavailable: ${error.error.message}`);
+  }
+}
+
+// FCM v1 API also returns a new token in some responses
+// Always check and upsert when provided
+async function upsertTokenIfRefreshed(
+  oldToken: string,
+  newToken: string | null,
+  userId: string
+): Promise<void> {
+  if (!newToken || newToken === oldToken) return;
+
+  await db.query(
+    `UPDATE device_tokens
+     SET token = $1, updated_at = NOW()
+     WHERE token = $2 AND user_id = $3`,
+    [newToken, oldToken, userId]
+  );
+  console.log(`Refreshed token for user ${userId}`);
+}
+```
+
+**Your task**: Write a function `pruneStaleTokens()` that runs daily and removes tokens that have not delivered a notification in 90 days. Use the `notification_log` table from Exercise 2 to identify stale tokens. What is the risk of being too aggressive (30 days)? What is the risk of being too conservative (180 days)?
+
+---
+
+## 7. Offline-First Sync Scenarios
+
+These scenarios describe specific offline sync problems you will encounter building TicketPulse's mobile app. Work through each one before looking at the guidance.
+
+### Scenario 1: The Checkout Conflict
+
+**Setup**: A user adds 2 tickets for the Summer Festival to their cart while online. They lose connectivity on the subway. They tap "Purchase" (the app optimistically shows "Processing..."). When connectivity returns, the app attempts to submit the purchase.
+
+**Problem**: In the 8 minutes they were offline, the 2 remaining tickets for that section sold out. The backend rejects the purchase.
+
+**Questions to answer before reading the guidance:**
+1. What should the app show when connectivity returns and the purchase fails?
+2. The user had tickets in their cart — should you show them as "reserved" while they're in the cart?
+3. How do you communicate that the 15-minute cart reservation window expires?
+
+**Guidance:**
+
+```
+Mobile cart reservation model for TicketPulse:
+
+1. Cart reservation is server-side, not client-side.
+   When the user adds tickets to the cart (online), the server
+   reserves them for 15 minutes. The app shows the countdown timer.
+
+2. If the user goes offline, the countdown continues.
+   The app shows "Your cart expires in X:XX" even offline, because
+   the expiration time is known from the server response.
+
+3. When connectivity returns, the app first checks if the reservation
+   is still valid (GET /api/orders/cart/{cartId}/status).
+   - If valid: proceed to purchase
+   - If expired: show "Your cart expired. Available tickets: [X]"
+
+4. The purchase button is DISABLED when offline.
+   This is the key design decision: purchasing requires real-time
+   availability confirmation. Do not allow optimistic purchases.
+
+The user experience trade-off: users cannot purchase offline.
+The business trade-off: no oversells, no fraud via offline state manipulation.
+```
+
+### Scenario 2: The Stale Profile Update
+
+**Setup**: A user updates their notification preferences while offline (they turned off "venue announcements"). The app queues the mutation. When they come back online, the backend syncs the change.
+
+**Problem**: In the meantime, a team member updated the user's notification preferences in the admin panel (adding them to a marketing campaign). The admin change happened while the user was offline.
+
+**The conflict**: user set `venue_announcements = false`, admin set `marketing_opt_in = true`. These are different fields — they do not conflict.
+
+**But what if**: user set `email_notifications = false`, admin set `email_notifications = true`.
+
+**Questions:**
+1. Whose change wins?
+2. How do you detect that this is the same field, modified by two different actors?
+3. What should you show the user when their preference sync results in a conflict?
+
+**Guidance:**
+
+```
+Conflict resolution strategy for preference syncs:
+
+Use "last writer wins" with a version vector:
+
+1. Every preference update includes:
+   - The value being set
+   - The client timestamp (when the user made the change)
+   - The client version (the version of the preferences when the
+     user last synced)
+
+2. The server applies changes if:
+   client_version >= server_version at the time of the user's change
+
+3. If client_version < server_version at the time of the change:
+   the server DOES NOT apply the change but returns the current state.
+   The app shows: "Your preference was updated by another session.
+   Current setting: [X]. Do you want to override it?"
+
+4. For admin overrides specifically:
+   Admin changes are marked with an admin flag.
+   Client mutations cannot override admin flags without confirmation.
+```
+
+### Scenario 3: The Duplicate Mutation Problem
+
+**Setup**: The user joins a waitlist while offline. The mutation is queued. When connectivity returns, the app retries the queued mutation — but the first retry succeeded and the user IS on the waitlist. The second retry hits the unique constraint (`UNIQUE(userId, eventId)`) and gets a 409.
+
+**Questions:**
+1. Is this a real error or expected behavior?
+2. How should the app handle a 409 on a queued mutation?
+3. How do you prevent the user from thinking the queue failed?
+
+**Guidance:**
+
+```
+Idempotency keys for offline mutations:
+
+1. When queuing a mutation, generate a client-side idempotency key.
+   const key = `join-waitlist:${userId}:${eventId}:${sessionId}`;
+
+2. Include the key in the request header:
+   Idempotency-Key: join-waitlist:user_abc:event_xyz:sess_123
+
+3. Server stores the key and result for 24 hours:
+   If the same key arrives again, return the original result without
+   re-executing.
+
+4. From the app's perspective: any 2xx response (including a cached
+   repeat response) means "success." A 409 with a different user
+   error should surface; a 409 that is "you are already on the list"
+   should be treated as success.
+
+5. The app should not retry 4xx errors blindly.
+   Distinguish between:
+   - 409 ALREADY_EXISTS: success (idempotent)
+   - 409 CONFLICT: failure (conflicting state, user needs to resolve)
+   - 429 RATE_LIMIT: wait and retry
+   - 5xx SERVER_ERROR: retry with backoff
+```
+
+---
+
+## 8. Reflect: Web vs Mobile Backend
 
 ### Stop and Think (5 minutes)
 
@@ -447,13 +826,27 @@ The fundamental shift is from **assumed connectivity** (web) to **intermittent c
 
 ---
 
+---
+
+## Cross-References
+
+- **Chapter 10** (Mobile Backend Patterns): Full treatment of the BFF pattern, device-aware APIs, and the push notification infrastructure covered in this module.
+- **L2-M36** (API Gateway and BFF): The BFF pattern for mobile is a specialization of the general BFF pattern — read that module for the foundational concepts.
+- **L3-M67** (Real-Time Systems with WebSockets): Push notifications and WebSockets serve different real-time use cases; this module contrasts them explicitly.
+
+---
+
 ## Checkpoint: What You Built
 
 You have:
 
 - [x] Designed the push notification flow: device registration, token management, delivery with stale token cleanup
 - [x] Implemented the in-app inbox as a reliable fallback for best-effort push
+- [x] Built a notification batching system that prevents notification fatigue
+- [x] Implemented delivery confirmation tracking with delivery and open rate analytics
+- [x] Handled token refresh and invalidation for both FCM and APNs
 - [x] Designed offline-first patterns with the outbox queue and server-wins conflict resolution
+- [x] Worked through three offline sync conflict scenarios: checkout conflicts, preference conflicts, and duplicate mutations
 - [x] Optimized APIs for mobile: BFF endpoints, compression, cursor pagination
 - [x] Set up deep linking configuration for iOS and Android
 - [x] Applied battery and data awareness patterns
@@ -473,3 +866,17 @@ You have:
 | **APNs** | Apple Push Notification service; Apple's service for delivering push notifications to iOS, macOS, and other Apple devices. |
 | **Offline-first** | An architecture where the app works without a network connection and syncs data when connectivity is restored. |
 | **Deep link** | A URL that navigates a user directly to specific content or a screen within a mobile application. |
+| **Idempotency key** | A client-generated unique identifier included in a request so the server can detect and deduplicate retries. |
+| **Notification batching** | Aggregating multiple related notifications into a single push to reduce notification volume and prevent fatigue. |
+| **Delivery receipt** | A confirmation sent from the app back to the server when a push notification is received or opened. |
+| **Conflict resolution** | The strategy for handling simultaneous mutations to the same data from different clients or actors. |
+
+### 🤔 Reflection Prompt
+
+Which mobile backend pattern required the most change to your existing API design -- offline-first, push notifications, or API optimization? Where does "mobile-friendly" conflict with "web-optimized"?
+
+---
+
+## What's Next
+
+In **The TicketPulse Architecture Review** (L3-M88), you'll build on what you learned here and take it further.

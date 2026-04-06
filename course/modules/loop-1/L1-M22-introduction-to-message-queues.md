@@ -103,7 +103,25 @@ Producer                    RabbitMQ                     Consumer
 
 ## 2. Build: The Message Publisher (15 minutes)
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: RabbitMQ Connection and Publisher
+
+<details>
+<summary>💡 Hint 1: Declare durable queues with dead-letter routing</summary>
+Use `channel.assertQueue('ticket.purchased', { durable: true })` so the queue survives RabbitMQ restarts. Add `x-dead-letter-exchange` and `x-dead-letter-routing-key` arguments to route failed messages to a `.dlq` queue instead of losing them.
+</details>
+
+<details>
+<summary>💡 Hint 2: Publish with persistent: true</summary>
+When calling `channel.sendToQueue()`, pass `{ persistent: true, contentType: 'application/json' }` in the options. This tells RabbitMQ to write the message to disk, so it survives broker restarts. Without this flag, messages are memory-only and can be lost.
+</details>
+
+<details>
+<summary>💡 Hint 3: Fail gracefully if RabbitMQ is down</summary>
+Track the connection/channel state. If `channel` is null (connection failed), log a warning and return `false` from `publishMessage()` — do not throw. The purchase already succeeded in Postgres; losing the queue message is bad but crashing the API is worse.
+</details>
+
 
 ```typescript
 // src/messaging/rabbitmq.ts
@@ -333,6 +351,22 @@ The consumer is a **separate process.** It does not run inside the API server. I
 
 ### 🛠️ Build: Consumer Process
 
+<details>
+<summary>💡 Hint 1: Use prefetch(1) for backpressure</summary>
+Call `channel.prefetch(1)` before consuming. This tells RabbitMQ to send only one unacknowledged message at a time. Without it, RabbitMQ pushes all queued messages to the consumer at once, which can overwhelm a slow email API.
+</details>
+
+<details>
+<summary>💡 Hint 2: ack on success, nack with requeue logic on failure</summary>
+After successfully sending the email, call `channel.ack(msg)`. On failure, check `msg.fields.redelivered` — if false, call `channel.nack(msg, false, true)` to retry once. If it is already redelivered (second failure), call `channel.nack(msg, false, false)` to send it to the dead letter queue.
+</details>
+
+<details>
+<summary>💡 Hint 3: Handle graceful shutdown with SIGTERM</summary>
+Listen for `process.on('SIGTERM', ...)` and `SIGINT`. Close the channel and connection cleanly. This ensures the consumer finishes its current message before exiting, preventing a half-processed message from being redelivered.
+</details>
+
+
 ```typescript
 // src/consumers/emailConsumer.ts
 
@@ -505,6 +539,22 @@ The API never waited for the email. The email consumer never slowed down the API
 ## 5. Debug: Kill the Consumer, Queue Up Messages (10 minutes)
 
 ### 🐛 The Experiment
+
+<details>
+<summary>💡 Hint 1: Kill the consumer, then buy tickets</summary>
+Ctrl+C the email consumer process. Then buy 5 tickets with `curl`. The API still responds in ~215ms — it does not care that the consumer is down. Check the RabbitMQ management UI at http://localhost:15672 — the queue should show Ready: 5, Consumers: 0.
+</details>
+
+<details>
+<summary>💡 Hint 2: Start the consumer and watch it drain</summary>
+Run `npm run consumer:email`. Watch the consumer process all 5 messages one by one. In the management UI, the Ready count drops from 5 to 0. This proves the queue acts as a durable buffer between producer and consumer.
+</details>
+
+<details>
+<summary>💡 Hint 3: Compare this to the in-process EventBus from M21</summary>
+If you had killed the API server (not just the consumer) in M21, the in-process EventBus events would be lost forever. With RabbitMQ, the messages survive because they are persisted to disk. That is the fundamental upgrade from in-process events to a message queue.
+</details>
+
 
 ```bash
 # Terminal 1: TicketPulse API is running
@@ -693,6 +743,9 @@ After this module, TicketPulse should have:
 
 ---
 
+
+> **What did you notice?** Look back at what you just built. What surprised you? What felt harder than expected? That's where the real learning happened.
+
 ## Module Summary
 
 | Concept | Key Takeaway |
@@ -735,3 +788,8 @@ After this module, TicketPulse should have:
 - Chapter 3 of the 100x Engineer Guide: Section 2 (Asynchronous Communication Patterns)
 - Martin Kleppmann, *Designing Data-Intensive Applications*, Chapter 11 (Stream Processing)
 - [Redis Streams](https://redis.io/docs/data-types/streams/) — An alternative to RabbitMQ using Redis (lighter weight, less feature-rich)
+---
+
+## What's Next
+
+In **OWASP Top 10 -- Finding Vulnerabilities** (L1-M23), you'll build on what you learned here and take it further.

@@ -13,5 +13,6 @@
 | 25 | [API Design & Developer Experience](./25-api-design.md) | Intermediate |
 | 29 | [Career Engineering](./29-career-engineering.md) | All levels |
 | 30 | [Data Privacy, Ethics & Compliance](./30-data-privacy-ethics.md) | Intermediate |
+| 36 | [Beast Mode — Operational Readiness](./36-beast-mode.md) | All levels |
 
-**Narrative:** How computers execute concurrently → how to deploy and operate → how to prove it works → how to lead the team → what's next → real system designs → great APIs → career growth → data responsibility.
+**Narrative:** How computers execute concurrently → how to deploy and operate → how to prove it works → how to lead the team → what's next → real system designs → great APIs → career growth → data responsibility → hit the ground running.

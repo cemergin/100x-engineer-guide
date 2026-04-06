@@ -33,6 +33,9 @@ By the end of this module, you will have a saga orchestrator that coordinates th
 
 ---
 
+> **Before you continue:** In the monolith, a ticket purchase was one database transaction — if payment fails, the reservation rolls back automatically. With separate services, how would you undo a reservation after a payment failure? Think about this before reading on.
+
+
 ## 0. The Problem: Distributed Transactions (5 minutes)
 
 ### The Happy Path
@@ -86,6 +89,22 @@ If step N fails, execute compensating actions for steps N-1, N-2, ..., 1 in reve
 
 ### 📐 Design Exercise
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think about what happens at each step of the purchase flow. What data does each step need from previous steps? What needs to be undone if this step fails?
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Each saga step needs execute() and compensate() methods. The compensating action for a payment is a refund; for a reservation, it is a release. Process steps in order; compensate in reverse.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The orchestrator loops through steps, tracks completedSteps, and on catch reverses through them calling compensate(). Store the saga context (IDs from each step) so compensations have the data they need.
+</details>
+
+
 Before writing code, design the saga. Draw the happy path and every failure path with compensating actions.
 
 **Your saga has four steps. That means four possible failure points (plus failures during compensation itself).**
@@ -122,6 +141,22 @@ Before writing code, design the saga. Draw the happy path and every failure path
                     └───────────────┘
 ```
 
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Draw the state machine: each step either succeeds (move forward) or fails (compensate backwards). Think about which steps are truly reversible and which are not.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+The saga has four steps: reserve ticket, process payment, confirm order, send notification. Each reversible step needs a compensating action. Compensations execute in reverse order of the completed steps.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Notification failure should NOT trigger compensation — it is best-effort. If compensation itself fails, log it and continue compensating remaining steps. Track compensation errors separately for alerting.
+</details>
+
 ### 🤔 Design Questions (answer before reading on)
 
 1. Should notification failure cause the saga to compensate? Why or why not?
@@ -133,6 +168,22 @@ Before writing code, design the saga. Draw the happy path and every failure path
 ## 2. Build: The Saga Orchestrator (25 minutes)
 
 ### 🛠️ Build: Saga Types and State
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Define a `SagaContext` that accumulates state across steps: `reservationId`, `paymentId`, `orderId`. Each step writes its result into the context so later steps (and compensations) can reference it. Also track `compensationErrors` as an array.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Define a `SagaStep` interface with `execute(ctx)` and `compensate(ctx)` methods. The compensation for the reservation step is `POST /api/reservations/:id/release`. The compensation for payment is `POST /api/payments/:id/refund`. Notification has a no-op compensate.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Use the saga ID as the payment's `orderId` for idempotency -- if the saga retries, the payment service returns the existing payment instead of charging twice. Each `compensate()` should check if there is anything to undo (`if (!ctx.paymentId) return`) before calling the reversal API.
+</details>
+
 
 ```typescript
 // src/sagas/types.ts
@@ -182,7 +233,39 @@ export interface SagaContext {
 }
 ```
 
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Define a `SagaStep` interface with `execute()` and `compensate()` methods. The orchestrator iterates steps, tracking completed ones so it knows what to undo on failure.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Each step's `execute()` calls a service API and stores the result in the saga context (e.g., `ctx.paymentId`). Each `compensate()` checks if there is anything to undo (`if (!ctx.paymentId) return`) and calls the reversal API.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Use the saga ID as the payment's `orderId` for idempotency. The notification step's `compensate()` is a no-op. On failure, reverse through `[...completedSteps].reverse()` calling each step's `compensate()`. Set status to COMPENSATING then FAILED.
+</details>
+
 ### 🛠️ Build: The Orchestrator
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The orchestrator loops through the STEPS array in order. Maintain a `completedSteps` array that tracks which steps succeeded. On any step failure, reverse through `completedSteps` calling `compensate()`.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Use `[...completedSteps].reverse()` to compensate in reverse order. If CONFIRMING_ORDER fails, you compensate processPayment first (refund), then reserveTicket (release). Each compensation should be wrapped in its own try/catch so one failure does not skip the rest.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Set `ctx.status = 'COMPENSATING'` before starting compensation, then `'FAILED'` when done. Store the saga in a Map keyed by `sagaId` so the status API (`GET /api/sagas/:sagaId`) can return current progress. Log each compensation step so operators can trace what happened.
+</details>
+
 
 ```typescript
 // src/sagas/purchaseSaga.ts
@@ -497,6 +580,22 @@ app.get('/api/sagas/:sagaId', (req, res) => {
 
 ### 🐛 Test Failure at Step 3 (Order Confirmation)
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Set `FAIL_AT_STEP=CONFIRMING_ORDER` in the monolith's environment. When you purchase a ticket, the saga should reserve a ticket (step 1), process payment (step 2), then fail at step 3.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Watch the logs for two compensating transactions firing in reverse order: first refund the payment (`POST /api/payments/:id/refund`), then release the reservation (`POST /api/reservations/:id/release`). The response should show `failedStep: "CONFIRMING_ORDER"`.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Verify consistency: `curl http://localhost:3001/api/payments/<paymentId>` should show `status: "refunded"`. The seat should be available again in the event service. No partial state remains -- the customer was not charged and no seat is held.
+</details>
+
+
 Add a way to inject failures for testing:
 
 ```typescript
@@ -556,6 +655,22 @@ Watch the logs:
 [saga:saga_abc123] Saga FAILED. Compensation complete.
 ```
 
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Use an environment variable like `FAIL_AT_STEP` to inject failures at specific saga steps without modifying service code.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Before each step executes, check `if (FAIL_AT_STEP === step.name) throw new Error(...)`. Test with each step name and verify the correct number of compensations fire.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+When CONFIRMING_ORDER fails, you should see two compensations in the logs: refund payment then release reservation. Verify by checking the payment status is "refunded" and the reservation seat is available again.
+</details>
+
 ### 🔍 Verify Consistency
 
 After the saga fails and compensates, check:
@@ -572,6 +687,22 @@ curl -s http://localhost:3001/api/payments/pay_def | jq .status
 The system is consistent. The customer was not charged. The seat is available. No partial state remains.
 
 ### 🐛 Test Failure at Each Step
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Test with each value: RESERVING_TICKET (0 compensations), PROCESSING_PAYMENT (1: release reservation), CONFIRMING_ORDER (2: refund + release), SENDING_NOTIFICATION (0: notification failure should not trigger compensation).
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+For each failure point, verify the compensations match the table: RESERVING_TICKET failure means nothing was created so nothing to undo. PROCESSING_PAYMENT failure means only the reservation exists and must be released.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The notification step is special: it should NOT trigger compensation even on failure because notifications are best-effort. Wrap the notification step's execute in a try/catch that logs but does not throw. The saga status should be COMPLETED even if the notification fails.
+</details>
+
 
 Repeat the test with `FAIL_AT_STEP` set to each step name:
 
@@ -670,7 +801,7 @@ Options:
 
 In production, all three are combined. Retry first, dead letter if retries exhaust, alert if the dead letter ages beyond a threshold.
 
-### 💡 Insight: Real-World Sagas
+> **The bigger picture:** Real-World Sagas
 
 Uber's trip lifecycle is a saga:
 
@@ -701,6 +832,8 @@ Notice: some steps cannot be compensated (physical actions like pickup). This is
 4. **If you had to add a fifth step (fraud check before payment), where would you insert it? What compensating action would it have?**
 
 ---
+
+> **What did you notice?** The saga code is significantly more complex than the original single-transaction version. Is this accidental complexity or essential complexity? When does a saga become worth the investment?
 
 ## 7. Checkpoint
 
@@ -741,6 +874,14 @@ After this module, TicketPulse should have:
 | **Two-phase commit (2PC)** | A distributed transaction protocol where all participants agree to commit or abort. Requires locking and a coordinator. Rarely used in microservices due to performance and availability concerns. |
 | **Idempotent** | An operation that produces the same result regardless of how many times it is executed. |
 | **Dead letter** | A message or saga state that failed processing and is set aside for later inspection or retry. |
+
+---
+
+---
+
+## What's Next
+
+In **Database Per Service** (L2-M35), you'll give each TicketPulse service its own database and confront the real cost of data independence.
 
 ---
 

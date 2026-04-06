@@ -201,6 +201,9 @@ TicketPulse updates tickets frequently: available -> reserved -> sold, or availa
 
 ---
 
+> **Before you continue:** When you run `UPDATE tickets SET status = 'sold' WHERE id = 42`, does PostgreSQL modify the row in place? Or does something more interesting happen? Write down your mental model before reading on.
+
+
 ## Part 2: WAL — The Write-Ahead Log (15 min)
 
 ### The Durability Guarantee
@@ -302,6 +305,9 @@ SET synchronous_commit = off;
 
 ---
 
+> **Before you continue:** If a ticket goes through 5 status changes (available, reserved, sold, refunded, re-listed), how many row versions exist in the table? What happens to the old ones?
+
+
 ## Part 3: Vacuum — Cleaning Up Dead Tuples (20 min)
 
 ### The Problem
@@ -319,6 +325,22 @@ Dead tuples cause:
 - **Wasted disk**: Space that could be reused is occupied by ghosts
 
 ### 🛠️ Build: Create and Observe Bloat
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Query `pg_stat_user_tables` for `n_dead_tup` before and after running `UPDATE tickets SET updated_at = NOW() WHERE event_id BETWEEN 1 AND 10`. The dead tuple count should jump by the number of rows updated.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Calculate the dead tuple percentage: `round(n_dead_tup::numeric / NULLIF(n_live_tup, 0) * 100, 1)`. Also check `pg_total_relation_size('tickets')` -- the table grows even though the live data has not changed, because dead tuples still occupy pages.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+After creating bloat, run `VACUUM tickets` and query `n_dead_tup` again -- it should drop to near zero. But check `pg_total_relation_size` -- it has NOT shrunk. VACUUM marks space as reusable but does not return it to the OS. Only `VACUUM FULL` (which locks the table) actually shrinks the file.
+</details>
+
 
 ```sql
 -- Step 1: Check current state
@@ -352,7 +374,39 @@ FROM pg_stat_user_tables
 WHERE relname = 'tickets';
 ```
 
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Check `pg_stat_user_tables` for `n_dead_tup` before and after a mass UPDATE. The dead tuple count should jump significantly.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Run `UPDATE tickets SET updated_at = NOW() WHERE event_id BETWEEN 1 AND 10` to create dead tuples. Then query `n_live_tup` and `n_dead_tup` from `pg_stat_user_tables` to see the ratio.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Calculate `dead_pct` as `round(n_dead_tup::numeric / NULLIF(n_live_tup, 0) * 100, 1)`. Also check `pg_total_relation_size('tickets')` — the table size grows with dead tuples even though the live data has not changed.
+</details>
+
 ### 🛠️ Build: Run VACUUM and See the Difference
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Note the `n_dead_tup` count before running `VACUUM tickets`. After it completes, query `pg_stat_user_tables` again -- the count should drop to near zero. Compare `last_vacuum` timestamp to confirm it ran.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+VACUUM marks dead tuple space as reusable in the Free Space Map but does NOT shrink the file on disk. To reclaim disk space, you would need `VACUUM FULL` -- but it takes an ACCESS EXCLUSIVE lock that blocks all reads and writes. In production, prefer regular VACUUM.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+For TicketPulse's tickets table, tune autovacuum per-table: `ALTER TABLE tickets SET (autovacuum_vacuum_scale_factor = 0.01, autovacuum_vacuum_cost_delay = 0)`. This triggers vacuum at 1% dead tuples instead of the default 20%, and runs without throttling. Use `pg_stat_activity` to find long-running transactions that block vacuum.
+</details>
+
 
 ```sql
 -- Before vacuum: note n_dead_tup
@@ -376,6 +430,22 @@ What VACUUM does **NOT** do:
 - Return disk space to the operating system (the file size stays the same)
 - Lock the table (reads and writes continue during VACUUM)
 - Reorder or defragment pages
+
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Note the `n_dead_tup` count before running VACUUM. After `VACUUM tickets`, check again — it should drop to near zero.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+VACUUM marks dead tuple space as reusable in the Free Space Map but does NOT shrink the file on disk. To actually reclaim disk space, you would need `VACUUM FULL` (which locks the table).
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+For TicketPulse's tickets table, tune autovacuum per-table: `ALTER TABLE tickets SET (autovacuum_vacuum_scale_factor = 0.01, autovacuum_vacuum_cost_delay = 0)`. This triggers vacuum at 1% dead tuples instead of the default 20%.
+</details>
 
 ### 📊 Observe: Autovacuum in Action
 
@@ -573,6 +643,8 @@ TicketPulse's tickets table has high churn — tickets are created, reserved, so
 </details>
 
 ---
+
+> **What did you notice?** Every UPDATE creates a dead tuple. For TicketPulse's high-churn tickets table, what does that mean for disk usage and query performance over time? How does autovacuum keep up?
 
 ## 🏁 Module Summary
 

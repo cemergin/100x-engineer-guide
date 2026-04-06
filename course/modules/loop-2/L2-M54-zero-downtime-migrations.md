@@ -4,6 +4,8 @@
 >
 > **Source:** Chapters 3, 22, 25, 32, 13 of the 100x Engineer Guide
 
+> **Before you continue:** You need to rename a database column that three services depend on. If you deploy the schema change and the code change at the same time, there is a window where the old code runs against the new schema. How do you avoid that gap?
+
 ---
 
 ## The Goal
@@ -426,6 +428,69 @@ Run three workers: one for IDs 1-3.3M, one for 3.3M-6.6M, one for 6.6M-10M.
 
 ---
 
+> **What did you notice?** Zero-downtime migrations require the expand-and-contract pattern: add the new thing, migrate, remove the old thing. This is slower than a breaking change but avoids any gap in service. When is the extra effort justified?
+
+## Exercises
+
+### 🛠️ Build: Expand-Contract for Renaming `ticket_type` to `tier_name`
+
+Implement the full four-step expand-and-contract migration to rename `ticket_type` to `tier_name` on a table with 10M rows, including the dual-write application code.
+
+<details>
+<summary>💡 Hint 1</summary>
+Phase 1 (Expand): `ALTER TABLE tickets ADD COLUMN tier_name VARCHAR(50)` -- instant, nullable, no lock. Phase 2 (Deploy): update `issueTicket()` to write the same value to both `ticket_type` and `tier_name` in the INSERT statement. This ensures no new rows are missing `tier_name` from this point forward.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Phase 3 (Backfill): reuse the batched backfill pattern with `FOR UPDATE SKIP LOCKED`: `UPDATE tickets SET tier_name = ticket_type WHERE tier_name IS NULL AND id IN (SELECT id FROM tickets WHERE tier_name IS NULL LIMIT 5000 FOR UPDATE SKIP LOCKED)`. Run with `--dry-run` first. The backfill is idempotent -- rerun if it crashes.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Phase 4 (Contract): switch reads to `tier_name`, then drop `ticket_type`. Do NOT drop the old column in the same deploy as the code change -- wait for all pods to roll over to the new code first. If any old-code pod reads `ticket_type` after the column is dropped, it will crash. Wait at least one full rolling deployment cycle before running `ALTER TABLE tickets DROP COLUMN ticket_type`.
+</details>
+
+### 🐛 Debug: Backfill Halted at 60%
+
+The backfill script updated 6M of 10M rows and then stopped making progress. The script reports `0 rows affected` on every batch, but `SELECT COUNT(*) FROM tickets WHERE seat_number IS NULL` still shows 4M remaining.
+
+<details>
+<summary>💡 Hint 1</summary>
+`FOR UPDATE SKIP LOCKED` skips rows that are locked by other transactions. If another process is holding long-running transactions (e.g., a reporting query with `FOR SHARE` or a stuck migration), those rows are permanently skipped. Run `SELECT pid, state, query, age(clock_timestamp(), xact_start) FROM pg_stat_activity WHERE state != 'idle' ORDER BY xact_start` to find long-running transactions.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Check if there is an open transaction holding locks: `SELECT locktype, relation::regclass, mode, granted, pid FROM pg_locks WHERE relation = 'tickets'::regclass AND NOT granted`. If rows show `RowExclusiveLock` not granted, another transaction is blocking. Terminate the blocking session with `SELECT pg_terminate_backend(<pid>)` after confirming it is safe.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Alternative fix: remove `FOR UPDATE SKIP LOCKED` temporarily and replace with plain `WHERE seat_number IS NULL LIMIT 5000`. This will wait for locks instead of skipping, which is slower but guarantees progress. Once the blocking transaction is resolved, switch back to `SKIP LOCKED` for the remaining rows.
+</details>
+
+### 📐 Design: Type Change from INTEGER to UUID
+
+TicketPulse needs to change `event_id` from `INTEGER` to `UUID` across the `tickets`, `orders`, and `pricing_tiers` tables. Design the expand-and-contract migration plan including foreign key handling.
+
+<details>
+<summary>💡 Hint 1</summary>
+The expand-and-contract pattern applies to type changes too: add a new `event_id_uuid UUID` column, dual-write both columns, backfill old rows with a mapping (either generate UUIDs deterministically from the integer, or maintain a `event_id_mapping` lookup table). The foreign keys on `tickets.event_id` and `orders.event_id` must be duplicated to point at the new column.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+The tricky part is foreign key consistency. You cannot add a FK constraint on `event_id_uuid` until all rows have been backfilled. Use the same NOT VALID + VALIDATE trick: `ALTER TABLE tickets ADD CONSTRAINT fk_tickets_event_uuid FOREIGN KEY (event_id_uuid) REFERENCES events(id_uuid) NOT VALID` (instant), then `ALTER TABLE tickets VALIDATE CONSTRAINT fk_tickets_event_uuid` (scans but does not block writes).
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Create the migration plan as a document with explicit phases and rollback at each step: Phase 1 (add columns, no FK), Phase 2 (deploy dual-write code), Phase 3 (backfill with batched UPDATE), Phase 4 (add FK constraints NOT VALID + VALIDATE), Phase 5 (switch reads to UUID columns), Phase 6 (drop old integer columns). Each phase has a rollback: phases 1-4 can be rolled back by dropping the new columns; phases 5-6 require code rollback first.
+</details>
+
+---
+
 ## Checkpoint
 
 Before continuing, verify:
@@ -444,6 +509,213 @@ git add -A && git commit -m "feat: zero-downtime migration for seat_number colum
 
 ---
 
+## 9. Migration Rollback Drills
+
+Every migration that goes forward should have a rollback path. This is not about being pessimistic — it is about being disciplined. If you cannot roll back a migration, you cannot safely deploy it.
+
+### Drill 1: The Rollback Decision Tree
+
+For each migration you run, answer these questions before starting. The answers determine your rollback strategy.
+
+```
+MIGRATION ROLLBACK PLANNING
+═══════════════════════════
+
+1. Is this migration reversible without data loss?
+   - Adding a nullable column: YES (drop the column)
+   - Dropping a column: NO (data is gone)
+   - Adding NOT NULL to existing column: YES (revert to nullable)
+   - Backfilling data: YES (column was nullable before)
+   - Changing a column type: SOMETIMES (depends on data)
+
+2. How long will the rollback take?
+   - Metadata-only change (add nullable column): milliseconds
+   - Re-backfilling removed data from backup: hours
+
+3. What does the application do during rollback?
+   - Is the application compatible with the pre-migration and post-migration schema?
+   - Will the rollback break existing running application pods?
+
+4. What is the rollback window?
+   - If you discover a problem 2 hours after migration, can you still roll back?
+   - If 1M new rows were written with the new schema, can you still roll back?
+```
+
+### Drill 2: Write the Rollback for the seat_number Migration
+
+For every migration file, create a corresponding rollback file. Here is the pattern:
+
+```
+migrations/
+  up/
+    001_add_seat_number.sql       ← forward migration
+    002_seat_number_not_null.sql  ← forward migration
+  down/
+    002_remove_seat_number_constraint.sql  ← rollback 002
+    001_drop_seat_number.sql               ← rollback 001
+```
+
+```sql
+-- down/002_remove_seat_number_constraint.sql
+-- Rollback: remove NOT NULL constraint (restore nullable state)
+
+ALTER TABLE tickets ALTER COLUMN seat_number DROP NOT NULL;
+ALTER TABLE tickets ALTER COLUMN seat_number DROP DEFAULT;
+-- Optionally: remove the index if it was added with NOT NULL
+-- DROP INDEX IF EXISTS idx_tickets_seat;
+
+-- Verify
+SELECT column_name, is_nullable, column_default
+FROM information_schema.columns
+WHERE table_name = 'tickets' AND column_name = 'seat_number';
+-- Expected: is_nullable = YES, column_default = null
+```
+
+```sql
+-- down/001_drop_seat_number.sql
+-- Rollback: remove the seat_number column entirely
+-- WARNING: This loses all seat_number data. Confirm the column was backfilled
+-- from a reliable source (event data) that can be regenerated if needed.
+
+-- Step 1: Verify you have a backup or the data is regeneratable
+-- SELECT COUNT(*) FROM tickets WHERE seat_number IS NOT NULL; -- how much data?
+
+-- Step 2: Drop the column
+ALTER TABLE tickets DROP COLUMN IF EXISTS seat_number;
+
+-- Verify
+\d tickets -- seat_number column should be gone
+```
+
+**The rollback test**: After writing rollback scripts, run them in a staging environment:
+1. Run the forward migration
+2. Verify the application works
+3. Run the rollback
+4. Verify the application still works in the pre-migration state
+
+If you cannot complete step 4, your rollback is broken.
+
+### Drill 3: The "Migration Already Deployed" Rollback
+
+The worst scenario: you migrated 6 hours ago, the application has been writing new data using the new schema, and now you need to roll back because of a production issue.
+
+For the `seat_number` migration, here is what "roll back with 6 hours of live data" looks like:
+
+```
+State at T+6h:
+- 50,000 new tickets written with seat_number values
+- The application currently reads seat_number for display and QR code
+- Rolling back (dropping seat_number) would break ticket display
+
+Options:
+1. DO NOT roll back the schema. Roll back only the application code.
+   - Redeploy the previous version of the application
+   - The previous application code reads seat_number as nullable
+     (it was nullable in Phase 2) — it will fall back to 'GA'
+   - The schema stays ahead of the application code
+   - This is the expand-and-contract pattern working as intended
+
+2. If the column itself is the problem (schema bug, wrong type):
+   - Add a new corrected column (new expand phase)
+   - Dual-write to both
+   - The seat_number column stays (too many rows depend on it)
+   - Contract later when the corrected column is stable
+```
+
+The lesson: **schema rollbacks after significant writes are almost always wrong**. Application code rollbacks are almost always right. The expand-and-contract pattern exists specifically to make this true.
+
+### Drill 4: Rehearse the Worst Case
+
+Run this simulation in staging before any production migration:
+
+```bash
+# 1. Start the application
+docker compose up -d
+
+# 2. Run the forward migration
+psql -d ticketpulse -f migrations/up/001_add_seat_number.sql
+psql -d ticketpulse -f migrations/up/002_seat_number_not_null.sql
+
+# 3. Verify the app works
+curl http://localhost:3000/api/events/evt_1/tickets
+# Expect: 200 OK, seat_number field present
+
+# 4. Simulate a production problem — reverse the migration
+psql -d ticketpulse -f migrations/down/002_remove_seat_number_constraint.sql
+psql -d ticketpulse -f migrations/down/001_drop_seat_number.sql
+
+# 5. Verify the app STILL works (this is the key test)
+curl http://localhost:3000/api/events/evt_1/tickets
+# Expect: 200 OK, seat_number absent OR defaulted gracefully
+
+# If step 5 fails: your application code is not compatible with both schema versions
+# Fix it before going to production
+```
+
+---
+
+## 10. The Expand-and-Contract Pattern: Four Scenarios
+
+The expand-and-contract pattern covers four common migration shapes. Each has a different sequence and different risks.
+
+### Scenario A: Adding a Column with Constraints
+
+This is what you built in the main module. The sequence:
+
+```
+Phase 1 EXPAND:   ADD COLUMN seat_number VARCHAR(10)          ← nullable, instant
+Phase 2 DEPLOY:   Deploy code that writes seat_number
+Phase 3 BACKFILL: Fill existing rows in batches (days-weeks)
+Phase 4 CONTRACT: ALTER COLUMN SET NOT NULL + ADD DEFAULT      ← after backfill done
+```
+
+**Risk point**: Phase 4. If a single row still has NULL, the NOT NULL constraint fails. Always run `SELECT COUNT(*) FROM tickets WHERE seat_number IS NULL` before Phase 4.
+
+### Scenario B: Removing a Column
+
+Removing a column safely requires going backwards through a deprecation cycle:
+
+```
+Phase 1 EXPAND:   Deploy code that stops READING the column   ← no schema change yet
+Phase 2 EXPAND:   Deploy code that stops WRITING the column
+Phase 3 VERIFY:   Wait for all pods to redeploy (rolling deploy)
+Phase 4 CONTRACT: ALTER TABLE tickets DROP COLUMN old_column   ← now safe to drop
+```
+
+**The most common mistake**: Dropping the column in the same deploy as removing reads from the code. There is a window where old pods are still running (during rolling deployment) that will fail to read the dropped column.
+
+### Scenario C: Renaming a Column
+
+Renaming is the most complex case because it requires dual-write for an extended period:
+
+```
+Phase 1 EXPAND:   ADD COLUMN tier_name VARCHAR(50)             ← new column
+Phase 2 DEPLOY:   Deploy code that READS from old, WRITES to both
+Phase 3 BACKFILL: UPDATE tickets SET tier_name = ticket_type WHERE tier_name IS NULL
+Phase 4 DEPLOY:   Deploy code that READS from new, WRITES to both
+Phase 5 VERIFY:   No old-code pods running
+Phase 6 CONTRACT: ALTER TABLE tickets DROP COLUMN ticket_type   ← drop old
+```
+
+Note that Phase 2 and Phase 4 are different deployments. Between them, new rows write to both columns. After Phase 4, reads come from the new column only.
+
+### Scenario D: Changing a Column Type
+
+For example, changing `event_id` from `INTEGER` to `UUID`:
+
+```
+Phase 1 EXPAND:   ADD COLUMN event_id_uuid UUID               ← new column
+Phase 2 BACKFILL: UPDATE tickets SET event_id_uuid = uuid_generate_v4()
+                  WHERE event_id_uuid IS NULL -- or map from integer IDs
+Phase 3 DEPLOY:   Write to both event_id (int) and event_id_uuid (uuid)
+Phase 4 DEPLOY:   Read from event_id_uuid, still write to both (safety net)
+Phase 5 CONTRACT: Drop old event_id column
+```
+
+**The key challenge in type changes**: The new column must be populated with values derived from the old column. If the mapping is complex (integer ID → UUID), you need a lookup table or a UUID-per-integer mapping table to ensure foreign key consistency.
+
+---
+
 ## Reflect
 
 GitHub built the `gh-ost` tool because traditional `ALTER TABLE` locked their tables for hours. Facebook built `OnlineSchemaChange` for the same reason. These tools exist because zero-downtime migrations are a universal problem at scale.
@@ -458,6 +730,16 @@ The key insight: **every migration is a multi-step process with application depl
 
 ---
 
+---
+
+## Cross-References
+
+- **Chapter 24** (Database Internals): PostgreSQL's MVCC model is why some DDL operations lock and others do not. Understanding how Postgres handles concurrent reads and writes during `ALTER TABLE` requires the internals covered there.
+- **Chapter 7** (Deployment Strategies): Zero-downtime schema migrations require rolling deployments to work correctly. A blue-green deploy and a staged migration sequence must be coordinated. Chapter 7 covers the deployment mechanics.
+- **L2-M43** (Kubernetes Fundamentals): Kubernetes rolling deployments create the "window of mixed versions" that drives the expand-and-contract pattern's requirement to support both schemas simultaneously.
+
+---
+
 ## Key Terms
 
 | Term | Definition |
@@ -467,6 +749,17 @@ The key insight: **every migration is a multi-step process with application depl
 | **Backfill** | The process of populating a new column or table with data derived from existing records. |
 | **Zero-downtime** | A deployment or migration approach that keeps the application available to users throughout the change. |
 | **DDL** | Data Definition Language; SQL statements (CREATE, ALTER, DROP) that define or modify database schema objects. |
+| **Dual-write** | A migration phase where application code writes to both the old and new columns simultaneously to maintain consistency. |
+| **Rollback window** | The time period after a migration during which rolling back is safe; shrinks as new data accumulates in the new schema. |
+| **Schema compatibility** | The property that application code can operate correctly against both the pre-migration and post-migration schema. |
+
+---
+
+## What's Next
+
+In **Webhooks** (L2-M55), you'll build a webhook system that lets external services subscribe to TicketPulse events with reliable delivery.
+
+---
 
 ## Further Reading
 

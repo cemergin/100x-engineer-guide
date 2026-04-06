@@ -837,6 +837,9 @@ The defense is layered:
 
 ---
 
+
+> **What did you notice?** Look back at what you just built. What surprised you? What felt harder than expected? That's where the real learning happened.
+
 ## 6. Summary: The Five Vulnerability Patterns
 
 | Vulnerability | Attack Vector | The Fix | Rule |

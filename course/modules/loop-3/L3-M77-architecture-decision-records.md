@@ -19,9 +19,13 @@ Six months from now, a new engineer joins the team. They look at the architectur
 
 ADRs are cheap to write and expensive to lack.
 
-> 💡 **Insight**: "At Spotify, ADRs are stored alongside code in the repo. When an engineer asks 'why do we use gRPC instead of REST for service X?', the answer is in docs/adr/0012-grpc-for-internal-services.md. This eliminates repeated debates and 'I was not here when that was decided' syndrome."
+> **Pro tip:** "At Spotify, ADRs are stored alongside code in the repo. When an engineer asks 'why do we use gRPC instead of REST for service X?', the answer is in docs/adr/0012-grpc-for-internal-services.md. This eliminates repeated debates and 'I was not here when that was decided' syndrome."
 
 ---
+
+### 🤔 Prediction Prompt
+
+Before reading the ADR format, think about the last architectural decision your team made. Could a new engineer joining 6 months from now reconstruct the reasoning? If not, what information is missing?
 
 ## The ADR Format
 
@@ -87,7 +91,20 @@ DO NOT WRITE AN ADR WHEN:
 
 ---
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ## 🛠️ Build: 5 ADRs for TicketPulse
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Follow the ADR template: Status, Context (forces at play), Decision (specific, not vague), Consequences (what becomes easier AND harder), and a reversal condition. The key is listing rejected alternatives with reasons -- that is the information future engineers actually need.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+For each ADR, force yourself to name at least two alternatives you considered and why you rejected them. If you cannot name alternatives, the decision may be too obvious for an ADR -- or you have not explored the design space enough.
+</details>
+
 
 Write each of these ADRs. Spend about 8-10 minutes on each. The goal is not perfection -- it is practice articulating decisions with structure and honesty.
 
@@ -427,6 +444,198 @@ API services.
 
 ---
 
+## ADR Writing Workshop
+
+Writing an ADR is a skill that develops with practice. These workshop exercises cover the common failure modes — the things engineers get wrong when writing ADRs for the first time.
+
+### Workshop Exercise 1: From Bad to Good
+
+Below is a poorly-written ADR. Identify all the problems, then rewrite it.
+
+**The Bad ADR:**
+
+```markdown
+# ADR-006: Use Redis
+
+## Status
+Accepted
+
+## Context
+We needed a cache.
+
+## Decision
+We decided to use Redis because it is fast and popular.
+
+## Consequences
+It will make things faster.
+We have to manage Redis.
+```
+
+**Problems to identify:**
+
+```
+Write your list of problems before reading the guidance below:
+1. _______________________________________________
+2. _______________________________________________
+3. _______________________________________________
+4. _______________________________________________
+5. _______________________________________________
+```
+
+**Guidance — the problems with this ADR:**
+
+1. **"We needed a cache" is not a context.** What were the specific performance problems? Which queries were slow? How slow? What was the user impact?
+
+2. **"Fast and popular" is not a decision rationale.** Why Redis over Memcached? Over an in-process cache? Over CDN-level caching? The alternatives considered are missing entirely.
+
+3. **No specific use cases.** Redis as a session store, Redis as a rate limiter, Redis as a pub/sub broker, and Redis as a cache have completely different implications. Which?
+
+4. **"Make things faster" is not a consequence.** Faster by how much? Which operations? What is slower (Redis requires network round trips vs in-process memory)?
+
+5. **No reversal condition.** When would you remove Redis? When would you switch to Memcached or a different approach?
+
+**Now rewrite it:**
+
+```markdown
+# ADR-006: Use Redis for Session Storage and Event Listing Cache
+
+## Status
+Accepted
+
+## Context
+TicketPulse's event listing endpoint queries 8 database tables and takes
+450ms on average. During peak traffic (concert on-sale events), the
+endpoint receives 2,000 requests per second. With 8 database connections
+per request, this saturates the database at ~300 concurrent requests.
+
+We need:
+1. Session storage: JWT tokens work but we need server-side invalidation
+   for security incidents (force-logout all sessions for a compromised user).
+2. Event listing cache: Reduce database load from browsing traffic.
+3. Rate limiter state: Store token bucket state across pods.
+
+Options evaluated:
+1. **Redis**: In-memory store, pub/sub, TTL support, well-supported client libraries
+2. **Memcached**: Simpler, slightly faster for pure caching, no pub/sub, no persistence
+3. **In-process cache**: Zero network latency, but not shared across pods (stale data
+   on different pods), cannot invalidate globally
+4. **PostgreSQL itself**: Existing infrastructure, but adds load to the primary DB
+
+## Decision
+We will use Redis 7.x for:
+- Session invalidation registry (SET session_id, TTL=24h, DEL on logout)
+- Event listing cache (SETEX event:list:{params} 30, TTL=30s)
+- Rate limiter token buckets (INCRBY with EXPIRE)
+
+Hosted on: AWS ElastiCache Redis (Multi-AZ, single shard, cache.r7g.large)
+
+## Consequences
+
+### What becomes easier:
+- Global session invalidation: DEL session_id works across all pods instantly
+- Event listing latency: cache hits reduce from 450ms to <10ms (Redis RTT)
+- Rate limiter: token bucket state is consistent across all API pods
+- Horizontal scaling: all pods share the same cache state
+
+### What becomes harder:
+- Cache invalidation: we need to invalidate event cache entries when events
+  are updated. We use a pattern-based key (event:list:*) and SCAN to find
+  affected keys. This adds complexity.
+- Availability dependency: if Redis goes down, session invalidation stops,
+  caching stops, rate limiting falls back to in-process (approximate).
+  We mitigate with Multi-AZ failover (~30s recovery time).
+- Cold start: fresh Redis instance has empty cache; the database absorbs
+  full traffic for ~2 minutes until the cache warms up.
+- Cost: ~$200/month for ElastiCache on top of existing RDS cost.
+
+### We would reconsider this decision if:
+- Redis operational cost (cost + maintenance) exceeds $1,000/month
+- A Redis outage causes more than 5 minutes of degraded service in a quarter
+- We move to a different cloud where ElastiCache is unavailable
+  (would switch to GCP Memorystore)
+```
+
+### Workshop Exercise 2: The Pre-Decision ADR
+
+Most ADRs are written after the decision is made — they document what was decided, not what was considered. The best ADRs are written BEFORE the decision, as a structured way to think through the trade-offs.
+
+Write a pre-decision ADR for this situation:
+
+**Context**: TicketPulse needs to add search functionality. Users want to find events by: event name, artist, venue, city, date range, genre, and price range. Currently there are 500,000 events in the database. The product team expects search to be one of the top 3 most-used features.
+
+**Your task**: Write the ADR before choosing the implementation. Include at least three options (PostgreSQL full-text search, Elasticsearch, Algolia/Typesense). Do NOT include the decision section yet — mark it as `[PENDING]`. The act of writing the context and options without committing to a choice often reveals which option is actually better.
+
+```markdown
+# ADR-NNN: Event Search Implementation
+
+## Status
+Proposed — decision pending engineering review
+
+## Context
+[Write this section — what is the specific problem? What are the query patterns?
+What are the constraints? What is the scale?]
+
+## Options Considered
+
+### Option 1: PostgreSQL Full-Text Search (pg_trgm + tsvector)
+Pros:
+- [list them]
+Cons:
+- [list them]
+
+### Option 2: Elasticsearch (self-managed or AWS OpenSearch)
+Pros:
+- [list them]
+Cons:
+- [list them]
+
+### Option 3: Algolia / Typesense (managed search SaaS)
+Pros:
+- [list them]
+Cons:
+- [list them]
+
+## Decision
+[PENDING — bring this to engineering review on [date]]
+
+## Consequences
+[Leave blank until decision is made]
+```
+
+After writing the options section, which option is leading? Does writing the pros/cons change your initial instinct?
+
+### Workshop Exercise 3: The Decision Log for a Live System
+
+For TicketPulse, or your current production system, create a retrospective decision log. This is different from an ADR — it captures decisions that were made implicitly and never documented.
+
+Go through the codebase and find 3-5 places where you can see that a decision was made but was never written down. Use these signals to find undocumented decisions:
+
+```bash
+# In a git repo, find long-standing "temporary" code
+git log --all --oneline --format="%as %s" | grep -i "temp\|hack\|fixme\|todo\|workaround" | head -20
+
+# Find large files that have grown organically (signs of architectural drift)
+find src/ -name "*.ts" -exec wc -l {} \; | sort -rn | head -10
+
+# Find places where the same pattern is implemented multiple ways
+# (signals of unresolved architectural debate)
+grep -r "fetch(" src/ | wc -l
+grep -r "axios(" src/ | wc -l
+# If both exist: there was a decision about HTTP clients that was never resolved
+```
+
+For each undocumented decision you find, write a one-paragraph retrospective:
+
+```
+UNDOCUMENTED DECISION: [What the code does]
+WHEN: [Approximate date from git blame]
+PROBABLE RATIONALE: [Why was this probably done?]
+CURRENT ASSESSMENT: [Is this still the right decision? Would you change it today?]
+ADR NEEDED: [Yes/No — and why]
+```
+
+---
+
 ## ADR Hygiene
 
 ### Rules for Maintaining ADRs
@@ -484,6 +693,107 @@ ticketpulse/
 
 ---
 
+## Decision Log Exercises
+
+The ADRs you wrote capture major decisions. But major decisions happen rarely. Most decisions are smaller and more frequent — and those accumulate into architectural drift when left undocumented.
+
+### Exercise 1: The Weekly Decision Log
+
+For the next two weeks, keep a decision log entry for every technical decision you make that meets these criteria:
+
+- Multiple options were available
+- The decision will be visible in the codebase in 6 months
+- A new engineer would reasonably ask "why?"
+
+The entry does not need to be a full ADR. A paragraph is enough:
+
+```
+DATE: 2026-04-02
+DECISION: Used cursor-based pagination for the event listing API instead of offset-based
+RATIONALE: Offset pagination breaks when new events are inserted (users see duplicates
+           or miss items). Cursor-based pagination is stable under concurrent writes.
+TRADE-OFF: Cursor-based pagination cannot jump to arbitrary pages (no "page 5 of 20").
+           The product team confirmed this is acceptable — infinite scroll is the UX.
+ALTERNATIVES REJECTED: Offset pagination (breaks under writes), keyset pagination
+                        (same as cursor, just different terminology)
+WOULD REVISIT IF: Product team requests "jump to page N" functionality.
+```
+
+After two weeks, review your log. How many decisions did you make? Which of them would benefit from a full ADR?
+
+### Exercise 2: The ADR Audit
+
+For an existing system you work on (or TicketPulse as built through the course), conduct an ADR audit:
+
+**Step 1: List the major architectural decisions in the system.**
+
+Start with these categories:
+- Language and runtime choice
+- Primary database choice
+- Message queue / event bus choice
+- Authentication approach
+- Deployment platform
+- Service decomposition strategy
+- Caching strategy
+- API style (REST, GraphQL, gRPC)
+
+**Step 2: For each decision, ask:**
+- Is this documented in an ADR?
+- If yes: is the ADR still accurate? Have the circumstances changed?
+- If no: should it be?
+
+**Step 3: Prioritize which decisions most need documentation.**
+
+The highest-priority undocumented decisions are the ones where:
+- People debate the decision regularly ("should we have used GraphQL?")
+- New engineers ask about it frequently ("why do we use Kafka instead of SQS?")
+- The decision is about to be revisited anyway
+
+For each high-priority undocumented decision, write the ADR. The ADR will be retrospective, but it still adds value — it forces the team to agree on the rationale and the conditions under which they would reconsider.
+
+### Exercise 3: The Superseding ADR
+
+Write a superseding ADR — a decision that reverses a previous one. Use ADR-002 (Limit Microservice Decomposition to 3-5 Services) from the Build section as the decision being superseded.
+
+**Scenario**: TicketPulse has grown. The team is now 20 engineers. The order service has become a monolith within a microservice — 80,000 lines of TypeScript handling orders, inventory, refunds, waitlists, and seat maps. Three teams own different parts of the order service and are constantly stepping on each other.
+
+Write ADR-006 that supersedes ADR-002:
+
+```markdown
+# ADR-006: Expand Microservice Decomposition Beyond 3-5 Services
+
+## Status
+Accepted — supersedes ADR-002
+
+## Context
+ADR-002 was written when TicketPulse had 8 engineers. It capped services
+at 3-5 to limit operational overhead.
+
+Since then:
+- Team has grown to 20 engineers across 3 teams
+- [describe what changed about the order service]
+- [describe the specific friction that is being experienced]
+- [describe what the teams are asking for]
+
+The reversal conditions in ADR-002 have been met:
+- "Team grows beyond 15 engineers" ✓ (team is 20)
+- "Deployment conflicts between features become frequent" ✓ ([describe incidents]
+
+## Decision
+[What is the new decomposition strategy?
+Which service(s) will be split from the order service?
+What are the new service boundaries?]
+
+## Consequences
+[What becomes easier?]
+[What becomes harder?]
+[New reversal conditions]
+```
+
+This exercise is valuable because it demonstrates that good ADRs anticipate their own reversal. ADR-002 explicitly stated "we would reconsider if the team grows to 15+ engineers." That foresight makes ADR-006 easy to write — the previous decision already told you when to revisit it.
+
+---
+
 ## 🤔 Final Reflections
 
 For each ADR you wrote, answer this question:
@@ -511,6 +821,16 @@ The best ADRs include their own expiration conditions. A decision that was right
 
 ---
 
+---
+
+## Cross-References
+
+- **Chapter 9** (Engineering Leadership): ADRs are one of three core documentation practices covered in this chapter, alongside RFCs (for proposals) and design docs (for large features). The chapter covers how ADRs fit into the decision-making culture of high-performing teams.
+- **L1-M19** (Architecture Patterns Overview): The architecture decision exercises in L1-M19 produce mini-ADRs. This module provides the full format and depth those exercises pointed toward.
+- **L3-M89** (Career Engineering Plan): Writing ADRs builds the muscle for writing promotion evidence — both require articulating context, rationale, and consequences clearly and honestly.
+
+---
+
 ## Key Terms
 
 | Term | Definition |
@@ -520,6 +840,10 @@ The best ADRs include their own expiration conditions. A decision that was right
 | **Design doc** | A detailed document describing a proposed technical design, including alternatives considered and trade-offs. |
 | **Decision record** | A log entry that captures the reasoning and outcome of a significant technical or process decision. |
 | **Supersede** | The act of replacing a previous decision record with a new one when the context or choice changes. |
+| **Pre-decision ADR** | An ADR written before the decision is finalized, used as a structured thinking tool rather than just documentation. |
+| **Decision log** | A lightweight record of daily technical decisions that do not warrant full ADRs but should be traceable over time. |
+| **ADR audit** | A periodic review of all active ADRs to verify their accuracy and identify decisions that need new ADRs. |
+| **Reversal condition** | A stated circumstance under which the current decision should be revisited and potentially reversed. |
 
 ## Further Reading
 
@@ -529,4 +853,13 @@ The best ADRs include their own expiration conditions. A decision that was right
 - **"Design Docs at Google"**: how Google documents design decisions at scale
 - **Joel Parker Henderson's ADR collection**: github.com/joelparkerhenderson/architecture-decision-record
 
+### 🤔 Reflection Prompt
+
+After writing ADRs for TicketPulse, which decision was hardest to articulate? When the "consequences" section forced you to name trade-offs explicitly, did it change your confidence in the decision?
+
 > **Going deeper:** **L3-M86a (AI-Native Spec-Driven Development)** extends ADRs into the AI era — CLAUDE.md as behavioral specification, the "spec stack" (CLAUDE.md + RFC + OpenAPI + Gherkin), and using specs as the interface between human intent and AI execution.
+---
+
+## What's Next
+
+In **Package Principles & Architecture Fitness Functions** (L3-M77a), you'll build on what you learned here and take it further.

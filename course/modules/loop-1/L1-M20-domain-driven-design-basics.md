@@ -166,6 +166,22 @@ Bounded contexts are not isolated islands. They communicate. The **context map**
 
 ### 📐 Design: TicketPulse Context Map
 
+<details>
+<summary>💡 Hint 1: Follow the data flow from event creation to email</summary>
+Start with Event Management (upstream). Ticketing consumes event data to create inventory. Payments processes charges based on orders from Ticketing. Notifications is downstream of everything — it reacts to events from all other contexts.
+</details>
+
+<details>
+<summary>💡 Hint 2: Identify sync vs async communication</summary>
+Ticketing calls Event Management synchronously (it needs event details before creating inventory). But Ticketing communicates with Notifications asynchronously via domain events like `TicketPurchased`. The direction of the arrow and whether it is sync or async matters for coupling.
+</details>
+
+<details>
+<summary>💡 Hint 3: Label the relationship patterns</summary>
+Event Management is the "supplier" to Ticketing's "customer." Notifications is a "conformist" — it adapts to whatever data the other contexts provide. If you integrate with Stripe, the Payments context wraps Stripe's API in an Anti-Corruption Layer so Stripe's model does not leak into your domain.
+</details>
+
+
 ```
   ┌─────────────────┐         ┌─────────────────┐
   │     Event        │         │    Ticketing     │
@@ -278,7 +294,25 @@ order.addTicket(eventId, tier, quantity);
 // 4. Enforces max 10 tickets per order
 ```
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Order Aggregate
+
+<details>
+<summary>💡 Hint 1: Start with invariants, not data</summary>
+List the business rules first: max 10 tickets per order, no duplicate event+tier combos, cannot modify a paid order, cannot confirm an empty order. These invariants become guard clauses inside the aggregate's methods — they are what make the aggregate more than a data container.
+</details>
+
+<details>
+<summary>💡 Hint 2: Use Value Objects for Money</summary>
+Create a `Money` class that wraps `amountInCents: number`. Enforce non-negative values in the constructor. Give it an `add()` method. This prevents accidental arithmetic on raw numbers (like adding cents to dollars) and makes the Order's `total` calculation self-documenting.
+</details>
+
+<details>
+<summary>💡 Hint 3: Emit domain events on state transitions</summary>
+When the Order moves from `draft` to `confirmed`, push an `OrderConfirmed` event into an internal `events: DomainEvent[]` array. Expose a `pullEvents()` method that returns and clears the array. The application layer calls `pullEvents()` after saving and publishes them to the event bus from M21.
+</details>
+
 
 ```typescript
 // src/modules/ticketing/domain/order.ts
@@ -628,3 +662,8 @@ After this module, you should have:
 - Vaughn Vernon, *Implementing Domain-Driven Design*, Chapter 10 (Aggregates)
 - [Martin Fowler on Bounded Contexts](https://martinfowler.com/bliki/BoundedContext.html)
 - Chapter 3 of the 100x Engineer Guide: Section 4 (Domain-Driven Design)
+---
+
+## What's Next
+
+In **Event-Driven Thinking** (L1-M21), you'll build on what you learned here and take it further.

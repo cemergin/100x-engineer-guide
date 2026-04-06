@@ -120,7 +120,25 @@ Request comes in
   └── Return data to client either way
 ```
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Resilient Cache Wrapper
+
+<details>
+<summary>💡 Hint 1: Connection state tracking</summary>
+Your wrapper needs a boolean like `isConnected` that flips on Redis events (`connect`, `error`, `end`). If `isConnected` is false, skip the cache entirely and return `null` — that tells the caller to fall back to Postgres.
+</details>
+
+<details>
+<summary>💡 Hint 2: Fail open with Promise.race</summary>
+For the `get()` method, race the Redis call against a short timeout (e.g., 100ms). If the timeout wins, return `null` instead of throwing. Wrap everything in try/catch so a cache error *never* propagates to the caller.
+</details>
+
+<details>
+<summary>💡 Hint 3: Auto-reconnect on a timer</summary>
+When you detect a disconnect, schedule a `setTimeout` that tries `client.connect()` every 5 seconds. Guard against duplicate timers. On success, set `isConnected = true` so the next request uses the cache again.
+</details>
+
 
 ```typescript
 // src/services/resilientCache.ts
@@ -464,6 +482,22 @@ The Postgres latency experiment revealed a critical weakness: TicketPulse waits 
 
 ### 🛠️ Build: Database Query Timeout
 
+<details>
+<summary>💡 Hint 1: Use Postgres statement_timeout</summary>
+Acquire a client from the pool, then run `SET statement_timeout = ${ms}` before your actual query. This tells Postgres itself to abort the query if it exceeds the deadline — no application-level timer needed.
+</details>
+
+<details>
+<summary>💡 Hint 2: Catch the timeout error specifically</summary>
+When Postgres kills a query, the error message includes `"statement timeout"`. Check for that string so you can throw a clear, descriptive error like `"Database query timed out after 5000ms"` instead of a generic Postgres error.
+</details>
+
+<details>
+<summary>💡 Hint 3: Reset timeout and release the client</summary>
+In a `finally` block, run `SET statement_timeout = 0` to reset the client to no-timeout, then call `client.release()`. If you skip the reset, the next query that borrows this client inherits the timeout.
+</details>
+
+
 ```typescript
 // src/db/queryWithTimeout.ts
 
@@ -500,6 +534,22 @@ export async function queryWithTimeout(
 ```
 
 ### 🛠️ Build: Simple Circuit Breaker
+
+<details>
+<summary>💡 Hint 1: Three states — CLOSED, OPEN, HALF_OPEN</summary>
+Track a `state` variable and a `failureCount`. In CLOSED state, call the primary function normally. After N consecutive failures (e.g., 5), transition to OPEN. In OPEN, skip the primary entirely and return the fallback immediately.
+</details>
+
+<details>
+<summary>💡 Hint 2: Time-based recovery</summary>
+Store `lastFailureTime`. In OPEN state, check if enough time has passed (e.g., 30 seconds). If so, transition to HALF_OPEN and let one probe request through. If it succeeds, go back to CLOSED. If it fails, go back to OPEN.
+</details>
+
+<details>
+<summary>💡 Hint 3: The execute() signature</summary>
+Your `execute<T>(fn: () => Promise<T>, fallback: () => Promise<T>): Promise<T>` method takes the primary call and a fallback. In OPEN state, call `fallback()` without trying `fn()`. This is what makes the circuit breaker fast — it avoids waiting for a timeout on a service it already knows is down.
+</details>
+
 
 A circuit breaker prevents your application from repeatedly calling a service that is known to be failing:
 
@@ -773,3 +823,8 @@ After this module, TicketPulse should have:
 - [CAP Twelve Years Later](https://www.infoq.com/articles/cap-twelve-years-later-how-the-rules-have-changed/) — Eric Brewer's own retrospective on CAP
 - Martin Kleppmann, *Designing Data-Intensive Applications*, Chapter 8 (The Trouble with Distributed Systems)
 - Chapter 1 of the 100x Engineer Guide: Sections 1.1-1.2 (CAP and PACELC)
+---
+
+## What's Next
+
+In **Consistency Models in Practice** (L1-M18), you'll build on what you learned here and take it further.

@@ -23,6 +23,10 @@ The engineers who get the most from AI are not the ones who type the cleverest p
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before starting the AI-assisted feature build, estimate: what percentage of the waitlist feature code do you expect AI to produce correctly on the first try? Where do you expect it to need the most human correction -- data model, business logic, or edge cases?
+
 ## 1. The Feature: Waitlist When Events Sell Out
 
 ### Product Requirements
@@ -38,6 +42,16 @@ When an event sells out, users should be able to join a waitlist. If tickets bec
 - A user cannot join the waitlist if they already have tickets for the event
 
 ### Stop and Design (10 minutes)
+
+<details>
+<summary>💡 Hint 1: Design the concurrency model before you touch the AI</summary>
+The waitlist position assignment is a classic read-modify-write race. Decide now whether you will use a serializable transaction, a database sequence, or an advisory lock. This is the exact thing AI will get wrong if you do not specify it in your prompt constraints.
+</details>
+
+<details>
+<summary>💡 Hint 2: Use Claude API tool_use to structure your prompts as typed contracts</summary>
+When prompting for implementation, specify exact input/output types, error codes, and Kafka event names as constraints. The more your prompt reads like an OpenAPI spec, the less correction the output needs. Vague prompts produce vague code.
+</details>
 
 Before using AI, spend 10 minutes designing this yourself:
 
@@ -392,6 +406,268 @@ You have:
 
 **Next module**: L3-M87 -- Mobile Backend Patterns, where TicketPulse launches a mobile app and the backend requirements change fundamentally.
 
+---
+
+## 7. Prompt Engineering Drills
+
+The fastest way to improve your AI output quality is deliberate practice. These drills are designed to be done sequentially, each one building on the previous.
+
+### Drill 1: The Context Injection Drill (10 minutes)
+
+Take a real task from your backlog. Write the same prompt three times with increasing levels of context:
+
+**Version A — Bare minimum:**
+```
+"Add rate limiting to the waitlist endpoint."
+```
+
+**Version B — Stack context:**
+```
+"Add rate limiting to POST /api/v1/events/:eventId/waitlist.
+Tech stack: Node.js, Express, TypeScript.
+Use our existing RateLimiter from src/lib/rate-limiter.ts.
+Limit: 5 requests per IP per 10 minutes."
+```
+
+**Version C — Full context with constraints:**
+```
+"Add rate limiting to POST /api/v1/events/:eventId/waitlist.
+
+Context:
+- Node.js + Express + TypeScript
+- Rate limiter middleware: src/lib/rate-limiter.ts (uses Redis sliding window)
+- Pattern in codebase: rateLimiter({ points: 5, duration: 600, prefix: 'rl:join:' })
+- Auth middleware runs before rate limiter (req.user is populated)
+- Error response format: { error: { code: 'RATE_LIMIT_EXCEEDED', message: '...' } }
+
+Constraint: limit by user ID when authenticated, by IP when not.
+Return 429 with Retry-After header.
+Do not add new dependencies."
+```
+
+Generate output from each version. Compare the quality. Measure how many corrections the Version C output needs vs Version A. In most cases, Version C needs zero corrections, Version A needs five.
+
+**The lesson:** writing the Version C prompt takes 3 extra minutes. Correcting a Version A output takes 15. You save time by investing in the prompt.
+
+### Drill 2: The Skeptic Drill (5 minutes)
+
+Take any AI-generated code snippet. Before running it, ask the AI to attack its own output:
+
+```
+"You just generated this code. Now act as an adversarial code reviewer.
+Find every race condition, security hole, and edge case this code misses.
+Be ruthless. Do not defend the code you wrote."
+```
+
+What comes back is often a list of 3-5 genuine problems. This is the fastest way to catch issues before they reach production. The AI knows what it generated and can reason about its own failure modes.
+
+### Drill 3: The Pattern Extraction Drill (10 minutes)
+
+Find a pattern in your codebase that you use repeatedly — maybe how you structure service classes, how you write Prisma transactions, or how you format error responses. Feed three examples to the AI:
+
+```
+"Here are three examples of how we structure service methods in TicketPulse:
+
+Example 1: [paste getEvent service method]
+Example 2: [paste createOrder service method]
+Example 3: [paste cancelTicket service method]
+
+Extract the pattern. Describe it precisely enough that you could generate new service methods that match it perfectly.
+
+Then generate createWaitlistEntry using that exact pattern."
+```
+
+This trains the AI on YOUR patterns, not generic patterns. The output will match your codebase style without manual correction.
+
+### Drill 4: The Constraint-First Drill (5 minutes)
+
+Most engineers describe WHAT they want. Effective AI prompting starts with constraints — things the output must NOT do:
+
+```
+"Implement the waitlist notification cron job.
+
+Hard constraints (these are non-negotiable):
+- Must be idempotent: running it twice must produce the same result
+- Must not use setTimeout or setInterval (these die when the process restarts)
+- Must not send more than one notification per user per event per hour
+- Must work with our existing Bull queue infrastructure
+
+Soft preferences:
+- Prefer simplicity over cleverness
+- Prefer explicit over implicit
+- Prefer small functions with clear names
+
+Now implement it."
+```
+
+The constraint-first structure forces the AI to eliminate bad solutions before writing code. You get dramatically better results on the first try.
+
+### Drill 5: The Incremental Refinement Drill (15 minutes)
+
+Do not try to get the perfect implementation in one shot. Practice a 5-step refinement loop:
+
+```
+Step 1: "Give me a rough sketch of the waitlist notification flow. Pseudocode is fine."
+         → Review the structure. Does the flow make sense?
+
+Step 2: "Good. Now implement step 2 (find users to notify) in TypeScript using Prisma."
+         → Review the query. Is it correct? Efficient?
+
+Step 3: "This query could be slow with 100K waitlist entries. Optimize it."
+         → Review the optimization. Does it still return correct data?
+
+Step 4: "Add error handling using our AppError class. Show me the full function."
+         → Review error paths. Are all failure modes covered?
+
+Step 5: "Generate tests for this function. Cover: happy path, empty waitlist,
+         database error, and concurrent execution."
+         → Review tests. Do the concurrent tests actually test concurrency?
+```
+
+Each step is small enough that you can evaluate it completely. Errors in step 2 get caught before you build steps 3-5 on a broken foundation.
+
+---
+
+## 8. Advanced AI Workflow: AI for Architecture and Design
+
+Most engineers use AI for implementation. The engineers who get the most leverage use it earlier — at the design and architecture stage.
+
+### Using AI for Design Critique
+
+Before writing code, use AI as an adversarial design partner:
+
+```
+"Here is my design for the waitlist notification system:
+[paste your design]
+
+Act as a Staff Engineer doing a design review. Your goal is to find problems with this design, not validate it. Focus on:
+1. Concurrency and race conditions
+2. Failure modes and how the system behaves when each component fails
+3. Scalability — what breaks at 10x, 100x the current load?
+4. Missing edge cases
+5. Integration points that are likely to cause problems
+
+Do not suggest improvements yet. Just identify problems."
+```
+
+This is more valuable than asking the AI to design something for you. You bring the domain knowledge and business constraints. The AI brings systematic skepticism.
+
+### Using AI for Trade-off Analysis
+
+When you are choosing between two approaches, AI can help you think through the trade-offs you have not considered:
+
+```
+"I am deciding between two approaches for the waitlist notification system:
+
+Option A: Cron job that runs every 30 seconds, checks for available tickets, and sends notifications.
+Option B: Event-driven — when a ticket is released, publish a WaitlistCheck event that triggers notification.
+
+I have already identified these trade-offs:
+- A is simpler, B is more responsive
+- A has up to 30s delay, B is near-instant
+- A is easier to reason about, B has more moving parts
+
+What trade-offs have I missed? Particularly around: failure handling, idempotency, monitoring and debugging, and cost at scale."
+```
+
+The AI often identifies trade-offs you did not consider — like the fact that Option B requires your event bus to be reliable before you can trust notification delivery.
+
+---
+
+## 9. AI-Assisted Code Review: A Checklist
+
+When reviewing a PR that was heavily AI-assisted, use this structured checklist. Each item targets a category of problems AI commonly misses.
+
+### Pre-Review: Set Expectations
+
+```
+Before reviewing AI-generated code, remind yourself:
+- AI does not know YOUR codebase conventions
+- AI does not know YOUR data distribution and volume
+- AI does not know which failure modes have burned YOU before
+- AI was not in the room when the requirements were discussed
+```
+
+### The Checklist
+
+**Concurrency (check every shared resource access):**
+- [ ] Every read-modify-write sequence uses a transaction or lock
+- [ ] Counter increments use atomic operations or serializable transactions
+- [ ] Any "check then act" pattern is protected from TOCTOU races
+- [ ] Background jobs are idempotent (safe to run twice)
+
+**Error handling (check every try/catch block):**
+- [ ] Errors propagate to the right level (not swallowed in service, thrown to route handler)
+- [ ] All catch blocks either re-throw or log + handle
+- [ ] Async errors are caught (unhandled promise rejections are silent)
+- [ ] External service failures are handled (database down, Kafka unavailable)
+
+**Security (check every external input):**
+- [ ] All inputs are validated before use (Zod, Joi, or equivalent)
+- [ ] SQL queries use parameterized queries, not string concatenation
+- [ ] User-controlled data does not flow into system commands or file paths
+- [ ] Authorization checks happen before data access, not after
+
+**Performance (check data access patterns):**
+- [ ] No queries inside loops (N+1 problem)
+- [ ] Indexes exist for all WHERE and ORDER BY columns in new queries
+- [ ] Large result sets are paginated, not loaded entirely into memory
+- [ ] Expensive operations (crypto, serialization) are outside hot paths
+
+**Integration (check codebase consistency):**
+- [ ] Error responses use your AppError class / standard format
+- [ ] Logging uses your existing logger with standard fields
+- [ ] Events published to Kafka follow your schema registry format
+- [ ] New files follow the project's naming and directory conventions
+
+---
+
+## 10. Reflect: Your AI Workflow
+
+### Stop and Think (10 minutes)
+
+After building the waitlist feature with AI assistance:
+
+1. **Time comparison**: How long would this have taken without AI? With AI? Where was the biggest time saving?
+
+2. **Quality comparison**: Was the AI-generated code production-ready as-is? What percentage needed correction?
+
+3. **Your role**: What did you contribute that AI could not? (System knowledge, concurrency reasoning, security awareness, taste in API design)
+
+4. **Going forward**: Which of your daily tasks would benefit most from AI assistance? Which should you never delegate to AI?
+
+5. **The meta-skill**: AI tools change every few months. New models, new capabilities, new interfaces. What is the underlying skill that transfers across all of them? (Answer: knowing your system deeply enough to evaluate any output against it.)
+
+The engineer who understands the system uses AI 10x more effectively than one who does not. AI does not replace understanding — it amplifies it.
+
+---
+
+## Cross-References
+
+- **Chapter 14** (The AI-Augmented Engineer): The mental model for integrating AI into every phase of the engineering workflow, from requirements through post-mortems.
+- **Chapter 17** (AI Pair Programming in Practice): Deep dive into prompt patterns, context management, and the economics of AI-assisted development across different task types.
+- **L3-M90** (Final Capstone): Uses AI pair programming as one of the primary tools for the capstone architecture review.
+
+---
+
+## Checkpoint: What You Built
+
+You have:
+
+- [x] Designed and implemented a waitlist feature using AI pair programming
+- [x] Evaluated AI output: identified what was correct, what needed fixes, and what was missing
+- [x] Fixed a concurrency bug that AI missed (position assignment race condition)
+- [x] Generated comprehensive tests using AI and verified their correctness
+- [x] Practiced five prompt engineering drills that compound quality with specificity
+- [x] Applied the adversarial review technique to your own AI-generated code
+- [x] Developed a framework for when to use AI vs when to rely on your own expertise
+
+**Key insight**: AI is a force multiplier, not a replacement. The 70% it handles well (boilerplate, tests, documentation, exploration) saves you hours. The 30% it misses (concurrency, security, system-specific integration, novel design) is where your engineering judgment earns its keep.
+
+---
+
+**Next module**: L3-M87 -- Mobile Backend Patterns, where TicketPulse launches a mobile app and the backend requirements change fundamentally.
+
 ## Key Terms
 
 | Term | Definition |
@@ -401,3 +677,16 @@ You have:
 | **Prompt engineering** | The practice of crafting effective inputs to an LLM to elicit accurate, useful responses. |
 | **Code review** | The process of examining code changes for correctness, style, security, and maintainability before merging. |
 | **Context window** | The maximum amount of text (measured in tokens) that an LLM can process in a single request. |
+| **Adversarial review** | A technique where the AI is asked to critique and attack its own output, simulating a skeptical reviewer. |
+| **Constraint-first prompting** | A prompting style that specifies what the output must NOT do before describing what it should do. |
+| **Incremental refinement** | An AI workflow pattern where complex output is built in small, verifiable steps rather than generated all at once. |
+
+### 🤔 Reflection Prompt
+
+Compare your prediction about AI accuracy with what actually happened. Where did the AI surprise you (better than expected) and where did it disappoint (worse than expected)? How does this shape your workflow going forward?
+
+---
+
+## What's Next
+
+In **AI-Native Spec-Driven Development** (L3-M86a), you'll build on what you learned here and take it further.

@@ -307,7 +307,25 @@ User reads (GET /my-tickets)
   │     └── NO → Read from REPLICA (fast, eventually consistent)
 ```
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Database Router
+
+<details>
+<summary>💡 Hint 1: Two pools, one router</summary>
+Create a `primaryPool` (port 5432) and a `replicaPool` (port 5433). Writes always go to `primaryPool`. For reads, you need a function like `getReadPool(userId?)` that decides which pool to use based on whether the user wrote recently.
+</details>
+
+<details>
+<summary>💡 Hint 2: Track recent writers with a Map</summary>
+Use a `Map<string, number>` that maps `userId` to the timestamp of their last write. After a purchase, call `recordWrite(userId)`. In `getReadPool()`, check if `Date.now() - lastWriteTime < 5000`. If yes, route to primary so they see their own data.
+</details>
+
+<details>
+<summary>💡 Hint 3: Clean up stale entries</summary>
+The Map will grow forever unless you prune it. When its size exceeds a threshold (e.g., 1000 entries), iterate and delete entries older than the read-your-writes window (5 seconds). This keeps memory bounded without affecting correctness.
+</details>
+
 
 ```typescript
 // src/db/dbRouter.ts
@@ -670,3 +688,8 @@ After this module, TicketPulse should have:
 - Martin Kleppmann, *Designing Data-Intensive Applications*, Chapter 5 (Replication)
 - [How Shopify handles read-your-writes](https://shopify.engineering/read-consistency-taming-database-replication-lag) — Real-world pattern at scale
 - Chapter 1 of the 100x Engineer Guide: Section 1.3 (Consistency Models)
+---
+
+## What's Next
+
+In **Architecture Patterns Overview** (L1-M19), you'll build on what you learned here and take it further.

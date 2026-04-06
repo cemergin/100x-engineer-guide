@@ -12,7 +12,7 @@
 
 > **Part III — Tooling & Practice** | Prerequisites: None | Difficulty: Beginner to Advanced
 
-The practical hard skills that eliminate friction — Linux mastery, shell productivity, editor efficiency, Git wizardry, and infrastructure CLI tools that make you measurably faster every day.
+The difference between a 10-minute task and a 10-second task is knowing your tools. This chapter is the practical hard skills that eliminate friction — Linux mastery, shell productivity, editor efficiency, Git wizardry, and infrastructure CLI tools that make you measurably faster every single day.
 
 ### In This Chapter
 - Linux Mastery
@@ -28,14 +28,28 @@ The practical hard skills that eliminate friction — Linux mastery, shell produ
 
 ### Related Chapters
 - Chapter 7 — infrastructure concepts behind Docker/Terraform/K8s
+- Chapter 17 — Claude Code as your AI co-pilot in the terminal
 - Chapter 20 — environment management
 - Chapter 15 — Git workflows in teams
+- Chapter 36 — Beast Mode toolchain setup (putting it all together)
+
+---
+
+Here's something nobody tells you when you start programming: the tool is never just the tool. Every hour you invest learning your editor, your shell, your git workflow — that's not overhead. That's compounding interest on every hour of work you'll ever do afterward. The engineers who seem impossibly fast aren't smarter than you. They've just spent time with their tools that you haven't yet.
+
+This chapter is that investment, accelerated. We're going to walk through the tools that actually matter — the ones that show up every single day — and get you past the "I know the basics" stage into the "I move like the computer is an extension of my hands" stage. That's the goal. Let's go.
 
 ---
 
 ## 1. LINUX MASTERY
 
+Think of Linux as the operating system that respects you enough to show you everything. No hidden task managers, no opaque system processes, no black boxes. Every process, every file handle, every network connection is inspectable from the command line. Once you internalize this, debugging stops being guesswork and starts being archaeology — you dig until you find exactly what's happening, and then you fix it.
+
+The commands in this section are your shovel.
+
 ### 1.1 Process Management
+
+You will hit a moment where something is consuming your CPU, eating your RAM, or holding a port hostage. These are the commands you reach for. `htop` for interactive exploration, `ps` for scripting and automation, `kill` when it's time to be decisive.
 
 ```bash
 # View processes
@@ -62,6 +76,8 @@ renice -n 5 -p <pid>           # Change running process priority
 
 ### 1.2 Disk & File System
 
+Disk space problems are always urgent and always discovered at the worst time. Have these commands ready before you need them.
+
 ```bash
 # Disk usage
 df -h                           # Filesystem usage, human-readable
@@ -81,6 +97,8 @@ iotop                          # Top-like I/O monitor (needs root)
 ```
 
 ### 1.3 Networking
+
+The gap between "I think there's a network issue" and "here is exactly what is wrong" comes down to knowing these commands. `ss` replaced `netstat`, `mtr` replaced `traceroute`, and `curl -v` is still the fastest way to see what's actually happening at the HTTP layer.
 
 ```bash
 # Connection inspection
@@ -116,7 +134,7 @@ tcpdump -w capture.pcap -i any       # Write to file for Wireshark analysis
 
 ### 1.4 Text Processing
 
-This is where Linux becomes a superpower. These compose together via pipes.
+This is where Linux becomes a superpower. These compose together via pipes, and that composition is where the magic happens. A senior engineer with `grep`, `awk`, `sed`, and `jq` can extract insights from a million-line log file in under a minute. These tools are not old — they are timeless.
 
 ```bash
 # grep — search content
@@ -196,6 +214,8 @@ tar czf backup-$(date +%Y%m%d).tar.gz --exclude='node_modules' --exclude='.git' 
 ```
 
 ### 1.6 Bash Scripting Essentials
+
+Every bash script you write for production should start with this single line. It's the difference between a script that fails loudly and one that silently eats errors while mutating your data. The rest follows from there.
 
 ```bash
 #!/usr/bin/env bash
@@ -315,6 +335,8 @@ screen -ls                              # List sessions
 
 ### 1.8 SSH Mastery
 
+Here's the SSH secret most developers learn too late: `~/.ssh/config` is a superpower hiding in plain sight. Instead of typing `ssh -i ~/.ssh/prod_ed25519 -p 2222 deploy@10.0.1.50` every time, you type `ssh prod`. Twelve keystrokes instead of fifty. More importantly, it eliminates the mental overhead of remembering host details, so your brain is free to think about what you're actually doing on that server.
+
 ```bash
 # ~/.ssh/config — the single most impactful SSH optimization
 Host prod
@@ -365,6 +387,8 @@ ssh-add ~/.ssh/prod_ed25519                # Add key to agent
 ```
 
 ### 1.9 Performance Debugging
+
+When something is slow or broken and you don't know why, these tools let you see inside a running process. `strace` is particularly mind-bending the first time you use it — you can literally watch a process open files, make network calls, allocate memory, all in real time. It's like X-ray vision for your programs.
 
 ```bash
 # strace — trace system calls (the "printf debugging" of Linux)
@@ -454,6 +478,10 @@ setfacl -R -m u:deploy:rwx /var/www        # Recursive
 
 ## 2. SHELL PRODUCTIVITY
 
+Your shell is where you spend your life as an engineer. Every second you spend navigating history the slow way, typing out long file paths, or waiting to remember a command you've run a hundred times — that's friction. Friction accumulates. The engineers who feel impossibly fast have mostly just eliminated friction at this level.
+
+The good news: a well-configured shell is a one-time investment with a lifetime payoff. Spend a weekend getting this right and you'll benefit for years. Chapter 36 (Beast Mode toolchain) covers the full setup; here we focus on the tools themselves.
+
 ### 2.1 Zsh + Prompt Configuration
 
 ```bash
@@ -513,7 +541,7 @@ min_time = 2000  # Show execution time for commands > 2s
 
 ### 2.2 Shell Aliases & Functions
 
-Add these to `~/.zshrc` or `~/.bashrc`:
+This is your personal CLI. Treat it like code — review it, refactor it, keep it in version control. Every alias here represents a command you will type thousands of times. Every function is a tiny program that solves a problem you have repeatedly. Add these to `~/.zshrc` or `~/.bashrc` and never type the long form again.
 
 ```bash
 # ── Navigation ──
@@ -597,6 +625,10 @@ listening() { lsof -iTCP -sTCP:LISTEN -n -P | grep -i "${1:-}"; }
 
 ### 2.3 fzf — Fuzzy Finder (Game Changer)
 
+If there's one tool in this entire chapter that will make you immediately, visibly faster the first day you use it — it's fzf. Install it and then press `Ctrl+R` to search your command history. You'll never go back to the default reverse-search again.
+
+`fzf` is the kind of tool that, once you understand what it actually does (pipe any list of things → interactive fuzzy filter → output selection), you start seeing applications for it everywhere. History search, file selection, git branch switching, process killing — all become interactive and blazing fast.
+
 ```bash
 # Install
 brew install fzf        # macOS
@@ -636,6 +668,8 @@ alias dsel='docker ps --format "{{.Names}}" | fzf | xargs docker exec -it'
 
 ### 2.4 Modern CLI Replacements
 
+Think of these as the same tools you know, but rebuilt with everything the original authors would have done differently if they'd started today. `rg` is not just faster than `grep` — it's smarter (respects `.gitignore` automatically, shows context by default, handles binary files gracefully). `fd` is not just faster than `find` — it's got a sane syntax you can actually remember. These aren't experimental toys. They're production tools used daily by engineers who care about their time.
+
 ```bash
 # ripgrep (rg) over grep — 5-10x faster, respects .gitignore
 rg "TODO" --type py                     # Search Python files
@@ -673,6 +707,10 @@ eza --tree --ignore-glob="node_modules|.git"
 ```
 
 ### 2.5 tmux Deep Dive
+
+tmux is the tool that separates engineers who work on servers from engineers who work *with* servers. It gives you persistent terminal sessions that outlive your SSH connection, multiple panes for monitoring while you code, and named sessions you can attach and detach freely. Think of it as a window manager for your terminal.
+
+The configuration below is battle-tested. The key remaps to `Ctrl+a` (instead of the default `Ctrl+b`) because `Ctrl+a` is on the home row and doesn't require moving your hand. The vim-style pane navigation means your muscle memory transfers. Set this up once and forget about it — it just works.
 
 ```bash
 # Start/manage sessions
@@ -765,6 +803,10 @@ run '~/.tmux/plugins/tpm/tpm'
 
 ### 2.6 direnv — Per-Project Environment Variables
 
+Every project has different environment variables: different database URLs, different API keys, different AWS profiles. The naive solution is to manually export them every time you switch projects. The `direnv` solution is to define them in an `.envrc` file and have them load automatically when you `cd` into the project — and unload automatically when you leave.
+
+This is surprisingly transformative. No more "why is my test database pointing at production" because you forgot to switch environments. No more environment variables leaking between projects. Each project gets its own clean environment.
+
 ```bash
 # Install
 brew install direnv      # macOS
@@ -794,6 +836,8 @@ use node                             # Auto-use .node-version
 
 ### 2.7 Shell History Tricks
 
+Your shell history is a searchable log of everything you've ever done. Most engineers use maybe 10% of its power. These are the shortcuts that unlock the rest — the ones that feel like cheating once you know them.
+
 ```bash
 !!                    # Repeat last command
 sudo !!               # Re-run last command with sudo (the classic)
@@ -821,7 +865,15 @@ setopt HIST_REDUCE_BLANKS     # Remove extra blanks
 
 ## 3. VIM / NEOVIM
 
+Let's address the elephant in the room: learning Vim feels slow at first. For a few days, you'll be slower than you were in your normal editor. This is completely normal and entirely worth pushing through.
+
+Here's why Vim is worth it: Vim's commands compose. `d` deletes, `w` moves to the next word, `i` means "inner", and combining them gives you `diw` — delete inner word. Learn ten operators and ten motion commands and you have one hundred combinations. Every new motion or operator you learn multiplies what you already know. This is fundamentally different from memorizing keyboard shortcuts, where each shortcut does exactly one thing.
+
+You don't have to go all-in on Vim as your primary editor. Even if you use VS Code, learning Vim motions (via the VSCodeVim extension) will make you faster in your editor. And when you're on a remote server with nothing but `vi` installed, you won't be helpless.
+
 ### 3.1 Essential Motions (The 20% That Matters)
+
+Start here. Master these before touching anything else. Most Vim users are productive with exactly these motions — the rest is polish.
 
 ```
 # Movement
@@ -844,6 +896,8 @@ H / M / L        Top/middle/bottom of screen
 ```
 
 ### 3.2 The Verb-Noun Grammar (Vim's Superpower)
+
+This is the moment Vim clicks. Once you understand the grammar, you stop memorizing commands and start *speaking* Vim. Operators are verbs (`d` = delete, `c` = change, `y` = yank). Text objects are nouns (`w` = word, `"` = inside quotes, `{` = inside braces). Modifiers connect them (`i` = inner, `a` = around).
 
 Vim commands compose: **verb + modifier + noun**.
 
@@ -909,6 +963,10 @@ Ctrl+v  Block (column) visual selection
 ```
 
 ### 3.4 Registers & Macros
+
+Registers are Vim's 26+ clipboards. Most editors have one clipboard. Vim has one per letter of the alphabet, plus special-purpose registers for system clipboard, last yank, last search, and more. This sounds excessive until you're refactoring code and need to swap two things without the first paste overwriting what you copied.
+
+Macros take this further: record any sequence of commands into a register, replay it any number of times. The classic use case is transforming a list of lines where each transformation is identical but too complex to do with a simple regex.
 
 ```
 # Registers (vim has 26+ clipboards)
@@ -986,6 +1044,8 @@ Ctrl+^            Toggle between last two buffers
 ```
 
 ### 3.7 Must-Have Neovim Plugins
+
+Modern Neovim with lazy.nvim, LSP, and Telescope is a legitimate alternative to VS Code — faster, more composable, runs in the terminal, and scriptable with Lua. If you're going to invest in Vim, invest in Neovim. This plugin setup gives you fuzzy file finding, full language intelligence, git integration, and completions — the features that make modern editors feel essential.
 
 ```lua
 -- Modern Neovim plugin setup with lazy.nvim
@@ -1095,6 +1155,12 @@ vim.keymap.set("n", "<leader>q", ":q<CR>")
 
 ## 4. VS CODE PRODUCTIVITY
 
+VS Code is where most engineers live, and most of them are using maybe 20% of what it can do. The gap between a developer who knows their editor and one who doesn't is visible in every pair programming session — one person is constantly reaching for the mouse, navigating menus, waiting for dialogs. The other is already done.
+
+The shortcuts below are not trivia. They're the difference between editing that feels like thinking and editing that feels like fighting your tool. Learn the navigation shortcuts first — those have the highest daily leverage. Then multi-cursor. Then the rest.
+
+If you're pairing Vim motions with VS Code (via the VSCodeVim extension), you get the best of both worlds: VS Code's ecosystem and Vim's editing efficiency. Chapter 17 covers how Claude Code integrates into this workflow as an AI co-pilot running directly in your terminal.
+
 ### 4.1 Essential Keyboard Shortcuts
 
 These are the shortcuts that eliminate mouse usage. Learn 2-3 per week until they are muscle memory.
@@ -1150,6 +1216,8 @@ Ctrl+Shift+D                Debug
 
 ### 4.2 Multi-Cursor Mastery
 
+Multi-cursor is one of those features that, once you see an expert use it, you can't unsee. The technique: select a word, `Ctrl+D` to grab the next occurrence, repeat until you have all the ones you want, then type the replacement. Every cursor edits simultaneously. No find-and-replace dialog, no regex, just direct manipulation at multiple points at once.
+
 ```
 # The workflow that replaces most find-and-replace:
 # 1. Select a word
@@ -1171,6 +1239,8 @@ Ctrl+Shift+D                Debug
 ```
 
 ### 4.3 Essential Extensions
+
+Extensions are where VS Code becomes your custom-built tool. The list below isn't a catalog — it's gear selection for a mission. `ErrorLens` alone might save you more time than anything else here; seeing errors inline without having to hover or check the Problems panel removes a small friction from every minute of coding. `GitLens` is like turning on x-ray vision for your codebase — every line shows you who wrote it, when, and why.
 
 ```json
 // Must-install extensions (Extension ID for quick install)
@@ -1211,6 +1281,8 @@ Ctrl+Shift+D                Debug
 ```
 
 ### 4.4 Workspace vs User Settings
+
+The settings hierarchy is worth understanding: user settings apply globally to all your projects, workspace settings (`.vscode/settings.json`) override them per-project. Use workspace settings to enforce project conventions — tab size, formatter, language-specific rules — so everyone on the team gets the same experience regardless of their personal preferences.
 
 ```jsonc
 // User settings (global): Ctrl+, → open settings.json
@@ -1265,6 +1337,8 @@ Ctrl+Shift+D                Debug
 ```
 
 ### 4.5 Tasks & Launch Configurations
+
+VS Code tasks and launch configs are the difference between "I have to switch terminals to run tests" and "I press one key and tests run in a dedicated panel." Set these up once per project and your entire team benefits. Commit them to `.vscode/` in source control.
 
 ```jsonc
 // .vscode/tasks.json — automate build/test/lint
@@ -1328,6 +1402,8 @@ Ctrl+Shift+D                Debug
 
 ### 4.6 Custom Snippets
 
+Snippets are tiny programs that eliminate boilerplate. The `rfc` snippet below generates a complete typed React component from two keystrokes. The `tca` snippet gives you a complete async try-catch block. Every time you type the same structural code, that's a snippet waiting to be created.
+
 ```jsonc
 // Ctrl+Shift+P → "Configure User Snippets" → typescript.json
 {
@@ -1385,7 +1461,15 @@ Ctrl+Shift+D                Debug
 
 ## 5. GIT MASTERY
 
+Here's the thing about Git: most people learn enough to `commit`, `push`, and `pull`, and then they stop. They treat Git like a save button. But Git is actually a time machine, a collaboration tool, a code review system, and a debugging assistant — all at once.
+
+The commands in this section are the ones that separate developers who are *in control of their history* from developers who are afraid to touch it. Interactive rebase, bisect, reflog — these feel like superpowers once they're in your toolkit. And the `.gitconfig` section at the end will improve your daily workflow immediately, with zero learning curve.
+
 ### 5.1 Interactive Rebase (The Most Powerful Git Feature)
+
+Interactive rebase lets you rewrite history before it becomes permanent (i.e., before you push). This is how you turn a messy sequence of "fix typo", "actually fix typo", "WIP", "more WIP" commits into a clean, logical sequence that tells a coherent story to the code reviewers.
+
+Think of it as editing a document before you publish it. The final published version should read clearly even if the drafting process was chaotic.
 
 ```bash
 # Rewrite the last 5 commits
@@ -1452,6 +1536,8 @@ git reset --hard HEAD@{1}               # Undo last reset/rebase/merge
 
 ### 5.3 Branching Strategies
 
+Choosing a branching strategy is like choosing a deployment architecture — it shapes how your team works every single day. Pick the wrong one and you'll spend hours on merge conflicts and coordination overhead. Here's the opinionated take:
+
 ```
 # Trunk-Based Development (recommended for most teams)
 # - Everyone commits to main (or short-lived feature branches, < 2 days)
@@ -1477,6 +1563,8 @@ git reset --hard HEAD@{1}               # Undo last reset/rebase/merge
 ```
 
 ### 5.4 Git Hooks with Husky + lint-staged
+
+Git hooks run automatically at key moments in the git workflow. The pre-commit hook runs before every commit, making it the perfect place to run your linter and formatter. This way, bad code physically cannot enter your repository — the commit just fails. `lint-staged` ensures you only lint the files you changed, keeping the hook fast.
 
 ```bash
 # Install
@@ -1537,6 +1625,8 @@ git subtree pull --prefix=lib/utils https://github.com/org/utils.git main --squa
 ```
 
 ### 5.6 .gitconfig Optimizations
+
+Your `.gitconfig` is worth spending an hour on. The options below aren't tweaks — they're significant quality-of-life improvements. `delta` as your diff pager makes code review a pleasure instead of a chore. `zdiff3` conflict style shows you the original code alongside both conflicting versions, so you actually understand what changed instead of guessing. `rerere` remembers how you resolved a conflict and reapplies that resolution automatically the next time the same conflict appears.
 
 ```ini
 # ~/.gitconfig
@@ -1605,6 +1695,8 @@ git subtree pull --prefix=lib/utils https://github.com/org/utils.git main --squa
 
 ### 5.7 Conventional Commits
 
+Conventional Commits aren't just about being tidy — they're the foundation of automated changelogs, semantic versioning, and CI/CD workflows that know whether a commit is a feature, a bug fix, or a breaking change. Once your team adopts this format, tools like `semantic-release` can automatically version and publish your package based on commit history alone.
+
 ```
 # Format: <type>(<optional scope>): <description>
 #
@@ -1640,6 +1732,10 @@ BREAKING CHANGE: Response is now paginated. Clients must handle `next_cursor` fi
 ---
 
 ## 6. DOCKER FOR DAILY USE
+
+Docker is the "it works on my machine" problem, solved. Instead of "I need you to install Node 18, the specific version of PostgreSQL we use, and Redis, and configure them all correctly," you say `docker compose up` and the entire environment materializes in thirty seconds, identical to what runs in production.
+
+The commands in this section are your daily Docker toolkit — the ones you'll use for local development, debugging, and managing containers. The multi-stage Dockerfile at the end is production-grade: small images, non-root user, health checks. Use it as a template.
 
 ### 6.1 Essential Commands
 
@@ -1678,6 +1774,8 @@ docker system df                                         # Show Docker disk usag
 ```
 
 ### 6.2 Docker Compose for Local Development
+
+This is the compose file you actually want — not just a database, but the full stack: API with hot reload, database with health checks and seed data, Redis, and a background worker, all wired together and ready to go with `docker compose up`.
 
 ```yaml
 # docker-compose.yml — typical backend development setup
@@ -1772,6 +1870,10 @@ docker compose run --rm api npm test          # Run one-off command
 
 ### 6.3 Multi-Stage Builds & Layer Caching
 
+Multi-stage builds solve the fundamental Docker tension: you need build tools to compile your app, but you don't want those build tools in your production image. The pattern: separate stages for deps, build, and production. The production image gets only the compiled output, not the compiler. This is the difference between a 1.2GB image and a 120MB image.
+
+The layer caching trick matters too: always `COPY package.json` before `COPY . .` so the expensive `npm ci` step is cached unless your dependencies actually changed.
+
 ```dockerfile
 # Dockerfile — production-optimized multi-stage build
 
@@ -1862,7 +1964,13 @@ docker run -p 127.0.0.1:3000:3000 myapp        # Bind to localhost only (more se
 
 ## 7. TERRAFORM ESSENTIALS
 
+Terraform is infrastructure as code in the most literal sense: your servers, databases, load balancers, DNS records — all described in text files, version-controlled, reviewable, and reproducible. Instead of clicking through the AWS console and hoping you remember every setting, you write it down once and can recreate the exact same environment in any region, any account, any time.
+
+The learning curve is real, but the payoff is enormous. Onboarding a new environment goes from "two weeks of clicking" to `terraform apply`. Disaster recovery goes from "does anyone remember how we set this up?" to `git clone && terraform apply`.
+
 ### 7.1 Core Workflow
+
+The four-command lifecycle is what you'll run every day. `plan` before `apply`, always — treat the plan output like a code review. Read it carefully. Infrastructure mistakes are expensive.
 
 ```bash
 # The 4-command lifecycle
@@ -1885,6 +1993,8 @@ terraform validate                               # Syntax and type checking
 ```
 
 ### 7.2 State Management
+
+Terraform's state is the source of truth about what infrastructure exists. The golden rule: never store state locally when working in a team. Put it in S3 (or equivalent) with DynamoDB locking. Without the lock, two engineers running `terraform apply` simultaneously can corrupt your infrastructure.
 
 ```hcl
 # Remote backend (store state in S3 — never local in a team)
@@ -1919,6 +2029,8 @@ terraform apply -refresh-only                     # Update state to match realit
 ```
 
 ### 7.3 Modules
+
+Modules are the functions of Terraform — reusable, parameterized, testable infrastructure components. A well-written VPC module means you write VPC configuration once and use it in dev, staging, and production by just passing different variables. The Terraform Registry has battle-tested community modules for most common infrastructure patterns.
 
 ```hcl
 # modules/vpc/main.tf — reusable VPC module
@@ -2099,6 +2211,10 @@ terraform graph -type=plan                # Show what will change
 
 ## 8. KUBERNETES CLI (kubectl)
 
+If Docker is "my app in a container," Kubernetes is "my app in a container, running on a cluster of machines, with automatic scaling, self-healing, rolling deployments, and service discovery." `kubectl` is the CLI that lets you talk to that cluster — inspect what's running, debug what's broken, scale what needs more capacity.
+
+The first thing to internalize: everything in Kubernetes is a resource with a status and events. When something breaks, your debugging flow is almost always: `get` to see status, `describe` to see events, `logs` to see what the app says. That loop solves 90% of Kubernetes problems.
+
 ### 8.1 Essential Commands
 
 ```bash
@@ -2158,6 +2274,8 @@ kubectl top pods --sort-by=memory              # Sort by memory usage
 
 ### 8.2 Context & Namespace Management
 
+Context switching is where engineers lose time. `kubectx` and `kubens` turn multi-step commands into single words — and with `fzf` integration, they become interactive fuzzy pickers. Install these the first day you start working with Kubernetes and never look back.
+
 ```bash
 # Without kubectx/kubens (built-in)
 kubectl config get-contexts                    # List all contexts
@@ -2177,7 +2295,7 @@ kubens -                    # Switch to previous namespace
 
 ### 8.3 Debugging Pods
 
-The systematic approach when a pod is not working:
+A systematic approach is worth more than memorizing commands. When a pod is broken, work through this checklist in order. The status alone tells you a lot — `CrashLoopBackOff`, `ImagePullBackOff`, `Pending` all have different causes and different fixes. Don't start guessing until you've read the events.
 
 ```bash
 # Step 1: Check pod status
@@ -2214,6 +2332,8 @@ kubectl top pods                                # Actual usage vs limits
 ```
 
 ### 8.4 kubectl Plugins & Tools
+
+`k9s` deserves special mention. It's a terminal UI for Kubernetes that makes navigating resources, reading logs, shelling into pods, and editing YAML feel natural and fast. Once you've used it, raw `kubectl` for anything interactive feels tedious. Install it immediately.
 
 ```bash
 # krew — plugin manager for kubectl
@@ -2293,7 +2413,9 @@ kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.c
 
 ## 9. REGEX MASTERY
 
-A surprisingly high-leverage skill. Regex appears in: grep/rg, sed, code search, log analysis, input validation, text extraction, linting rules, and database queries.
+Regex is one of those skills where the activation energy to learn it is high, but the payoff lasts a career. It shows up everywhere: `grep`, `rg`, `sed`, VS Code search, log analysis, input validation, database queries, linting rules. Engineers who don't know regex reach for manual solutions to problems that should take three seconds. Engineers who do know it turn log analysis, refactoring, and data extraction into one-liners.
+
+A surprisingly high-leverage skill. Master the syntax, know the gotchas, and bookmark regex101.com for the rest.
 
 ### Core Syntax Reference
 
@@ -2406,6 +2528,8 @@ SELECT regexp_matches(url, '/api/v(\d+)/(\w+)', 'g') FROM requests;
 
 ### Catastrophic Backtracking (The Regex That Kills Your Server)
 
+This one is important enough to memorize. Catastrophic backtracking is not a theoretical concern — it caused the Cloudflare outage (Ch 26) that knocked a significant chunk of the internet offline. A single poorly-crafted regex in a hot path can take a server from 5% CPU to 100% with a single specific input string.
+
 ```
 # DANGEROUS: nested quantifiers with overlapping matches
 (a+)+$          # Exponential backtracking on "aaaaaaaaaaaaaaab"
@@ -2467,4 +2591,20 @@ a+$             # Remove nesting
 
 ---
 
-> **The meta-lesson:** Tools are multipliers. Spending 30 minutes learning a tool you use daily saves hundreds of hours per year. The commands in this chapter are not trivia — they are the difference between spending 10 minutes or 10 seconds on a task you do 20 times a day.
+> **The meta-lesson:** Tools are multipliers. Spending 30 minutes learning a tool you use daily saves hundreds of hours per year. The commands in this chapter are not trivia — they are the difference between spending 10 minutes or 10 seconds on a task you do 20 times a day. Go set up your shell, configure your editor, tune your `.gitconfig`. Then pair all of this with Claude Code (Ch 17) running in your terminal and the full Beast Mode toolchain (Ch 36), and you'll have a development environment that most engineers have never experienced. Once you've worked that way, you can't go back.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L1-M01: Course Setup & TicketPulse Kickoff](../course/modules/loop-1/L1-M01-course-setup-ticketpulse-kickoff.md)** — Wire up the full local development environment from scratch, including shell, editor, and Docker
+- **[L1-M02: Your Dev Environment](../course/modules/loop-1/L1-M02-your-dev-environment.md)** — Configure your terminal, dotfiles, and editor extensions for maximum leverage
+- **[L1-M03: Git Beyond the Basics](../course/modules/loop-1/L1-M03-git-beyond-the-basics.md)** — Interactive rebase, bisect, worktrees, and the git workflows that senior engineers use daily
+
+### Quick Exercises
+
+1. **Time yourself finding a function definition with and without fzf/ripgrep** — pick any function in a codebase you know, find it with `grep -r`, then find it again with `rg` or `fzf`. Note the difference in keystrokes and seconds.
+2. **Set up 3 git aliases that save you keystrokes daily** — candidates: `git st` for status, `git co` for checkout, `git lg` for a one-line log. Add them to your `.gitconfig` and commit to using them for a week.
+3. **Learn 5 new Vim motions or VS Code shortcuts this week** — pick from the tables in this chapter, add them to a sticky note on your monitor, and practice until they're muscle memory.

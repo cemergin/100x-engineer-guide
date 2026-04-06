@@ -4,6 +4,8 @@
 >
 > **Source:** Chapters 3, 22, 25, 32, 13 of the 100x Engineer Guide
 
+> **Before you continue:** TicketPulse reads events for the homepage thousands of times per second but writes new events maybe once a day. Should the read path and write path use the same data model and infrastructure? What if you could optimize each independently?
+
 ---
 
 ## The Goal
@@ -577,6 +579,69 @@ For TicketPulse's "user profile" page -- a simple `SELECT * FROM users WHERE id 
 
 ---
 
+> **What did you notice?** Separating reads from writes required more code and infrastructure, but each path can now be optimized independently. When would the added complexity of CQRS not be worth it?
+
+## Exercises
+
+### 🛠️ Build: Add a `TicketPurchased` Projector
+
+Extend the `EventReadModelProjector` to handle a new event type: when a batch of tickets is purchased, decrement the `total_available` counter and update the `pricing` JSONB to reflect per-tier availability.
+
+<details>
+<summary>💡 Hint 1</summary>
+The write model emits a `TicketPurchased` event with `eventId`, `tierName`, and `quantity`. Your projector must update the read model's `pricing` JSONB array by finding the matching tier and decrementing its `available` field -- use `jsonb_array_elements` with a `CASE` expression inside `jsonb_agg`.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Use a single `UPDATE ... SET total_available = total_available - $2, pricing = (SELECT jsonb_agg(...))` statement so the tier-level and event-level counts stay consistent. Wrap the JSONB manipulation in a subquery that iterates `jsonb_array_elements(pricing)` and conditionally applies `jsonb_set` on the matching tier name.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Handle the edge case where `total_available` would go negative (a stale event replayed after a cancellation). Add a `WHERE total_available >= $2` guard to the UPDATE and log a warning if `rowCount === 0` -- that means the projection is out of sync and needs a full rebuild from the write model.
+</details>
+
+### 🐛 Debug: Read Model Drift
+
+After running for a week, the read model shows 12 tickets available for an event, but the write model shows 8. Users are seeing stale availability.
+
+<details>
+<summary>💡 Hint 1</summary>
+Check the Kafka consumer group lag for the projector's consumer group. If the lag is non-zero, the projector is behind. Run `kafka-consumer-groups.sh --describe --group event-projector` and look at the LAG column for the `events` topic.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Compare `updated_at` in `event_read_model` with the latest event timestamp in Kafka. If there is a gap, check the projector logs for errors on specific event types -- a `TicketPurchased` handler that throws on unexpected `tierName` values will cause the consumer to skip messages without updating the read model.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Build a reconciliation query: `SELECT e.id, rm.total_available AS read_available, (SELECT SUM(pt.capacity) - COUNT(t.id) FROM pricing_tiers pt LEFT JOIN tickets t ON t.tier_id = pt.id AND t.status = 'sold' WHERE pt.event_id = e.id) AS write_available FROM events e JOIN event_read_model rm ON rm.event_id = e.id WHERE ...`. Any mismatch means the projector missed events or processed them out of order.
+</details>
+
+### 📐 Design: When to Skip CQRS
+
+Your teammate proposes adding CQRS to the user profile page. Evaluate whether separating read and write models is justified for a `SELECT * FROM users WHERE id = $1` query.
+
+<details>
+<summary>💡 Hint 1</summary>
+Measure the current query: run `EXPLAIN ANALYZE SELECT * FROM users WHERE id = $1`. If it returns in under 1ms with a single index scan and no JOINs, the read path is already optimal -- there is nothing to pre-compute or denormalize.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+CQRS adds a Kafka topic, a projector process, a denormalized table, and eventual consistency. For user profiles, the read/write ratio is roughly 1:1 (users read their own profile about as often as they update it). CQRS shines at 100:1 or higher read/write ratios with expensive aggregation queries.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+The decision framework: (1) Is the read query slow? No. (2) Does the read query involve expensive JOINs or aggregations? No. (3) Do reads and writes need to scale independently? No -- user profile traffic is modest. All three answers point to "skip CQRS." Write a one-paragraph justification citing these three criteria.
+</details>
+
+---
+
 ## Checkpoint
 
 Before continuing, verify:
@@ -612,6 +677,14 @@ The meta-lesson: **always start simple**. Add CQRS when you have measured eviden
 | **Read model** | A data representation optimized for queries, often denormalized for fast lookups. |
 | **Write model** | A data representation optimized for processing commands, enforcing business rules and consistency. |
 | **Projection** | The process of transforming events or commands into a read-optimized view of the data. |
+
+---
+
+## What's Next
+
+In **Composition over Inheritance — FP vs OOP** (L2-M51a), you'll explore two fundamental paradigms for structuring code and learn when each one shines.
+
+---
 
 ## Further Reading
 

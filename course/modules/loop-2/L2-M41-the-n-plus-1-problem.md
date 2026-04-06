@@ -25,9 +25,26 @@ docker compose ps
 
 ---
 
+> **Before you continue:** The events list endpoint loads 100 events with their venue name and ticket count. How many database queries do you think it makes? Write down a number before enabling query logging.
+
 ## Part 1: See the Problem (10 min)
 
 ### 🐛 Debug: Enable Query Logging
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Set log_statement='all' and log_min_duration_statement=0 in Postgres to see every query with its duration.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Hit the events list endpoint and watch the Postgres logs. Count the number of SELECT statements -- you should see 1 + N + N queries for N events.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Look for repetitive query patterns: the same query structure with different parameter values is the hallmark of N+1. For 100 events, expect 201 queries: 1 for events + 100 for venues + 100 for ticket counts.
+</details>
 
 First, let's see every query Postgres executes. Enable query logging:
 
@@ -48,7 +65,39 @@ Now every query hits the Postgres log. Watch it:
 docker compose logs -f postgres
 ```
 
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Enable `log_statement = 'all'` in Postgres to see every query. Then load the events page and count the individual SELECT statements in the log output.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+The pattern you are looking for: one SELECT for events, then one SELECT per event for the venue, then one SELECT per event for the ticket count. That is 1 + N + N = 2N + 1 queries.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+With 100 events, you should see 201 queries: 1 for the event list, 100 for venue lookups, 100 for ticket counts. The fix is to replace the loop with a JOIN or batch query that fetches all venues and counts in 1-2 queries total.
+</details>
+
 ### 🐛 Debug: Load the Events Page
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Look at the query log pattern: if you see the same query shape repeated N times with different parameter values, that is the N+1 problem. The fix depends on context: JOIN, batch load, or ORM includes.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Collect all unique IDs first, then fetch ALL related data in one query using WHERE id = ANY($1). Build a Map for O(1) lookups when assembling the response.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The optimized version uses 3 queries total: one for the list, one batch fetch for related entity A, one batch fetch for related entity B. Assembly happens in application code using Maps.
+</details>
+
 
 Now hit the TicketPulse events list endpoint — the page that shows all events with their venue name and ticket count:
 
@@ -149,6 +198,21 @@ Instead of 201 queries, write ONE query that fetches everything at once:
 
 ### 🛠️ Build: Single Query with JOINs
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Replace the N+1 pattern with a single query that JOINs events, venues, and tickets with GROUP BY and COUNT FILTER.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Use LEFT JOIN for tickets to handle events with no tickets. Apply FILTER (WHERE status = 'available') inside COUNT for available ticket counts.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The query: SELECT e.*, v.name AS venue_name, COUNT(t.id) FILTER (WHERE t.status = 'available') AS available_tickets FROM events e JOIN venues v ON e.venue_id = v.id LEFT JOIN tickets t ON t.event_id = e.id GROUP BY e.id, v.name ORDER BY e.event_date LIMIT 100.
+</details>
+
 ```javascript
 async function getEventsOptimized() {
   // ONE query that gets events + venues + ticket counts
@@ -173,6 +237,22 @@ async function getEventsOptimized() {
   return result.rows;
 }
 ```
+
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Replace the N individual venue lookups with a single JOIN in the original events query. Add a subquery or LEFT JOIN for ticket counts.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Use `SELECT e.*, v.name as venue_name, COUNT(t.id) as ticket_count FROM events e JOIN venues v ON e.venue_id = v.id LEFT JOIN tickets t ON ...` to get everything in one query.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Be careful with the GROUP BY — when you JOIN tickets for the count, you need to group by all event and venue columns. Alternatively, use a correlated subquery: `(SELECT COUNT(*) FROM tickets WHERE event_id = e.id) as ticket_count` which avoids the GROUP BY complexity.
+</details>
 
 ### 📊 Observe: Measure the Improvement
 
@@ -223,6 +303,22 @@ Do:
 ```
 
 ### 🛠️ Build: Batch Loading
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Look at the query log pattern: if you see the same query shape repeated N times with different parameter values, that is the N+1 problem. The fix depends on context: JOIN, batch load, or ORM includes.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Collect all unique IDs first, then fetch ALL related data in one query using WHERE id = ANY($1). Build a Map for O(1) lookups when assembling the response.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The optimized version uses 3 queries total: one for the list, one batch fetch for related entity A, one batch fetch for related entity B. Assembly happens in application code using Maps.
+</details>
+
 
 ```javascript
 async function getEventsWithBatchLoading() {
@@ -307,6 +403,22 @@ DataLoader:
 | No complex SQL (just IN queries) | Requires collecting IDs first |
 | Works great with GraphQL resolvers | Slight overhead from DataLoader batching logic |
 | Avoids over-fetching | Application-level join (assembling results in code) |
+
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Instead of fetching venues one by one, collect all unique venue IDs from the events and fetch them in a single `WHERE id IN (...)` query. This is the DataLoader pattern.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+After fetching events, extract `venueIds = [...new Set(events.map(e => e.venue_id))]`, then `SELECT * FROM venues WHERE id = ANY($1)` with the array. Build a Map for O(1) lookup when attaching venue data to events.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The DataLoader pattern batches and deduplicates: even if 50 events reference venue ID 1, it fetches venue 1 only once. In Node.js, use the `dataloader` package. For ORMs like Prisma, use `include` or `findMany` with relations to trigger eager loading.
+</details>
 
 ---
 
@@ -455,6 +567,8 @@ test('events list should not have N+1', async () => {
 
 ---
 
+> **What did you notice?** The N+1 fix reduced queries from 201 to 1 and response time by 16x. How easy was it to spot the problem before enabling query logging? What does this say about making query visibility a default part of your development workflow?
+
 ## 🏁 Module Summary
 
 | Concept | Key Takeaway |
@@ -481,6 +595,232 @@ In **L2-M42: Graph Databases**, you'll add social features to TicketPulse — "f
 | **DataLoader** | A utility that batches and deduplicates data-fetching calls within a single execution tick. |
 | **Batch loading** | The technique of combining multiple individual data requests into a single query to reduce database round trips. |
 | **Query logging** | The practice of recording all SQL queries an application executes, used to detect N+1 and other performance issues. |
+
+---
+
+## Part 6: Real-World Walkthrough — The Attendee Dashboard (15 min)
+
+### The Scenario
+
+TicketPulse's new "My Events" page shows a user's upcoming tickets with: event name, venue, date, ticket section, and organizer name. The naive implementation causes a severe N+1.
+
+### Step 1: Reproduce the Bug
+
+Build the naive version first so you can feel the problem:
+
+```javascript
+// routes/attendee.routes.js (naive — do NOT ship this)
+router.get('/api/attendee/:userId/upcoming', async (req, res) => {
+  // Query 1: Get all tickets for the user
+  const tickets = await db.query(`
+    SELECT t.*, o.id AS order_id
+    FROM tickets t
+    JOIN order_items oi ON oi.ticket_id = t.id
+    JOIN orders o ON oi.order_id = o.id
+    WHERE o.user_id = $1 AND t.status = 'sold'
+    ORDER BY t.created_at DESC
+    LIMIT 50
+  `, [req.params.userId]);
+
+  // For each ticket, fetch related data — HERE IS THE N+1
+  const enriched = await Promise.all(tickets.rows.map(async (ticket) => {
+    // N queries: one per ticket for event
+    const event = await db.query(
+      'SELECT id, name, event_date, category FROM events WHERE id = $1',
+      [ticket.event_id]
+    );
+
+    // N queries: one per ticket for venue
+    const venue = await db.query(
+      'SELECT id, name, city, address FROM venues WHERE id = $1',
+      [event.rows[0].venue_id]
+    );
+
+    // N queries: one per ticket for organizer
+    const organizer = await db.query(
+      'SELECT id, name, email FROM organizers WHERE id = $1',
+      [event.rows[0].organizer_id]
+    );
+
+    return {
+      ticket_id: ticket.id,
+      section: ticket.section,
+      row: ticket.row,
+      seat: ticket.seat,
+      event: event.rows[0],
+      venue: venue.rows[0],
+      organizer: organizer.rows[0],
+    };
+  }));
+
+  res.json(enriched);
+});
+```
+
+For a user with 50 tickets: **1 + 50 + 50 + 50 = 151 queries**.
+
+### Step 2: Enable Query Logging and Confirm
+
+```bash
+# Enable logging in Postgres
+docker exec -it ticketpulse-postgres psql -U postgres -c \
+  "ALTER SYSTEM SET log_min_duration_statement = 0; SELECT pg_reload_conf();"
+
+# Follow the logs in a separate terminal
+docker compose logs -f postgres | grep LOG
+
+# Hit the endpoint
+curl http://localhost:3000/api/attendee/user_123/upcoming
+```
+
+Count the logs. You'll see a pattern:
+```
+LOG: SELECT t.*, ... FROM tickets ...  (the main query)
+LOG: SELECT ... FROM events WHERE id = 4
+LOG: SELECT ... FROM venues WHERE id = 2
+LOG: SELECT ... FROM organizers WHERE id = 1
+LOG: SELECT ... FROM events WHERE id = 7
+LOG: SELECT ... FROM venues WHERE id = 5   ← same venue? duplicate query!
+...
+```
+
+Notice venue queries are often duplicated — the same venue hosts multiple events, but the naive code fetches it per ticket anyway.
+
+### Step 3: Fix With a Single Optimized JOIN
+
+```javascript
+// routes/attendee.routes.js (fixed)
+router.get('/api/attendee/:userId/upcoming', async (req, res) => {
+  // ONE query that fetches everything
+  const result = await db.query(`
+    SELECT
+      t.id         AS ticket_id,
+      t.section,
+      t.row,
+      t.seat,
+      t.price,
+      e.id         AS event_id,
+      e.name       AS event_name,
+      e.event_date,
+      e.category,
+      v.id         AS venue_id,
+      v.name       AS venue_name,
+      v.city,
+      v.address,
+      org.id       AS organizer_id,
+      org.name     AS organizer_name,
+      org.email    AS organizer_email
+    FROM tickets t
+    JOIN order_items oi  ON oi.ticket_id    = t.id
+    JOIN orders o        ON oi.order_id     = o.id
+    JOIN events e        ON t.event_id      = e.id
+    JOIN venues v        ON e.venue_id      = v.id
+    JOIN organizers org  ON e.organizer_id  = org.id
+    WHERE o.user_id = $1 AND t.status = 'sold'
+    ORDER BY e.event_date
+    LIMIT 50
+  `, [req.params.userId]);
+
+  // Shape the flat rows into nested objects (no extra queries needed)
+  const enriched = result.rows.map(row => ({
+    ticket_id:    row.ticket_id,
+    section:      row.section,
+    row:          row.row,
+    seat:         row.seat,
+    price:        row.price,
+    event: {
+      id:         row.event_id,
+      name:       row.event_name,
+      event_date: row.event_date,
+      category:   row.category,
+    },
+    venue: {
+      id:         row.venue_id,
+      name:       row.venue_name,
+      city:       row.city,
+      address:    row.address,
+    },
+    organizer: {
+      id:         row.organizer_id,
+      name:       row.organizer_name,
+      email:      row.organizer_email,
+    },
+  }));
+
+  res.json(enriched);
+});
+```
+
+**Result**: 151 queries → 1 query. On a loaded production DB this is the difference between 1.5 seconds and 30ms.
+
+### Step 4: Add the Query Count Assert to CI
+
+Now lock in the fix so it never regresses:
+
+```javascript
+// tests/performance/attendee-dashboard.test.js
+const { pool } = require('../../src/db');
+
+test('attendee upcoming tickets: max 3 queries (with pagination overhead)', async () => {
+  const queries = [];
+  const originalQuery = pool.query.bind(pool);
+
+  pool.query = (...args) => {
+    queries.push(typeof args[0] === 'string' ? args[0].trim().split('\n')[0] : 'prepared');
+    return originalQuery(...args);
+  };
+
+  await request(app)
+    .get('/api/attendee/user_test_1/upcoming')
+    .expect(200);
+
+  pool.query = originalQuery;  // restore
+
+  expect(queries.length).toBeLessThanOrEqual(3);
+  // If this fails, someone introduced an N+1. The query log in queries[] tells you which one.
+  console.log('Queries fired:', queries);
+});
+```
+
+---
+
+## Part 7: Guided Reflection (5 min)
+
+Work through these questions. Write your answers — they will sharpen your instincts.
+
+### Question 1: When is batch loading (DataLoader) better than a JOIN?
+
+Consider these two scenarios:
+
+**Scenario A**: A GraphQL API where the `event` resolver, `venue` resolver, and `organizer` resolver are all wired independently by three different engineers. They each call `db.query(... WHERE id = $1)` for their own entity.
+
+**Scenario B**: A REST endpoint that you own end-to-end and always needs all three related objects.
+
+Which approach (JOIN vs DataLoader) makes more sense for each, and why?
+
+> **Guided answer for Scenario A**: DataLoader wins. You cannot easily refactor three independent resolvers into a single JOIN. DataLoader lets each resolver stay simple while automatically batching under the hood. The alternative — forcing all three into a single resolver — breaks GraphQL's composability.
+
+> **Guided answer for Scenario B**: JOIN wins. You own the endpoint, you always need all the data, and a single JOIN is simpler to understand, debug, and monitor than DataLoader wiring.
+
+### Question 2: A team member says "I added 5 new resolvers but they each only add one extra query — that's fine." How do you respond?
+
+Think about: what happens when those resolvers are called for a list of 100 items? Draw the math: 5 extra queries × 100 items = 500 extra queries per page load.
+
+"One extra query per item" is exactly the N+1 problem dressed up in better clothes. The word "only" is the danger.
+
+### Question 3: Your monitoring shows a slow endpoint (800ms p99). How do you decide whether N+1 is the culprit vs a slow individual query?
+
+Procedure:
+1. Enable Postgres query logging (or use `pg_stat_statements`).
+2. Load the slow endpoint once.
+3. If you see **many queries with identical shapes** (same structure, different bind values), it's N+1.
+4. If you see **one or two queries with high `actual time`** in EXPLAIN ANALYZE, it's a missing index or inefficient query — not N+1.
+
+---
+
+> **Want the deep theory?** See Ch 24 of the 100x Engineer Guide: "Query Optimization & Execution Plans" — covers EXPLAIN ANALYZE in depth, query planner statistics, and multi-table JOIN strategies.
+
+---
 
 ## 📚 Further Reading
 - [DataLoader README](https://github.com/graphql/dataloader) — Facebook's original batching library

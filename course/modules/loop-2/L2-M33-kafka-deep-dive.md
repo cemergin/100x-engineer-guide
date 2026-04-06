@@ -12,11 +12,16 @@ In M22, you added RabbitMQ to TicketPulse. It works well for task queues — one
 
 Kafka is not a replacement for RabbitMQ — it is a different tool for a different problem. RabbitMQ is a message broker (route messages to consumers). Kafka is a distributed log (append events, let anyone read them at their own pace).
 
+**From the guide:** Chapter 13 explains why event-driven architecture is the backbone of modern distributed systems — not just for decoupling services, but because an immutable, replayable event log is a fundamentally more durable record of what happened than a synchronized state machine. The chapter's key insight is that events are facts: "a ticket was purchased" is something that happened and cannot be un-happened. Downstream systems can interpret that fact differently — the notification service sends an email, the analytics service increments a counter, the fraud service runs a risk score — without the purchase service needing to know any of them exist. Now you'll build exactly that. TicketPulse's ticket-purchases topic will become the single source of truth that multiple independent consumer groups read at their own pace. Kill one consumer, restart it, watch it replay from where it left off without missing a single event. That's the capability Chapter 13 described in theory.
+
 By the end of this module, TicketPulse will have Kafka as its event backbone. You will create topics, produce messages, run multiple consumer groups, kill consumers and watch them catch up, and observe everything through Kafka UI.
 
 **You will see your first Kafka message within five minutes.**
 
 ---
+
+> **Before you continue:** With RabbitMQ, once a consumer processes a message, it is gone. What if a new analytics service needs to process all historical purchase events? How would you solve this with RabbitMQ? Keep this limitation in mind.
+
 
 ## 0. Deploy Kafka (5 minutes)
 
@@ -209,6 +214,9 @@ For TicketPulse, keying `ticket-purchases` by `event_id` means all purchases for
 
 ---
 
+> **Before you continue:** If you have 6 partitions and 8 consumers in the same group, what happens to the extra 2 consumers? Think about how Kafka distributes work.
+
+
 ## 3. Build: Kafka Producer (15 minutes)
 
 ### Install KafkaJS
@@ -219,6 +227,22 @@ npm install kafkajs
 ```
 
 ### 🛠️ Build: The Kafka Producer
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The producer needs a persistent connection initialized once at startup. The critical decision is the partition key: using `event_id` means all purchases for the same event land in the same partition, guaranteeing order per event.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Create a `connectKafkaProducer()` called at startup, and a `publishEvent(topic, key, event)` function. Use `producer.send({ topic, messages: [{ key, value: JSON.stringify(event), headers: {...} }] })`. Add headers for event-type and timestamp for debugging.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Wire `publishEvent('ticket-purchases', req.params.eventId, event)` into the purchase endpoint alongside the existing RabbitMQ publish. Both can coexist during migration. Handle the case where the producer is not connected (log a warning, do not crash the purchase).
+</details>
+
 
 ```typescript
 // src/messaging/kafkaProducer.ts
@@ -351,11 +375,43 @@ process.on('SIGTERM', async () => {
 });
 ```
 
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The Kafka producer needs a persistent connection initialized once on startup. The partition key controls message ordering — same key means same partition means guaranteed order.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Create a `connectKafkaProducer()` function called at startup. The `publishEvent()` function takes a topic, key, and event object. Use `event_id` as the key so all purchases for the same event land in the same partition.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Call `producer.send({ topic, messages: [{ key, value: JSON.stringify(event), headers: {...} }] })`. Add headers for event-type and timestamp. Wire `publishEvent('ticket-purchases', req.params.eventId, event)` into the purchase endpoint alongside the existing RabbitMQ publish.
+</details>
+
 ---
 
 ## 4. Build: Kafka Consumers (15 minutes)
 
 ### 🛠️ Build: Notification Consumer
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The notification consumer needs its own `groupId: 'notification-service'` so it tracks offsets independently from the analytics consumer. Use `fromBeginning: false` -- it only needs new events, not historical replay.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Subscribe to `['ticket-purchases', 'event-updates']`. In the `eachMessage` handler, parse `message.value` as JSON and switch on `event.type` to route to the correct handler (TicketPurchased, EventUpdated, etc.).
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Handle graceful shutdown by disconnecting the consumer on SIGTERM/SIGINT. Log the topic, partition, and offset for each message so you can trace exactly where the consumer is in the log when debugging.
+</details>
+
 
 ```typescript
 // services/notification-service/src/kafkaConsumer.ts
@@ -431,7 +487,39 @@ start().catch(err => {
 });
 ```
 
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Each Kafka consumer group independently tracks its position (offset) in the topic. The notification service and analytics service both read every message but at their own pace.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Set a unique `groupId` for each service. Use `subscribe({ topics: [...], fromBeginning: false })` for the notification service (only new messages) and `fromBeginning: true` for analytics (replay all history).
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+The consumer's `eachMessage` handler receives `{ topic, partition, message }`. Parse `message.value` as JSON, switch on `event.type`, and process accordingly. Handle graceful shutdown by disconnecting the consumer on SIGTERM/SIGINT.
+</details>
+
 ### 🛠️ Build: Analytics Consumer
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The analytics consumer uses `groupId: 'analytics-service'` -- a different group from notifications, so both independently consume every message. The key difference: use `fromBeginning: true` to replay all historical events on first startup.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Maintain in-memory counters (totalPurchases, totalRevenue, purchasesByEvent Map). On each TicketPurchased event, increment the counters. In production you would write to a data warehouse instead.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+When you kill and restart this consumer, it resumes from its last committed offset -- not from the beginning (offsets are already committed). Only a brand-new consumer group with `fromBeginning: true` replays history. This is Kafka's superpower over RabbitMQ.
+</details>
+
 
 ```typescript
 // services/analytics-service/src/kafkaConsumer.ts
@@ -560,6 +648,22 @@ Both services process all 10 messages independently:
 
 ### 🐛 Kill a Consumer, Buy More Tickets, Restart
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Stop the notification service with `docker compose stop notification-service`, then buy 5 more tickets. Check Kafka UI's Consumer Groups view -- the notification-service group should show consumer lag = 5.
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+Restart with `docker compose start notification-service` and watch the logs. The consumer resumes from its last committed offset and processes exactly the 5 missed messages. No messages were lost because Kafka retained them in the topic log.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+Compare this to RabbitMQ: with RabbitMQ, once a consumer acks a message, it is gone. With Kafka, the message stays in the partition log for the configured retention period (default 7 days). Any consumer group can replay from any offset at any time.
+</details>
+
+
 ```bash
 # Step 1: Stop the notification service
 docker compose stop notification-service
@@ -682,6 +786,8 @@ For TicketPulse: Kafka is the event backbone (ticket-purchases, event-updates). 
 
 ---
 
+> **What did you notice?** When you killed the notification consumer and restarted it, all messages were still there. How does this compare to RabbitMQ's behavior? What makes Kafka's persistent log fundamentally different?
+
 ## 9. Checkpoint
 
 After this module, TicketPulse should have:
@@ -728,6 +834,14 @@ After this module, TicketPulse should have:
 | **Partition key** | A value used to determine which partition a message is written to. Same key = same partition. |
 | **Retention** | How long Kafka keeps messages. Default is 7 days. Can be configured per topic. |
 | **Rebalancing** | The process of reassigning partitions among consumers when the group membership changes. |
+
+---
+
+---
+
+## What's Next
+
+In **The Saga Pattern** (L2-M34), you'll tackle the hardest problem microservices create: coordinating transactions across services without a shared database.
 
 ---
 

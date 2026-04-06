@@ -25,6 +25,10 @@ Platform engineering solves this by building abstractions -- simple interfaces (
 
 This is staff+ engineer territory: designing the platform that makes other engineers productive. In L2-M44 you learned Terraform from the operator's perspective. Here you learn how to wrap that complexity behind a developer-friendly API.
 
+### 🤔 Prediction Prompt
+
+Before reading, think about what happens when an application team asks for a new database today. How many steps does it take? How much cloud-specific knowledge does the developer need? What would the ideal self-service experience look like?
+
 ## Prereq Check
 
 You need the kind cluster from L3-M83, Helm, and kubectl.
@@ -1038,6 +1042,16 @@ No tickets. No waiting for the platform team. Self-service in minutes.
 
 ### Exercise: Design the TicketPulse Platform Stack
 
+<details>
+<summary>💡 Hint 1: Trace the Crossplane resource chain from Claim to running pod</summary>
+The golden path is: Claim (developer-facing) -> CompositeResource (XR, platform-owned) -> Managed Resources (StatefulSet, Service, ConfigMap). When something fails, `kubectl describe` at each level shows where the reconciliation broke. Start your diagram from the Claim and follow each arrow.
+</details>
+
+<details>
+<summary>💡 Hint 2: Map each layer's failure mode to a concrete signal</summary>
+ArgoCD failure shows as "OutOfSync" in the UI. Crossplane failure shows as `READY: False` on the XR with an event message. Kyverno failure shows as an admission webhook rejection. For each layer in your diagram, write the command that surfaces the failure.
+</details>
+
 Draw (on paper, a whiteboard, or ASCII) the complete platform stack for TicketPulse. Use this template and fill in the specifics for each layer:
 
 ```
@@ -1165,3 +1179,13 @@ Before moving on, verify you can answer "yes" to each:
 - [ ] You wrote catalog-info.yaml entries for all three TicketPulse services
 - [ ] You can explain when to choose Crossplane vs Terraform
 - [ ] You can explain the golden path from Backstage template to running infrastructure
+
+### 🤔 Reflection Prompt
+
+After building the Crossplane abstractions, how did the developer experience change compared to raw Terraform? Where is the sweet spot between "too much abstraction" (developers cannot debug) and "too little" (developers need cloud expertise)?
+
+---
+
+## What's Next
+
+In **Nix & Reproducible Builds** (L3-M84), you'll build on what you learned here and take it further.

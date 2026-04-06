@@ -347,6 +347,21 @@ function calculateTicketPrice(basePriceCents: number, quantity: number): number 
 
 ## 3. Build: Break the Dependency Cycle
 
+<details>
+<summary>💡 Hint 1: Extract a Shared Interface Into a Neutral Module</summary>
+Create `src/shared/event-reader.interface.ts` with `interface EventReader { findById(id: string): Promise<EventInfo | null>; }` and an `EventInfo` type. This interface is owned by neither the events module nor the orders module -- it lives in shared territory.
+</details>
+
+<details>
+<summary>💡 Hint 2: OrderService Depends on the Interface, Not the Class</summary>
+Change `OrderService` constructor from `constructor(private eventService: EventService)` to `constructor(private eventReader: EventReader)`. Now orders imports from `shared/`, not from `events/`. The cycle is broken. In production, pass the real `EventService` (which implements `EventReader`).
+</details>
+
+<details>
+<summary>💡 Hint 3: Remove the Revenue Method From EventService</summary>
+The `getEventRevenue()` method that imported `Order` from the orders module should move to a separate `reporting/` module. Reporting is a leaf module that legitimately depends on both events and orders (read-only). EventService no longer needs to know about orders at all.
+</details>
+
 The cycle is: `events/event.service.ts` imports `Order` from `orders/`, and `orders/order.service.ts` imports `EventService` from `events/`. This means you cannot change, test, or deploy either module independently.
 
 ### Solution: Extract a Shared Interface
@@ -450,6 +465,21 @@ The cycle is gone. `events/` and `orders/` both point to `shared/`, but neither 
 ---
 
 ## 4. Cohesion: Reorganize the Utils Directory
+
+<details>
+<summary>💡 Hint 1: Sort Functions by Domain, Not by "Type"</summary>
+`isValidEmail()` belongs in `src/users/email-validation.ts` -- it is user domain logic. `generateSlug()` belongs in `src/events/slug.ts` -- it is event domain logic. Only genuinely cross-cutting utilities (ID generation, retry logic, date formatting) stay in `src/shared/`.
+</details>
+
+<details>
+<summary>💡 Hint 2: One Concept Per File in shared/</summary>
+Split `utils/helpers.ts` into `shared/formatting.ts` (formatDate, formatCurrency), `shared/id.ts` (generateId), `shared/retry.ts` (withRetry), and `shared/pagination.ts` (PaginationParams, buildPaginationQuery). Each file has functional cohesion -- everything inside serves one purpose.
+</details>
+
+<details>
+<summary>💡 Hint 3: Update Imports and Delete the Junk Drawer</summary>
+After creating the new files, find every `import { ... } from '../utils/helpers'` and update it to the specific module. Then delete `utils/helpers.ts` entirely. Run `npx jest --passWithNoTests` to verify nothing is broken. The dependency graph will show clean, narrow arrows instead of one hub.
+</details>
 
 ### Diagnose the Problem
 

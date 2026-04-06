@@ -56,6 +56,21 @@ The principle: **alert on symptoms (user-visible impact), not causes (infrastruc
 
 We defined SLOs in earlier modules. Now we turn them into alerts.
 
+<details>
+<summary>💡 Hint 1: Burn Rate Math</summary>
+Burn rate = (actual error rate) / (SLO error budget rate). For a 99.9% SLO, the error budget is 0.1%. A 14.4x burn rate means errors are occurring at 14.4 * 0.1% = 1.44% -- you will exhaust 30 days of budget in about 2 days. Use two thresholds: 14.4x for critical (page) and 6x for warning (ticket).
+</details>
+
+<details>
+<summary>💡 Hint 2: Multi-Window Structure</summary>
+Each burn-rate alert uses two PromQL windows joined by <code>and</code>: a long window (1h or 6h) ensures the problem is sustained, and a short window (5m or 30m) ensures the problem is still happening right now. This prevents both false positives from brief spikes and stale alerts from resolved issues.
+</details>
+
+<details>
+<summary>💡 Hint 3: Routing with PagerDuty</summary>
+In Alertmanager's <code>route</code> config, match on the <code>severity</code> label: <code>critical</code> routes to a PagerDuty receiver (pages the on-call), <code>warning</code> routes to Slack (creates a ticket). Use <code>group_by: ['alertname', 'slo']</code> to avoid alert storms where one root cause triggers multiple pages.
+</details>
+
 ### SLO 1: 99.9% Availability
 
 **What it means:** Over a 30-day window, at most 0.1% of requests can be errors. That is 43.2 minutes of total error time per month.
@@ -300,6 +315,21 @@ receivers:
 
 Every alert needs a runbook. A runbook is a step-by-step guide that an on-call engineer -- who may not be familiar with this service -- can follow at 3 AM.
 
+<details>
+<summary>💡 Hint 1: First 5 Minutes</summary>
+Start the runbook with scope identification: <code>sum by (service) (rate(http_requests_total{status_code=~"5.."}[5m]))</code> tells you which service is erroring. Then check for recent deployments: <code>kubectl rollout history deployment -n ticketpulse</code>. A deployment in the last 30 minutes is the likely cause.
+</details>
+
+<details>
+<summary>💡 Hint 2: Copy-Pasteable Commands</summary>
+Every runbook command should work as-is when pasted into a terminal at 3 AM. Include the full namespace, full label selectors, and exact flags. For example: <code>kubectl logs -n ticketpulse -l app=payment-service --tail=100 --since=10m | grep ERROR</code> -- not "check the payment service logs."
+</details>
+
+<details>
+<summary>💡 Hint 3: Mitigation Before Root Cause</summary>
+The runbook should prioritize stopping the bleeding. If a deployment caused it: <code>kubectl rollout undo deployment/&lt;service&gt; -n ticketpulse</code>. If an external dependency is down, check its status page and verify the circuit breaker is active. Investigate root cause AFTER the error rate is back within SLO.
+</details>
+
 Create a runbook for the HighErrorRate alert:
 
 ```markdown
@@ -452,6 +482,8 @@ Week 3: Charlie (primary), Alice (secondary)
 >
 > Monitoring is observing: collecting metrics, building dashboards, understanding system behavior. Alerting is acting: automatically notifying humans when metrics indicate a problem. You monitor everything; you alert on the small subset that requires immediate human intervention. Too many alerts means you are not monitoring well enough to set good thresholds.
 
+> **What did you notice?** After following the runbook step by step, how long did it take to identify the problem? What would you add to the runbook to make the next response faster?
+
 ---
 
 ## 7. Checkpoint
@@ -471,6 +503,150 @@ After this module, you should have:
 
 ---
 
+> **Before you continue:** If you inject a 15% error rate into the event service, how long do you predict it will take for the HighErrorRate_Critical alert to fire? Consider the `for: 2m` clause and the multi-window evaluation.
+
+## 8. Hands-On Walkthrough: Trigger and Respond to an Alert (20 min)
+
+Theory only takes you so far. This walkthrough makes you experience the full alert lifecycle: trigger, page, diagnose, mitigate.
+
+### Step 1: Create a Synthetic Failure
+
+Inject a high error rate into TicketPulse's event service:
+
+```bash
+# Option A: Kill the event-service pod (complete outage)
+kubectl delete pod -n ticketpulse -l app=event-service
+
+# Option B: Inject errors via environment variable (if your service supports it)
+kubectl set env deployment/event-service -n ticketpulse ERROR_RATE=0.5
+# Then roll it back: kubectl set env deployment/event-service -n ticketpulse ERROR_RATE=0
+
+# Option C: Simulate with a Prometheus metric injection (most controlled)
+# If you have a /internal/inject-errors endpoint for testing:
+curl -X POST http://localhost:3000/internal/inject-errors \
+  -H 'Content-Type: application/json' \
+  -d '{"rate": 0.15, "durationSeconds": 300}'
+```
+
+### Step 2: Watch the Alert Fire in Prometheus
+
+```bash
+# Watch the rules evaluation every 15 seconds
+watch -n 15 'curl -s http://localhost:9090/api/v1/alerts | jq ".data.alerts[] | {name: .labels.alertname, state: .state, value: .annotations.description}"'
+```
+
+Expected progression:
+```
+After ~30s:  PENDING (threshold crossed but for: 2m not elapsed yet)
+After ~2m:   FIRING (alert is now active)
+```
+
+### Step 3: Receive the Alert (Slack Simulation)
+
+In a real setup, PagerDuty would wake you up. For this exercise, check Alertmanager's local UI or Slack webhook:
+
+```bash
+# Alertmanager UI (if running locally)
+open http://localhost:9093
+
+# List active alerts via API
+curl -s http://localhost:9093/api/v1/alerts | jq '.data[] | {name: .labels.alertname, severity: .labels.severity}'
+```
+
+### Step 4: Follow Your Runbook
+
+Now practice being an on-call engineer. Work through the HighErrorRate runbook you wrote above:
+
+```bash
+# Step 1: Which service is erroring?
+curl -s 'http://localhost:9090/api/v1/query?query=sum+by+(service)+(rate(http_requests_total{status_code=~"5.."}[5m]))' \
+  | jq '.data.result[] | {service: .metric.service, rate: .value[1]}'
+
+# Step 2: Check recent deployments
+kubectl rollout history deployment -n ticketpulse
+
+# Step 3: Check logs
+kubectl logs -n ticketpulse -l app=event-service --tail=50 --since=5m | grep -E "ERROR|error|Error"
+
+# Step 4: Check health endpoint
+kubectl exec -it deploy/api-gateway -n ticketpulse -- \
+  wget -qO- http://event-service:3000/health
+```
+
+### Step 5: Resolve and Verify Alert Clears
+
+```bash
+# Undo the synthetic failure
+kubectl rollout restart deployment/event-service -n ticketpulse
+# -- OR --
+kubectl set env deployment/event-service -n ticketpulse ERROR_RATE=0
+
+# Wait for the alert to clear (watch the burn rate drop below threshold)
+watch -n 30 'curl -s http://localhost:9090/api/v1/alerts | jq ".data.alerts | length"'
+# Should go to 0 after the for: 2m window resolves
+```
+
+### Step 6: Write a Mini Postmortem
+
+Even for a synthetic incident, practice the format:
+
+```markdown
+## Incident: HighErrorRate_Critical (Synthetic)
+
+**Duration**: 12:03 PM – 12:18 PM (15 minutes)
+**Impact**: 15% of requests to event-service returned 5xx errors.
+**Burn rate**: ~6x the SLO error budget
+
+**Timeline**:
+- 12:03: Error injection started (simulated)
+- 12:05: Alert entered PENDING state
+- 12:07: Alert FIRED, on-call engineer paged
+- 12:10: Engineer began runbook. Identified event-service pod was OOM-killed.
+- 12:15: Rollout restart issued
+- 12:18: Error rate normalized, alert resolved
+
+**Root cause**: Memory limit too low for current traffic; pod hit the limit and was killed.
+
+**Action items**:
+- [ ] Increase memory limit for event-service from 256Mi to 512Mi
+- [ ] Add OOM kill alert (kubernetes_pod_oom_kills_total)
+- [ ] Add a load test to CI that catches OOM at 2x expected traffic
+
+**Lessons**:
+- The runbook worked — reduced time to mitigation from "no idea" to 8 minutes.
+- Alert firing correctly at 2m into the incident. Good sensitivity.
+```
+
+---
+
+## 9. Extended Reflection: Alert Design Decisions (10 min)
+
+Work through these scenarios. There is no single right answer — the goal is to reason through trade-offs.
+
+### Scenario A: Alert Fatigue
+
+Your team is getting paged 8 times per night, and 7 of those pages turn out to be noise (auto-resolved within 10 minutes, no user impact). The team starts ignoring alerts. What do you do?
+
+> **Guided approach**: Do not raise the threshold blindly. First, analyze: which alerts are noisy? Are they flapping (firing and resolving repeatedly)? Increase the `for:` duration on those specific alerts. Second, check if the metric is the right signal — CPU at 95% is rarely the right thing to alert on. Switch to latency or error rate. Third, add a `group_wait` in Alertmanager to prevent alert storms where one root cause triggers 10 dependent alerts.
+
+### Scenario B: The Slow Burn
+
+Your error budget is draining at 2x the normal rate — not urgent enough for a page, but you will exhaust the budget in 15 days instead of 30. The on-call rotation changes in 3 days. What does the alert system do?
+
+> **Guided approach**: This is exactly the 6x burn rate scenario (Warning severity). It should create a Jira ticket automatically via Alertmanager's webhook receiver, not page anyone. The incoming on-call engineer should see this open ticket in their handoff notes. The key: warning alerts must actually flow to a tracking system, not just Slack, or they get lost.
+
+### Scenario C: Disagreement on Severity
+
+Your colleague says: "Disk at 85% is critical — we should page on it." You say: "Disk at 85% is fine, we have two weeks before it's full." How do you resolve this?
+
+> **Guided approach**: Convert the metric to time-to-impact. `node_filesystem_avail_bytes` combined with a fill-rate projection tells you "at current rate, disk will be full in N days." Page if N < 1 day. Create a ticket if N < 7 days. Dashboard-only if N > 7 days. Remove the opinion from the discussion by making it concrete.
+
+---
+
+> **Want the deep theory?** See Ch 18 of the 100x Engineer Guide: "Alert Design and On-Call Culture" — covers the full Google SRE burn rate methodology and alert routing patterns used at scale.
+
+---
+
 ## Glossary
 
 | Term | Definition |
@@ -487,3 +663,9 @@ After this module, you should have:
 | **Flapping** | An alert that rapidly toggles between firing and resolved, creating noise. Prevented by `for` durations and multi-window rules. |
 | **Escalation** | The process of notifying additional people when the primary on-call does not acknowledge or cannot resolve an alert. |
 | **Postmortem** | A blameless review after an incident, documenting what happened, why, and what will be done to prevent recurrence. |
+
+---
+
+## What's Next
+
+In **Chaos Engineering** (L2-M48), you'll deliberately break TicketPulse in controlled ways to discover weaknesses before your users do.

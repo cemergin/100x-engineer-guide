@@ -143,7 +143,25 @@ ticketpulse/
 
 3. **No circular dependencies.** If ticketing depends on events, events cannot depend on ticketing. Use events (domain events, not the module) to decouple.
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Exercise: Enforce Boundaries with a Lint Rule
+
+<details>
+<summary>💡 Hint 1: Use eslint-plugin-import restriction zones</summary>
+The ESLint rule `import/no-restricted-paths` lets you define "zones" — pairs of (target, from) globs. If code in the target tries to import from the restricted `from` path, the linter fails. Each module's internals become off-limits to other modules.
+</details>
+
+<details>
+<summary>💡 Hint 2: Only allow imports from index.ts</summary>
+Each module exposes a public API via `index.ts`. The lint rule should block imports like `from '../events/events.repository'` but allow `from '../events'` (which resolves to `index.ts`). Use a glob like `!(index).ts` to match everything except the barrel file.
+</details>
+
+<details>
+<summary>💡 Hint 3: Block cross-module repository access</summary>
+Repositories contain direct SQL. No module should import another module's repository — that would bypass the public API and create hidden coupling. Add a zone that blocks any `*.repository.ts` import from outside its own module.
+</details>
+
 
 You can enforce module boundaries at build time. With ESLint and `eslint-plugin-import`:
 
@@ -179,7 +197,7 @@ module.exports = {
 
 Run the linter and it catches boundary violations at build time. This is the cheap version of microservice boundaries — same benefits for team independence, without the operational complexity of network calls.
 
-### 💡 Insight: Shopify's Modular Monolith
+> **Pro tip:** Shopify's Modular Monolith
 
 Shopify is one of the largest Ruby on Rails monoliths in the world. They did not break it into microservices. Instead, they created **component boundaries** within the monolith using a tool called Packwerk. Each component:
 - Has a declared public API
@@ -306,7 +324,7 @@ Most successful companies follow this path:
 
 The mistake companies make: jumping to microservices at step 1. They spend months building infrastructure (service mesh, container orchestration, distributed tracing) before they have validated the business. Many startups have died building microservices for a product nobody wanted.
 
-### 💡 Insight: Segment's "Goodbye Microservices"
+> **Pro tip:** Segment's "Goodbye Microservices"
 
 Segment (now part of Twilio) famously went from monolith to microservices and back again. They had 140+ microservices, each with its own deployment pipeline, database, and monitoring. The operational overhead was crushing their small team. They consolidated back into a modular architecture and their development velocity tripled.
 
@@ -351,6 +369,22 @@ Each team owns their services end-to-end: code, database, deployment, and on-cal
 ## 7. Design Exercise: TicketPulse at 100x Scale (10 minutes)
 
 ### 📐 Exercise
+
+<details>
+<summary>💡 Hint 1: Identify the hottest path</summary>
+During a Taylor Swift on-sale, the ticket purchase endpoint gets 100x the traffic of everything else. The event listing page is read-heavy and can be cached aggressively (CDN + Redis, 30-second TTL). The purchase endpoint needs strong consistency — that is your bottleneck to design around.
+</details>
+
+<details>
+<summary>💡 Hint 2: Separate read and write scaling</summary>
+Add Postgres read replicas for browse traffic (90% of reads). Keep the primary for purchases only. Put a Redis cluster in front for event listings. This means most requests never touch the primary database at all.
+</details>
+
+<details>
+<summary>💡 Hint 3: Move non-critical work off the hot path</summary>
+Email confirmations, analytics, receipt generation, and PDF tickets should go through a message queue (RabbitMQ or Redis Streams). The purchase response only needs to confirm the reservation and payment — everything else is async. This is the pattern you built in M21-M22.
+</details>
+
 
 TicketPulse currently handles 100 requests per second. Imagine it needs to handle 10,000 requests per second (100x growth). The event is a Taylor Swift concert and tickets go on sale in 5 minutes.
 
@@ -413,7 +447,163 @@ This is not microservices. It is a well-scaled monolith (or modular monolith) wi
 
 ---
 
-## 8. Checkpoint
+## 8. Architecture Decision Exercises
+
+These exercises develop the pattern-matching instincts that distinguish senior engineers from junior ones. The goal is not to find the "right" answer — it is to practice the reasoning process.
+
+### Exercise 1: The Architectural Smell Test
+
+Read each scenario and identify what is wrong with the architecture choice. Then describe what you would do instead.
+
+**Scenario A**: A 4-engineer startup building a food delivery app has 12 microservices. Each has its own database, CI/CD pipeline, and Kubernetes deployment. They have spent 6 months on infrastructure and have not shipped the main product yet.
+
+```
+What is wrong:
+_______________________________________________
+
+What I would do instead:
+_______________________________________________
+```
+
+**Guidance**: This is microservices premature optimization. At 4 engineers, the operational overhead (12 CI/CD pipelines, 12 deployment processes, 12 database schemas to maintain) overwhelms the organizational benefit. A monolith or modular monolith would let them ship in 2 months instead of 6. The microservices architecture is solving a team coordination problem they do not yet have.
+
+---
+
+**Scenario B**: A 200-engineer company's e-commerce platform is a single monolith. Three teams — catalog, checkout, and fulfillment — all work in the same codebase. PRs are blocked for 2 days because of merge conflicts. Deployments happen at 2 AM because any broken change takes everything down.
+
+```
+What is wrong:
+_______________________________________________
+
+What I would do instead:
+_______________________________________________
+```
+
+**Guidance**: This is a case where the team size has exceeded what a monolith can support efficiently. Conway's Law is working against them — 200 engineers on one codebase means 200 engineers can break each other's work. The answer is not necessarily full microservices, but the modular monolith boundaries should map to team boundaries, and they should extract the highest-friction module (whichever team causes the most merge conflicts) into its own service first.
+
+---
+
+**Scenario C**: A product team decided to make "everything serverless." Their API is Lambda functions behind API Gateway. They have 47 Lambda functions, each a tiny handler for a single endpoint. Local development requires mocking 12 AWS services. Response times are 800ms for the first request of the day (cold start).
+
+```
+What is wrong:
+_______________________________________________
+
+What I would do instead:
+_______________________________________________
+```
+
+**Guidance**: This is over-decomposition of a different kind — serverless granularity applied to everything. Lambda works well for event-triggered, bursty workloads. It is poor for always-on API traffic with latency requirements. The cold start problem (800ms) is fatal for user-facing APIs. A containerized service (ECS/Fargate or Cloud Run) would be always warm, simpler to develop locally, and nearly as operationally simple. Keep Lambda for truly async, bursty work (email sending, PDF generation, scheduled jobs) and use a proper API runtime for request/response endpoints.
+
+### Exercise 2: Pattern Matching Drills
+
+For each system description, identify the architectural pattern that best fits and explain why. Choose from: monolith, modular monolith, microservices, serverless, event-driven, CQRS, or a combination.
+
+**System 1**: A company processes 50,000 insurance claims per day. Each claim goes through 15 sequential processing steps (intake → validation → underwriting → approval → payment). Steps can fail and need to be retried. The business needs a complete audit trail of every step for every claim for regulatory compliance.
+
+```
+Pattern: _______________________________________________
+Why: ___________________________________________________
+What this buys you: _____________________________________
+```
+
+*Answer hint: This is a textbook case for durable execution (saga pattern) + event sourcing. The step-by-step nature maps to a saga. The audit trail requirement maps to event sourcing. The retry requirement maps to durable execution (each step is persisted so retries pick up where they left off).*
+
+---
+
+**System 2**: A SaaS dashboard shows business analytics for 10,000 customers. Each customer sees their own data. The dashboard has 20 different chart types. Data is updated nightly by batch jobs. Reads are 100x more frequent than writes.
+
+```
+Pattern: _______________________________________________
+Why: ___________________________________________________
+What this buys you: _____________________________________
+```
+
+*Answer hint: CQRS. The read model (dashboards) is fundamentally different from the write model (nightly batch ingestion). You want to optimize the read side independently (pre-aggregated views, materialized query results) without coupling it to how data is written. This is not microservices — it is a read/write separation within a service.*
+
+---
+
+**System 3**: A gaming company runs online multiplayer matches. Each match has 10-100 players, lasts 10-30 minutes, and has no persistence requirements (the match data can be discarded after it ends). They need to spin up 50,000 matches simultaneously during a peak event.
+
+```
+Pattern: _______________________________________________
+Why: ___________________________________________________
+What this buys you: _____________________________________
+```
+
+*Answer hint: Serverless (Lambda/Cloud Run) per match instance, or stateful server pods with rapid scale-out. The bursty, short-lived, no-persistence nature maps perfectly to serverless. Each match is an independent function invocation that terminates when the match ends. The 50,000 simultaneous matches scale trivially with serverless — you never need to provision capacity for peak.*
+
+### Exercise 3: Architecture Decision Record for TicketPulse
+
+Write a mini-ADR (Architecture Decision Record) for a decision TicketPulse needs to make. Choose one of these and write the ADR:
+
+**Option A**: Should TicketPulse's notification system be part of the order service or a separate notification service?
+
+**Option B**: Should TicketPulse use a message queue (Kafka) for service communication, or direct HTTP calls between services?
+
+**Option C**: Should TicketPulse's event search use PostgreSQL full-text search or Elasticsearch?
+
+Use this format:
+
+```markdown
+# Architecture Decision: [Your chosen option]
+
+## Context
+What problem does this decision solve?
+What are the current constraints (team size, timeline, scale)?
+
+## Options Considered
+Option 1: [name]
+  Pros: ...
+  Cons: ...
+
+Option 2: [name]
+  Pros: ...
+  Cons: ...
+
+## Decision
+We will [chosen option] because [reason].
+
+## Consequences
+Easier: ...
+Harder: ...
+We would reconsider if: ...
+```
+
+Spend 15 minutes writing this ADR. Then compare your reasoning to the actual decisions documented in L3-M77 (Architecture Decision Records).
+
+### Exercise 4: Conway's Law Applied to Your Team
+
+Think about your current or most recent team. Answer these questions:
+
+1. How many engineers are on the team?
+2. How many independent code repositories (services, packages) are there?
+3. Does the service boundary map to team boundaries? Or does one team own multiple services?
+4. Where do the most integration bugs come from — within a team's service, or at the boundaries between services owned by different teams?
+
+Now apply Conway's Law in reverse (the "Inverse Conway Maneuver"):
+
+If you could redesign the team structure to produce better architecture, what would you change?
+
+```
+Current team structure:
+_______________________________________________
+
+Current architecture:
+_______________________________________________
+
+Mismatch (if any):
+_______________________________________________
+
+Proposed change:
+_______________________________________________
+```
+
+This exercise is more valuable than any textbook example because it is about your actual system. The patterns you recognize in your own team are the ones that will stick.
+
+---
+
+## 9. Checkpoint
 
 After this module, you should understand:
 
@@ -445,6 +635,16 @@ After this module, you should understand:
 
 ---
 
+---
+
+## Cross-References
+
+- **Chapter 3** (Architectural Styles): The full taxonomy of architectural patterns with case studies. The monolith-to-microservices spectrum described in this module is drawn directly from Chapter 3.
+- **L3-M77** (Architecture Decision Records): The ADR you wrote in Exercise 3 follows the format covered in depth there. ADRs are the primary mechanism for documenting and revisiting architectural decisions.
+- **L2-M31** (Domain-Driven Design): Bounded contexts in DDD map directly to the module boundaries in a modular monolith and the service boundaries in microservices. The two disciplines reinforce each other.
+
+---
+
 ## Further Reading
 
 - [Shopify's Modular Monolith with Packwerk](https://shopify.engineering/shopify-monolith) — How Shopify makes a massive monolith work
@@ -452,3 +652,8 @@ After this module, you should understand:
 - [MonolithFirst by Martin Fowler](https://martinfowler.com/bliki/MonolithFirst.html) — Start monolith, split later
 - Chapter 3 of the 100x Engineer Guide: Section 1 (Architectural Styles)
 - Sam Newman, *Building Microservices*, Chapter 1 (What Are Microservices?)
+---
+
+## What's Next
+
+In **Domain-Driven Design Basics** (L1-M20), you'll build on what you learned here and take it further.

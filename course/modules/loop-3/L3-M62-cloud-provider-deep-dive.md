@@ -98,6 +98,16 @@ Walk through the ECS "Getting Started" wizard. It creates a Fargate cluster, tas
 
 📐 **Design Exercise:** Before using any wizard or template, write down the resources you think you need. Draw the network diagram. Then compare with what the wizard creates.
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Think in layers: public internet -> load balancer -> compute -> data stores. Each layer needs its own network boundary.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+You need at minimum: a VPC with public and private subnets, an ALB in the public subnet, ECS tasks in private subnets, and RDS/ElastiCache in private subnets with no public access.
+</details>
+
 **The minimum viable architecture:**
 
 ```
@@ -301,7 +311,22 @@ Open the Google Cloud Console:
 
 ## 3. Compare the Platforms (10 minutes)
 
+### 🤔 Prediction Prompt
+
+Before filling in this comparison, predict: which platform will have more resources created for the same deployment? By how much? What is the hidden cost you expect to be surprised by?
+
 ### 📐 Design Exercise: Side-by-Side Comparison
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered comparing not just price, but the number of distinct resources you had to create? Count every VPC, subnet, security group, IAM role -- the "resource count" is a proxy for operational burden.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Compare the AWS NAT Gateway cost ($0.045/hr + $0.045/GB) against GCP's Cloud Run, which has no equivalent charge. That single line item often explains the cost difference at small to medium scale.
+</details>
+
 
 Now that you have deployed (or walked through deploying) on at least one platform, fill in this comparison based on your experience:
 
@@ -327,7 +352,9 @@ Now that you have deployed (or walked through deploying) on at least one platfor
 | **Custom domains + TLS** | You configure ACM certificate + ALB listener | Automatic with `gcloud run domain-mappings` |
 | **Price transparency** | Complex (Fargate vCPU-hr + memory-hr + ALB + NAT Gateway + data transfer) | Simpler (per request + CPU time + memory time) |
 
-### 🤔 Reflect
+### 🤔 Reflection Prompt
+
+Compare your predictions from before the side-by-side exercise with what you found. Where did the gap between expectation and reality surprise you most -- resource count, networking complexity, or cost?
 
 "AWS has more services. GCP is often simpler. Which matters more for your team?"
 
@@ -340,6 +367,17 @@ The best cloud is the one your team knows. Switching costs are enormous.
 ## 4. Cost Estimation (15 minutes)
 
 ### 📐 Design Exercise: What Would TicketPulse Cost at 1M Users/Month?
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered that the NAT Gateway and cross-AZ data transfer are the two costs most teams miss? Start your estimate there, then layer on compute and managed services.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Work category by category: Fargate (vCPU-hr + memory-hr x 3 tasks), ALB (per-LCU + hourly), RDS (instance + Multi-AZ surcharge + storage), ElastiCache, SQS, NAT Gateway, data transfer out. The NAT Gateway alone is often ~$50/month.
+</details>
+
 
 Estimate the monthly AWS cost for TicketPulse with these assumptions:
 - 1M monthly active users
@@ -388,6 +426,8 @@ Estimate the monthly AWS cost for TicketPulse with these assumptions:
 - At higher scale (steady-state traffic, reserved instances), AWS pricing improves significantly. Reserved RDS and Fargate Savings Plans can cut costs 30-60%.
 - These estimates exclude: domain registration, SSL certificate (free on both), developer time, and the cost of learning the platform.
 
+> **Pro tip:** The NAT Gateway on AWS ($0.045/GB + $0.045/hr) is the single most common source of billing surprises. Budget for it explicitly or use VPC endpoints to avoid it.
+
 ### ⚠️ Common Mistake: Leaving Resources Running
 
 Cloud resources cost money every hour they run, whether you are using them or not. After this exercise:
@@ -419,6 +459,214 @@ aws budgets create-budget \
 
 ---
 
+## 4b. Multi-Cloud Comparison Exercises
+
+These exercises build on the AWS and GCP deployments you ran in Sections 1 and 2. They develop the judgment needed to evaluate cloud providers as an architectural decision rather than a vendor preference.
+
+### Exercise 1: Service Equivalence Mapping
+
+Every cloud provider has equivalents for common services, but the behavior differences matter. Fill in the equivalents and note the key behavioral difference for each:
+
+| Capability | AWS | GCP | Azure | Key Behavioral Difference |
+|------------|-----|-----|-------|--------------------------|
+| Managed Kubernetes | EKS | GKE | AKS | GKE has the most mature managed K8s; EKS gives more VPC control |
+| Serverless containers | Fargate | Cloud Run | Container Apps | Cloud Run scales to zero; Fargate minimum is 1 task |
+| Managed PostgreSQL | RDS | Cloud SQL | Azure Database for PostgreSQL | RDS supports most instance types; Cloud SQL has better GCP integration |
+| Object storage | S3 | Cloud Storage | Blob Storage | S3 is the original; all others are API-compatible |
+| Global CDN | CloudFront | Cloud CDN | Azure CDN / Front Door | CloudFront has the most PoPs; Cloud CDN is simpler |
+| Message queue | SQS | Pub/Sub | Service Bus | SQS is pull-based; Pub/Sub is push with delivery guarantees |
+| Streaming (Kafka) | MSK | Dataflow/Pub/Sub | Event Hubs | MSK is managed Kafka; others are proprietary |
+| Secret management | Secrets Manager | Secret Manager | Key Vault | Pricing varies significantly at scale |
+| Container registry | ECR | Artifact Registry | Container Registry | Artifact Registry supports more artifact types beyond containers |
+
+**Why this matters**: When a colleague recommends "using Lambda" for something, you need to know whether Cloud Run, Container Apps, or Cloud Functions would be equivalent — or whether the behavioral differences matter for your use case.
+
+### Exercise 2: The Abstraction Ladder
+
+Cloud services exist at different levels of abstraction. Choosing the right level is an architectural decision, not just a configuration choice.
+
+For a PostgreSQL database in TicketPulse, map the options from least to most managed:
+
+```
+LEVEL 1: Self-managed
+  EC2 instance + PostgreSQL installed manually
+  GCP VM + PostgreSQL installed manually
+
+  Control: Full (you manage everything)
+  Operational burden: Highest (OS patches, backups, failover, monitoring)
+  Cost: Lowest per vCPU
+  Best for: Specific PostgreSQL configurations, compliance requirements
+
+LEVEL 2: Managed VMs with data disk
+  EC2 + EBS volume (you install PostgreSQL, AWS manages VM)
+  GCP Compute Engine + Persistent Disk
+
+  Control: High (you manage PostgreSQL, OS)
+  Operational burden: High (but VM maintenance automated)
+  Cost: Low
+  Best for: Unusual PostgreSQL extensions, custom configs
+
+LEVEL 3: Managed database service
+  AWS RDS for PostgreSQL
+  GCP Cloud SQL for PostgreSQL
+  Azure Database for PostgreSQL
+
+  Control: Medium (you manage schema, queries, connection pooling)
+  Operational burden: Low (backups, patching, failover managed)
+  Cost: Medium
+  Best for: Most production workloads — this is the right default
+
+LEVEL 4: Serverless database
+  AWS Aurora Serverless v2
+  GCP AlloyDB
+  PlanetScale (MySQL-compatible, serverless)
+  Neon (PostgreSQL, serverless)
+
+  Control: Low (you manage schema, service manages capacity)
+  Operational burden: Minimal
+  Cost: Pay per use (can be cheaper for variable loads, expensive for steady state)
+  Best for: Variable or unpredictable workloads, development environments
+
+LEVEL 5: Managed distributed database
+  AWS Aurora Global Database
+  GCP Spanner
+  CockroachDB Serverless
+
+  Control: Low (provider manages distribution)
+  Operational burden: Minimal
+  Cost: Highest per query
+  Best for: Multi-region active-active, globally distributed writes
+```
+
+**The exercise**: For each of these TicketPulse use cases, choose the right abstraction level and justify it:
+
+1. The main transactional database (orders, tickets) — expected 5,000 writes/minute peak
+2. The analytics read store (aggregate reports, business metrics) — expected 10 heavy queries per minute
+3. The development/staging environment — used 8 hours/day, idle overnight
+4. The global seat availability cache (needs sub-10ms reads from 5 regions)
+
+### Exercise 3: Total Cost of Ownership Comparison
+
+The monthly bill is not the total cost. Calculate the true TCO for TicketPulse across providers, including hidden costs:
+
+```
+TCO CATEGORIES:
+═══════════════
+
+1. Compute costs (what the calculator shows)
+   AWS ECS/Fargate vs GCP Cloud Run vs Azure Container Apps
+   → Run the cost calculator with your traffic profile
+
+2. Networking costs (often invisible until the bill arrives)
+   - AWS NAT Gateway: $0.045/hr + $0.045/GB processed
+     For 100GB/month: ~$33 just for NAT gateway
+   - GCP: Egress pricing from Cloud Run to internet
+   - Cross-AZ data transfer (AWS charges, GCP mostly does not)
+
+3. Operational costs (engineer-hours)
+   - AWS: More complex configurations → more engineer time
+   - GCP Cloud Run: Less configuration → less engineer time
+   - Estimate: 2h/month vs 6h/month × $75/hr = $150 vs $450
+   
+4. Incident costs (unreliable platforms cost more)
+   - Both AWS and GCP have SLAs of 99.9% or better
+   - Difference is usually the operational complexity, not platform reliability
+
+5. Switching costs (if you change your mind)
+   - Container images: portable across clouds
+   - Managed services (RDS, CloudSQL): data migration required
+   - Proprietary services (Pub/Sub, SQS): code changes required
+   - IAM, networking: complete re-architecture
+   
+Rule of thumb: switching cloud providers costs 3-6 months of a platform engineer's time
+for a mid-sized system. Factor this into the "GCP is cheaper" calculation.
+```
+
+**Your task**: For TicketPulse at 1M users/month, calculate the total 3-year cost for:
+- Staying on AWS (current)
+- Migrating to GCP (one-time migration cost + ongoing savings)
+- Using a multi-cloud setup (managed Kubernetes on your own, cloud-agnostic services)
+
+Which option wins? (Answer: depends on your team's GCP expertise and the migration cost. At small scale, the monthly savings from GCP often do not justify the migration cost. At large scale, they do.)
+
+### Exercise 4: The Multi-Cloud Reality Check
+
+Multi-cloud is often proposed as a strategy. Let's examine it honestly.
+
+**The theoretical benefits of multi-cloud:**
+- Avoid vendor lock-in
+- Negotiate better pricing (play providers against each other)
+- Use the best service from each provider
+- Survive a cloud provider outage
+
+**The practical costs of multi-cloud:**
+```
+1. Operational complexity
+   - Two security models to maintain (IAM on AWS AND IAM on GCP)
+   - Two monitoring platforms (CloudWatch AND Cloud Monitoring)
+   - Two networking models (VPC + peering on AWS, VPC on GCP)
+   - Two deployment pipelines
+   
+2. No managed service harmony
+   - Cannot use AWS-specific services (Lambda@Edge, SQS FIFO) if GCP must also work
+   - Must use cloud-agnostic tools (Terraform, Kubernetes, open-source Kafka)
+   - Cloud-agnostic = you give up the best features of each cloud
+
+3. The "cloud outage" argument
+   - Major cloud outages are extremely rare (<1 per year for each provider)
+   - When they happen, your multi-cloud setup probably fails too
+     (because most outages affect multiple services, not one region)
+   - True redundancy requires multi-region within one cloud, not multi-cloud
+
+4. Vendor negotiation
+   - Realistic for companies spending $1M+/month
+   - Not relevant for most startups
+```
+
+**The verdict for TicketPulse:**
+- Primary cloud: choose one and commit (AWS or GCP)
+- Run Kubernetes so your application layer is portable
+- Use Terraform for infrastructure so the configuration is understandable
+- Revisit multi-cloud only if spending exceeds $500K/month and you have dedicated platform engineers
+
+### Exercise 5: The Emergency Migration Drill
+
+Your company decided to move from AWS to GCP. You have 90 days. Work through the migration plan:
+
+```
+WEEK 1-2: Assessment
+  - Inventory all AWS services in use (list them all)
+  - Identify which have direct GCP equivalents
+  - Identify which are proprietary (will require code changes)
+  - Estimate effort for each
+
+WEEK 3-4: GCP Foundation
+  - Set up GCP project with billing alerts
+  - Configure VPC, subnets, and firewall rules
+  - Set up Cloud Run, Cloud SQL, Memorystore, Pub/Sub
+  - Configure IAM (mirror AWS IAM structure)
+
+WEEK 5-8: Service Migration
+  - Migrate stateless services first (they are easy — just update the container registry and environment variables)
+  - Migrate databases last (they are the risky part — data migration required)
+  - Run AWS and GCP in parallel for overlap period
+
+WEEK 9-10: Data Migration
+  - pg_dump from RDS → restore to Cloud SQL
+  - Verify data integrity (row counts, checksums)
+  - Test application against GCP database
+
+WEEK 11-12: Cutover
+  - DNS cutover from ALB → Cloud Load Balancer
+  - Monitor error rates for 48 hours
+  - Keep AWS running for 1 week (rollback window)
+  - Terminate AWS resources after successful cutover
+```
+
+**Key insight**: The containerized application layer (TicketPulse services as Docker images) migrates in a day. The infrastructure configuration (VPC, IAM, networking) takes 2-3 weeks. The data migration is the highest-risk step and takes the longest to verify.
+
+---
+
 ## 5. Reflect (5 minutes)
 
 ### 🤔 Questions
@@ -447,6 +695,9 @@ After this module, you should have:
 
 ---
 
+
+> **What did you notice?** Consider how this connects to systems you've worked on. Where have you seen similar patterns — or missed opportunities to apply them?
+
 ## Module Summary
 
 | Concept | Key Takeaway |
@@ -470,6 +721,22 @@ After this module, you should have:
 | **NAT Gateway** | A managed service that allows resources in private subnets to access the internet. Notorious for unexpected costs on AWS. |
 | **Cloud SQL** | GCP's managed relational database service supporting PostgreSQL, MySQL, and SQL Server. |
 | **ElastiCache** | AWS managed caching service supporting Redis and Memcached. |
+
+---
+
+---
+
+## What's Next
+
+Next up: **[L3-M63: Database at Scale](L3-M63-database-at-scale.md)** -- now that you have cloud infrastructure running, you will tackle the database scaling challenges that appear as TicketPulse grows from thousands to millions of users.
+
+---
+
+## Cross-References
+
+- **Chapter 19** (AWS Deep Dive): Covers ECS, EKS, RDS, ElastiCache, SQS, CloudWatch, and the IAM permission model in depth beyond what this module covers.
+- **Chapter 31** (GCP Deep Dive): Covers Cloud Run, GKE, Cloud SQL, Pub/Sub, and the GCP resource hierarchy and IAM model.
+- **L3-M61** (Multi-Region Design): Deploying across multiple cloud regions requires understanding the global networking primitives (CloudFront, Cloud Load Balancing) that this module introduces.
 
 ---
 

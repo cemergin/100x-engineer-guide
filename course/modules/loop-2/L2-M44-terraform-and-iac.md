@@ -92,6 +92,21 @@ Both produce the same result. The difference matters when you change from 3 to 5
 
 We will define TicketPulse's infrastructure for a local/simulated environment. The patterns translate directly to AWS, GCP, or Azure.
 
+<details>
+<summary>💡 Hint 1: HCL Resource Block Structure</summary>
+Every HCL resource block follows the pattern <code>resource "provider_type" "local_name" { ... }</code>. The provider_type determines the API (e.g., <code>kubernetes_deployment</code>), and the local_name is how you reference it elsewhere in your config (e.g., <code>kubernetes_namespace.ticketpulse.metadata[0].name</code>).
+</details>
+
+<details>
+<summary>💡 Hint 2: Reading terraform plan Output</summary>
+In <code>terraform plan</code> output, <code>+</code> means create, <code>~</code> means modify in-place, <code>-</code> means destroy, and <code>-/+</code> means destroy-and-recreate. Always read the plan line by line before running <code>apply</code> -- a <code>-/+</code> on a database resource means data loss.
+</details>
+
+<details>
+<summary>💡 Hint 3: Dependency Graph</summary>
+Terraform builds a dependency graph automatically from resource references. When you write <code>namespace = kubernetes_namespace.ticketpulse.metadata[0].name</code> inside a ConfigMap, Terraform knows to create the namespace first. You never need to specify ordering manually.
+</details>
+
 Create the Terraform project:
 
 ```bash
@@ -863,7 +878,24 @@ Three services, each with identical operational characteristics, defined in 15 l
 
 ## 6. Debug: Infrastructure Drift
 
+> **Before you continue:** If someone manually scales a deployment from 3 to 5 replicas outside of Terraform, what will `terraform plan` show? Will Terraform try to scale it back down?
+
 Drift happens when someone changes infrastructure outside of Terraform. Let us cause it.
+
+<details>
+<summary>💡 Hint 1: How Drift Shows in Plan</summary>
+Run <code>terraform plan -var-file=dev.tfvars</code> after the manual change. The output will show a <code>~</code> (update in-place) with the drift: <code>replicas = 5 -> 3</code>. Terraform compares the desired state in your <code>.tf</code> files against the actual state it discovers via the Kubernetes API.
+</details>
+
+<details>
+<summary>💡 Hint 2: State Refresh</summary>
+Terraform refreshes state at the start of every <code>plan</code> and <code>apply</code>. It queries the real infrastructure to update the state file, then compares the refreshed state against your config. That is how it detects that someone changed replicas from 3 to 5 outside of Terraform.
+</details>
+
+<details>
+<summary>💡 Hint 3: Intentional Override</summary>
+If the manual change was intentional and you want to keep 5 replicas, update <code>var.api_replicas</code> to 5 in your <code>.tfvars</code> file and re-run <code>terraform plan</code>. The plan should now show "No changes." The code is the source of truth -- make the code match the desired reality.
+</details>
 
 ```bash
 # Manually scale the API gateway outside Terraform
@@ -940,7 +972,7 @@ terraform plan -var-file=dev.tfvars
 # No changes. Your infrastructure matches the configuration.
 ```
 
-> **Tip:** `terraform import` only updates the state file. You still need to write the matching config in `.tf` files. If the config does not match the real resource, the next `plan` will show changes.
+> **Pro tip:** `terraform import` only updates the state file. You still need to write the matching config in `.tf` files. If the config does not match the real resource, the next `plan` will show changes.
 
 ---
 
@@ -962,6 +994,8 @@ The key principle: **nobody runs `terraform apply` from their laptop in producti
 ---
 
 ## 9. Reflect
+
+> **What did you notice?** When Terraform detected the manual drift (5 replicas instead of 3), did it feel reassuring or concerning that it wanted to change it back? How does this change your workflow around manual infrastructure changes?
 
 > **"What happens if the state file is deleted?"**
 >
@@ -1016,3 +1050,9 @@ After this module, your TicketPulse Terraform setup should have:
 | **Remote Backend** | Storing Terraform state in a shared location (S3, GCS, Terraform Cloud) with locking for team use. |
 | **terraform import** | A command that brings existing infrastructure under Terraform management by adding it to the state file. |
 | **Sensitive Variable** | A variable marked `sensitive = true`. Its value is redacted from plan output and logs. |
+
+---
+
+## What's Next
+
+In **Policy and IaC Scanning** (L2-M44a), you'll add automated security and compliance scanning to your Terraform code before it ever reaches production.

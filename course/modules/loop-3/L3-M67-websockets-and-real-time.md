@@ -64,6 +64,10 @@ The overhead difference is dramatic. An HTTP request carries ~800 bytes of heade
 
 ---
 
+### 🤔 Prediction Prompt
+
+Before building the WebSocket server, think about horizontal scaling. If you have 3 server instances behind a load balancer, and a user connected to server A buys a ticket, how do users connected to servers B and C find out?
+
 ## 2. Build: WebSocket Server for TicketPulse
 
 ### The Goal
@@ -86,6 +90,16 @@ Before looking at the implementation, think through:
 1. How will you track which clients are watching which event?
 2. When a ticket is purchased via the REST API, how does the WebSocket server find out?
 3. What happens when a client disconnects? How do you clean up?
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered that WebSocket connections are stateful? A `Map<eventId, Set<WebSocket>>` gives you O(1) room lookups. The harder question is how the REST purchase handler notifies the WebSocket server -- especially across multiple server instances.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+For single-server: broadcast directly from the purchase endpoint. For multi-server: publish to a Redis Pub/Sub channel per event (`ticket-updates:${eventId}`), and have each WebSocket server subscribe and broadcast to its local clients. Implement ping/pong heartbeats at 30s intervals to detect dead connections before the load balancer's 60s idle timeout kills them.
+</details>
 
 Write down your approach, then continue.
 
@@ -342,6 +356,16 @@ Redis Pub/Sub acts as a broadcast backbone. Every WebSocket server subscribes to
 ```
 
 ### Build: Add Redis Pub/Sub
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered that Redis requires separate connections for pub/sub? A connection in subscribe mode cannot issue other commands. You need one client for publishing and one for subscribing.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Use per-event channels (`ticket-updates:${eventId}`) rather than a single global channel. Subscribe when the first client connects to an event room; unsubscribe when the last client disconnects. This avoids every server receiving every event's updates.
+</details>
 
 ```javascript
 // redis-broadcast.js
@@ -607,13 +631,24 @@ Before moving on, verify:
 
 ---
 
+
+> **What did you notice?** Consider how this connects to systems you've worked on. Where have you seen similar patterns — or missed opportunities to apply them?
+
 ## Summary
 
 WebSocket gives TicketPulse real-time superpowers. A single ticket purchase propagates to every watcher in milliseconds. But WebSocket connections are stateful, which complicates horizontal scaling. Redis Pub/Sub solves this by acting as a broadcast backbone across servers. Heartbeats detect dead connections, and exponential backoff with jitter prevents thundering herds on reconnection.
 
 The pattern you built here -- event rooms, pub/sub backbone, heartbeat, reconnection -- is the foundation for every real-time feature: live chat, collaborative editing, real-time dashboards, multiplayer games. The protocol details change, but the architecture is the same.
 
-Next module: we stress-test this system. What happens when 50K users all try to buy 500 tickets at the same instant?
+### 🤔 Reflection Prompt
+
+What surprised you about the complexity gap between "make a WebSocket connection work" and "make WebSocket connections work at scale"? Where does stateful connection management change your architectural thinking?
+
+---
+
+## What's Next
+
+Next up: **[L3-M68: The Ticket Rush Problem](L3-M68-the-ticket-rush-problem.md)** -- we stress-test this system. What happens when 50K users all try to buy 500 tickets at the same instant?
 
 ## Key Terms
 

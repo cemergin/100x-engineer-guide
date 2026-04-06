@@ -613,6 +613,9 @@ git checkout -- .
 
 ---
 
+
+> **What did you notice?** Look back at what you just built. What surprised you? What felt harder than expected? That's where the real learning happened.
+
 ## Module Summary
 
 - **Interactive rebase** (`git rebase -i HEAD~N`) lets you squash, reword, reorder, and drop commits to create clean, logical history before a PR

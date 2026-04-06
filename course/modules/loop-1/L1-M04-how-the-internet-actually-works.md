@@ -620,6 +620,9 @@ For a single request, the difference is minimal. HTTP/2's advantage shows up whe
 
 ---
 
+
+> **What did you notice?** Look back at what you just built. What surprised you? What felt harder than expected? That's where the real learning happened.
+
 ## Module Summary
 
 - **Every HTTPS request follows 7 steps:** DNS resolution, TCP handshake, TLS negotiation, HTTP request, server processing, HTTP response, connection handling

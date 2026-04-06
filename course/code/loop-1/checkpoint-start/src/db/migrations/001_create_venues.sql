@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS venues (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  city VARCHAR(100) NOT NULL,
+  capacity INTEGER NOT NULL CHECK (capacity > 0),
+  address TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

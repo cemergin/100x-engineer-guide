@@ -88,7 +88,25 @@ builds trust and focuses the review discussion.]
 [Timelines, milestones, how you will validate each phase.]
 ```
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Write an RFC for TicketPulse
+
+<details>
+<summary>💡 Hint 1</summary>
+Start with the Problem section. Anchor it in data: "34% of events sell out, 12% release additional inventory later, ~200 support emails/month asking for notifications." A reviewer who sees concrete numbers trusts the problem is real. Do not describe the solution in the Problem section -- just the pain.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+The Alternatives Considered section is where reviewers spend the most time. Compare at least: (A) new waitlist service with its own database vs. (B) waitlist as a feature in the existing event service. For notification strategy, compare: (A) notify all 50,000 waitlisted users simultaneously vs. (B) notify in batches of 100 with a time-limited purchase window. For each alternative, give one pro and one con.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Add a Non-Goals section: "This RFC does NOT address dynamic pricing for waitlisted users, transferable waitlist positions, or waitlist priority based on loyalty tier." Non-goals prevent scope creep during review. Add success metrics: "Within 30 days of launch, 15% of sold-out event page visitors join the waitlist, and 8% of waitlisted users complete a purchase when notified."
+</details>
+
 
 **Feature: Add a Waitlist When Events Sell Out**
 
@@ -122,6 +140,22 @@ Your RFC should address:
 - Build waitlist into the existing purchase service vs. create a new waitlist service
 - Notify all waitlisted users simultaneously vs. notify in batches (first in line first)
 - Guarantee a ticket to notified users vs. give them a time-limited purchase window
+
+
+<details>
+<summary>💡 Hint 1</summary>
+For the waitlist data model, consider a `waitlist_entries` table with `(id, event_id, user_id, position, status, notified_at, expires_at, created_at)`. The `position` column enables fair ordering. Use an ADR (Architecture Decision Record) format for the data store choice: "We chose Postgres over a Redis sorted set because waitlist entries need durability across restarts and we need JOIN queries for analytics."
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+The Proposed Solution should include an API contract: `POST /api/events/:id/waitlist` (join), `DELETE /api/events/:id/waitlist` (leave), `GET /api/events/:id/waitlist/position` (check position). Include the notification flow: when inventory is released, a Kafka consumer reads `inventory.released` events and sends batched notifications via the notification service. Specify the time-limited purchase window (e.g., 15 minutes).
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Address the scale concern explicitly: "A Taylor Swift concert waitlist could have 50,000 entries. Notification delivery at this scale requires batched processing (100 users per batch, 1-second delay between batches) to avoid overwhelming the email provider. Use a feature flag to control batch size during initial rollout." Add a rollback plan: "The waitlist can be disabled via feature flag. Existing waitlist entries remain in the database but no new notifications are sent."
+</details>
 
 ### 🤔 Reflect: Pre-Address Reviewer Concerns
 
@@ -183,12 +217,44 @@ Include names, PagerDuty schedules, Slack channels.]
 
 ### 🛠️ Build: Write the TicketPulse Purchase Failures Runbook
 
+<details>
+<summary>💡 Hint 1</summary>
+A runbook is a how-to guide (task-oriented in the Diataxis framework), not an explanation. Every step must have a copy-pasteable command. Never say "check the database" -- say `kubectl -n ticketpulse exec -it deployment/event-db -- psql -U ticketpulse -d events -c "SELECT count(*), state FROM pg_stat_activity GROUP BY state;"` and specify what the output means.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Structure the runbook as a decision tree: Step 1 (assess impact) branches to "major outage" (escalate immediately) or "degraded" (continue investigation). Step 2 (check deployments) branches to "recent deployment found" (rollback with `kubectl rollout undo`) or "no recent deployment" (check dependencies). Each branch has a specific action and a way to verify it worked.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Include exact log search queries: `kubectl -n ticketpulse logs deployment/purchase-service --since=30m | jq 'select(.level == "error") | {message, error, traceId}'`. Include the escalation path: "If error rate > 50% or unresolved after 15 minutes, page the purchase-service team lead via PagerDuty: #tp-purchase-oncall." Include the verification step: "After mitigation, watch the Grafana error rate panel for 5 minutes. If it drops below 1%, the incident is resolved."
+</details>
+
+
 Write a runbook for the scenario from L2-M58: "TicketPulse purchase failures -- elevated error rate."
 
 Your runbook should cover:
 
 **Step 1: Assess Impact**
 ```markdown
+
+<details>
+<summary>💡 Hint 1</summary>
+For the database connectivity check, provide the exact command: `kubectl -n ticketpulse exec -it deployment/purchase-service -- node -e "const pg = require('pg'); const p = new pg.Pool({connectionString: process.env.DATABASE_URL}); p.query('SELECT 1').then(() => console.log('DB OK')).catch(e => console.error('DB FAIL:', e.message))"`. Provide expected output for both success and failure.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+For the Kafka consumer lag check: `kubectl -n ticketpulse exec -it kafka-0 -- kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group purchase-processor`. Expected: LAG column should be 0-10. If LAG > 1000 on any partition, the consumer is stuck. Resolution: restart the consumer pod with `kubectl -n ticketpulse rollout restart deployment/purchase-processor`.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+For the connection pool check: `kubectl -n ticketpulse exec -it deployment/purchase-db -- psql -U ticketpulse -c "SELECT state, count(*) FROM pg_stat_activity GROUP BY state;"`. If `active` > 15 (out of a pool of 20), connections are nearly exhausted. Immediate mitigation: `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state = 'idle in transaction' AND query_start < now() - interval '5 minutes';` -- this kills stale transactions hogging connections.
+</details>
+
 ### 1. Assess Impact
 Open the Grafana purchases dashboard:
 https://grafana.ticketpulse.dev/d/purchases/overview
@@ -296,6 +362,9 @@ Why blameless? If people fear blame, they will hide information. If the on-call 
 ```markdown
 # Postmortem: [Incident Title] ([Date])
 
+
+> **What did you notice?** Reflect on the trade-offs you encountered. Which decisions would you make differently with more information?
+
 ## Summary
 [2-3 sentences. What happened, how long, what was the impact.]
 
@@ -337,6 +406,22 @@ slow escalation?]
 ```
 
 ### 🛠️ Build: Write the Postmortem for the L2-M58 Incident
+
+<details>
+<summary>💡 Hint 1</summary>
+Start with a one-paragraph summary that any engineer in the company can understand: what broke, how long, how many users were affected, and what fixed it. Example: "Purchase error rate spiked to 8.3% for 43 minutes due to a missing database index on the tickets table. The slow query caused cascading connection pool exhaustion. Mitigation: added a composite index. 1,247 purchase attempts failed."
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Apply the "5 Whys" to find the root cause: (1) Why did purchases fail? Connection pool exhausted. (2) Why was the pool exhausted? Connections held for 4+ seconds per query. (3) Why were queries slow? Sequential scan on 50K-row tickets table. (4) Why was there a sequential scan? Missing index on `(event_id, status)`. (5) Why was the index missing? The migration that added the new query path did not include an index, and CI does not check query plans.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Make action items specific and measurable: not "improve monitoring" but "add Grafana alert: `pg_stat_activity_count{datname='events'} > 40` triggers PagerDuty (owner: Alice, due: March 15)". Not "add tests" but "add a load test scenario with events containing 10K+ tickets and assert p99 < 200ms (owner: Bob, due: March 22)". Each action item should have a Jira/Linear ticket number.
+</details>
+
 
 Using the incident timeline you built in L2-M58, write a full postmortem. This is the same incident: purchase failures caused by three layered problems (slow DB queries, stuck Kafka consumer, connection pool exhaustion).
 
@@ -383,6 +468,22 @@ Each action item must be:
 - **Assigned**: one owner, not "the team"
 - **Dated**: a concrete deadline
 - **Tracked**: in your issue tracker, not just in the postmortem document
+
+
+<details>
+<summary>💡 Hint 1</summary>
+Blameless means writing "the deployment at 2:15 PM introduced a query regression" not "Alice's deployment broke production." Systems fail, not people. Focus on the process gaps: why did the system allow a deployment with a missing index? What guardrails were absent?
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+Include a "What Went Well" section: (1) "The Grafana alert fired within 5 minutes of the error rate spike." (2) "Distributed tracing in Jaeger pinpointed the slow query within 3 minutes of investigation." (3) "The read-your-writes pattern from L2-M51 prevented data loss during the period of degraded writes." Celebrating what worked builds confidence in the team's observability investment.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Use the ADR (Architecture Decision Record) format for each action item: "We will add `EXPLAIN ANALYZE` checks to the CI pipeline for all migration files because the missing index was not caught during code review. This trades ~30 seconds of CI time per migration for early detection of query regressions. Alternative considered: manual review -- rejected because human reviewers consistently miss index requirements on large tables."
+</details>
 
 ---
 
@@ -584,6 +685,14 @@ Before moving on, verify:
 | **Diataxis** | A documentation framework that classifies content into tutorials, how-to guides, explanations, and reference. |
 | **Blameless** | An incident review culture that focuses on systemic improvements rather than assigning personal fault. |
 | **Action item** | A concrete, assigned follow-up task resulting from a postmortem or review that prevents recurrence. |
+
+---
+
+## What's Next
+
+In **Spec-Driven Development** (L2-M59a), you'll design APIs contract-first with OpenAPI and generate code, docs, and tests from a single source of truth.
+
+---
 
 ## Further Reading
 

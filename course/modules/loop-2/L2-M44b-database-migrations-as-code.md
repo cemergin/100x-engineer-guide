@@ -44,6 +44,8 @@ migrate --version
 # Should show: 4.17.0 or similar
 ```
 
+> **Before you continue:** Application code has version control, code review, and CI/CD. How do your database schema changes currently get deployed? If something goes wrong with a schema migration, how do you roll back?
+
 ---
 
 ## 1. Why Migrations, Not Ad-Hoc SQL
@@ -72,6 +74,21 @@ golang-migrate maintains a `schema_migrations` table with two columns: `version`
 ---
 
 ## 2. Build: TicketPulse's Core Schema
+
+<details>
+<summary>💡 Hint 1: Migration File Naming</summary>
+Use <code>migrate create -ext sql -dir db/migrations -seq &lt;name&gt;</code> to generate numbered up/down pairs. The <code>-seq</code> flag produces sequential numbers (000001, 000002). Each migration gets two files: <code>000001_create_users_table.up.sql</code> and <code>000001_create_users_table.down.sql</code>.
+</details>
+
+<details>
+<summary>💡 Hint 2: Up/Down Symmetry</summary>
+Every up migration must have a corresponding down migration that completely undoes it. If the up is <code>CREATE TABLE users (...)</code>, the down is <code>DROP TABLE IF EXISTS users</code>. If the up is <code>ALTER TABLE tickets ADD COLUMN status</code>, the down is <code>ALTER TABLE tickets DROP COLUMN IF EXISTS status</code>.
+</details>
+
+<details>
+<summary>💡 Hint 3: Running and Verifying</summary>
+Run <code>migrate -path db/migrations -database "${DATABASE_URL}" up</code> to apply all pending migrations. Verify with <code>psql "${DATABASE_URL}" -c "SELECT * FROM schema_migrations;"</code> -- it shows the current version number and whether the state is dirty (false = clean).
+</details>
 
 Create the migrations directory:
 
@@ -253,6 +270,21 @@ migrate -path db/migrations -database "${DATABASE_URL}" up         # Re-apply al
 ## 3. Debug: The Dirty State Problem
 
 This is the scenario every developer hits exactly once -- and panics. Let us cause it deliberately.
+
+<details>
+<summary>💡 Hint 1: Recognizing Dirty State</summary>
+Run <code>migrate -path db/migrations -database "${DATABASE_URL}" version</code>. If the output says <code>5 (dirty)</code>, the migration tool is stuck. It refuses to run any further migrations until you resolve it. The "dirty" flag means a migration started but did not complete cleanly.
+</details>
+
+<details>
+<summary>💡 Hint 2: Investigate Before Forcing</summary>
+Before using <code>force</code>, check what actually happened in the database with <code>psql "${DATABASE_URL}" -c "\d &lt;table&gt;"</code>. PostgreSQL DDL is transactional, so a failed <code>ALTER TABLE</code> typically leaves no partial changes. But in MySQL or multi-statement migrations, partial changes are possible.
+</details>
+
+<details>
+<summary>💡 Hint 3: The Recovery Sequence</summary>
+The fix is always: (1) inspect the database to see what actually changed, (2) <code>migrate force &lt;last_clean_version&gt;</code> to reset the tracking table (this runs NO SQL -- it only updates schema_migrations), (3) fix the broken migration file, (4) re-run <code>migrate up</code>.
+</details>
 
 ### Create a Broken Migration
 
@@ -768,6 +800,8 @@ Not every project uses golang-migrate. Here is how the major tools compare:
 
 ---
 
+> **What did you notice?** Treating database migrations as code means schema changes go through the same review, testing, and CI/CD process as application code. How does this change your confidence when deploying schema changes?
+
 ## 10. Checkpoint
 
 After this module, your TicketPulse migration setup should have:
@@ -806,3 +840,9 @@ After this module, your TicketPulse migration setup should have:
 | **Online DDL** | Techniques for altering table structure without locking the entire table. Tools: pg_repack, gh-ost. |
 | **FOR UPDATE SKIP LOCKED** | A PostgreSQL locking hint that skips rows already locked by other transactions, enabling concurrent batch processing. |
 | **Declarative migration** | Defining the desired end-state schema and letting the tool compute the required ALTER statements. Opposite of versioned/imperative migrations. |
+
+---
+
+## What's Next
+
+In **Monitoring with Prometheus & Grafana** (L2-M45), you'll add metrics collection and dashboards so you can see what TicketPulse is doing in real time.

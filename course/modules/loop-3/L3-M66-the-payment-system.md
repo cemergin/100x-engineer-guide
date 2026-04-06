@@ -25,7 +25,21 @@ This is a classic system design interview question, and for good reason — it t
 
 ## 0. The Architecture (5 minutes)
 
+### 🤔 Prediction Prompt
+
+Before reading the architecture, sketch your own payment flow from "Buy button click" to "Ticket confirmed." Where does the card number go? What happens if step 3 of 5 fails?
+
 ### 📐 Design Exercise: Before You Read On
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+The card number should never touch your servers. Think about a tokenization step on the client side before anything hits your API.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Use Stripe Elements (an iframe) to collect card details client-side. Your server only receives a payment_method_id token. The flow is: client tokenizes -> your API creates a PaymentIntent -> Stripe charges -> webhook confirms.
+</details>
 
 Draw TicketPulse's payment architecture. Include:
 - Where the customer's card number goes (spoiler: it should never touch your servers).
@@ -109,7 +123,20 @@ Request 2: POST /api/payments { idempotency_key: "idem_abc123", amount: 5000 }
   → NO second charge
 ```
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Implement Idempotency
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered Stripe's own idempotency key pattern? The client generates the key, and the server uses it for both the local database lookup and the Stripe API call -- two layers of deduplication with one key.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Store the idempotency key with a request hash in PostgreSQL. If the same key arrives with a different request body, reject it (key reuse). Use a Redis lock (`SET NX EX 30`) to prevent concurrent processing of the same key. Return the cached response for replays.
+</details>
+
 
 ```typescript
 // src/payments/idempotency.ts
@@ -232,7 +259,9 @@ CREATE INDEX idx_idempotency_expires ON idempotency_keys (expires_at);
 -- This matches Stripe's idempotency key retention period.
 ```
 
-### 💡 Insight: Stripe's Idempotency at Scale
+> **The bigger picture:** Idempotency is not just a payment concern -- it is a fundamental distributed systems principle. Any operation that can be retried (and in distributed systems, everything can be retried) needs idempotency.
+
+### Stripe's Idempotency at Scale
 
 Stripe processes over $1 trillion annually. Their idempotency key system handles approximately 1% of all requests being retries. That is billions of idempotent replay requests per year. The system works because:
 - Every API endpoint accepts an `Idempotency-Key` header.
@@ -253,6 +282,17 @@ Every money movement in TicketPulse creates exactly two ledger entries: a debit 
 - Double-entry: "Customer account debited $50. Merchant account credited $50." The money is tracked from source to destination. The books always balance.
 
 ### 🛠️ Build: Implement a Simple Ledger
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered that the ledger must be append-only? No UPDATEs, no DELETEs. To reverse a transaction, insert new reversal entries. This preserves the full audit trail that regulators and fraud detection require.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Every transaction creates balanced debit/credit entries: customer debited $50, merchant credited $45, platform credited $5. The golden query (`SUM(debits) - SUM(credits)`) must always return zero. If it does not, stop everything.
+</details>
+
 
 ```sql
 -- The ledger table (append-only, immutable)
@@ -364,6 +404,17 @@ Reconciliation is the process of comparing TicketPulse's ledger with the payment
 
 ### 📐 Design: The Reconciliation Process
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered that the scariest mismatch category is "in Stripe but not in TicketPulse"? That means a customer was charged but has no ticket. Your reconciliation must flag this as an immediate escalation, not a batch-resolved item.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+Export from both systems by time range, compare by `payment_intent_id`, and classify mismatches into three buckets: (A) in TicketPulse only, (B) in Stripe only, (C) amount mismatch. Category B is the fire drill. Auto-resolve Category A if the status is still "pending."
+</details>
+
+
 ```
 Daily at 2:00 AM UTC:
 
@@ -403,6 +454,17 @@ Daily at 2:00 AM UTC:
 ```
 
 ### 📐 Design Exercise: What Happens When They Don't Match?
+
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered what the customer experiences in each mismatch scenario? Category B (charged but no ticket) is the worst UX -- the customer sees money gone and no confirmation. Your SLA for resolving that should be under 1 hour.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+For Category A (in your system, not in Stripe): check if the PaymentIntent exists via the Stripe API. If not, reverse the ledger entry. For Category B: create the ticket immediately and send a delayed confirmation email. Investigate root cause (likely a webhook delivery failure).
+</details>
+
 
 For each mismatch category, design the automated resolution and the escalation path. Think about:
 - What does the customer experience?
@@ -519,6 +581,17 @@ The ledger entries are already written. The Stripe refund call fails (network ti
 
 ### 🐛 Debug: Payment Succeeds at Stripe, Callback Times Out
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+Have you considered that you need defense in depth here? No single mechanism (idempotency, webhooks, or reconciliation) catches every failure mode. The question is how the three layers compose.
+</details>
+
+<details>
+<summary>💡 Hint 2: If You're Stuck</summary>
+The client retries with the same Stripe idempotency key -- Stripe returns the original charge without double-billing. If the client never retries, the `payment_intent.succeeded` webhook fires asynchronously and the webhook handler creates the missing ticket. Daily reconciliation is the final safety net.
+</details>
+
+
 This is the nightmare scenario every payment engineer fears:
 
 ```
@@ -613,6 +686,10 @@ No single defense is sufficient. Together, they ensure that no payment is ever l
 
    Think about: ticket reservation duration, ledger entries for pending payments, what happens if the customer never pays, and how this interacts with the saga pattern.
 
+### 🤔 Reflection Prompt
+
+Which of the four defense layers (idempotency, webhooks, reconciliation, manual ops) would you have missed if you designed this system from scratch? What does that tell you about how you approach failure handling?
+
 ---
 
 ## 7. Checkpoint
@@ -630,6 +707,9 @@ After this module, you should have:
 - [ ] Answers to all reflect questions
 
 ---
+
+
+> **What did you notice?** Consider how this connects to systems you've worked on. Where have you seen similar patterns — or missed opportunities to apply them?
 
 ## Module Summary
 
@@ -668,3 +748,9 @@ After this module, you should have:
 - Chapter 23 of the 100x Engineer Guide: Section 8 (Payment System Case Study)
 - Chapter 1 of the 100x Engineer Guide: Section 5.2 (Idempotency Everywhere)
 - Patrick McKenzie, ["Designing Robust and Predictable APIs with Idempotency"](https://brandur.org/idempotency-keys) — Stripe's idempotency key design
+
+---
+
+## What's Next
+
+Next up: **[L3-M67: WebSockets & Real-Time](L3-M67-websockets-and-real-time.md)** -- you will build the real-time layer that keeps TicketPulse users updated on ticket availability, purchase confirmations, and live event updates without polling.

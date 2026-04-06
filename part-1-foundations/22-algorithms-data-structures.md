@@ -12,7 +12,7 @@
 
 > **Part I — Foundations** | Prerequisites: None | Difficulty: Intermediate → Advanced
 
-Not LeetCode grinding — the data structures and algorithms that backend engineers actually encounter in production systems, databases, and distributed infrastructure.
+Not LeetCode grinding. This is the set of data structures and algorithms you will actually reach for in production — the ones hiding inside Redis, Postgres, Cassandra, and Elasticsearch, doing the heavy lifting you've been taking for granted. Once you see them, you can't unsee them.
 
 ### In This Chapter
 - Complexity Analysis That Matters
@@ -26,14 +26,14 @@ Not LeetCode grinding — the data structures and algorithms that backend engine
 
 ### Related Chapters
 - Ch 1 (consistent hashing, distributed systems)
-- Ch 2 (B-trees, LSM trees, indexing)
+- Ch 24 (database internals — B-trees, LSM trees in depth)
 - Ch 6 (lock-free data structures)
 
 ---
 
 ## 1. Complexity Analysis That Matters
 
-Complexity analysis is not an academic exercise. It is how you predict whether your system will survive at 10x the current traffic. The difference between O(n) and O(n^2) is the difference between a 200ms response and a 20-minute timeout.
+Here is the truth about Big-O: it is not an academic exercise designed to torment junior engineers before coding interviews. It is how you predict whether your system will survive at 10x the current traffic. The difference between O(n) and O(n^2) is the difference between a 200ms response and a 20-minute timeout. When your on-call pager goes off at 3am and the logs show a query that used to take 80ms now taking 45 seconds, Big-O is how you diagnose the problem in five minutes instead of three hours.
 
 ### 1.1 Big-O Refresher with Real-World Examples
 
@@ -59,11 +59,11 @@ O(n log n)  →  20,000,000 operations
 O(n²)       →  1,000,000,000,000 operations  ← this kills your server
 ```
 
-The jump from O(n) to O(n^2) is where systems fall over. A query that scans 1M rows in 100ms will take 100,000 seconds with an O(n^2) algorithm. This is the number one reason to add database indexes.
+The jump from O(n) to O(n^2) is where systems fall over. A query that scans 1M rows in 100ms will take 100,000 seconds with an O(n^2) algorithm. This is the number one reason to add database indexes. Every nested loop over a large dataset is a landmine waiting to detonate at scale.
 
 ### 1.2 Amortized Analysis
 
-Some operations are expensive occasionally but cheap on average. Amortized analysis accounts for this.
+Some operations are expensive occasionally but cheap on average. Amortized analysis accounts for this — and it matters more than most engineers realize.
 
 **Dynamic arrays (ArrayList, Go slices, Python lists)** are the canonical example:
 
@@ -77,13 +77,13 @@ But if the array doubles each time:
 - Average cost per append = 2n / n = O(1) amortized
 ```
 
-This matters in practice. When someone says "appending to a slice is O(1)," they mean amortized O(1). If you are building a system that cannot tolerate occasional latency spikes (say, a real-time trading system), you care about the worst case, not the amortized case. Pre-allocate your arrays.
+This matters in practice. When someone says "appending to a slice is O(1)," they mean amortized O(1). If you are building a system that cannot tolerate occasional latency spikes — say, a real-time trading system where a 10ms hiccup triggers a margin call — you care about the worst case, not the amortized case. Pre-allocate your arrays.
 
-**Hash map resize** follows the same pattern. When the load factor exceeds a threshold (typically 0.75), the map doubles its bucket count and rehashes every key. Individual inserts are O(1) amortized but occasionally O(n).
+**Hash map resize** follows the same pattern. When the load factor exceeds a threshold (typically 0.75), the map doubles its bucket count and rehashes every key. Individual inserts are O(1) amortized but occasionally O(n). In Go, if you know upfront how big a map will get, `make(map[K]V, expectedSize)` avoids those resize pauses entirely.
 
 ### 1.3 Space-Time Trade-offs
 
-Almost every design decision in backend engineering is a space-time trade-off:
+Almost every design decision in backend engineering is a space-time trade-off. You are constantly negotiating between how much memory you spend and how fast things run.
 
 **Trading space for time (caching):**
 - Database query cache: store result sets to avoid recomputation
@@ -101,9 +101,11 @@ Almost every design decision in backend engineering is a space-time trade-off:
 - Column-oriented storage: compress similar values together
 - Delta encoding: store differences instead of absolute values
 
+The probabilistic structures in particular are underused by most engineers. You'll meet them properly in Section 5 — they're one of the most satisfying parts of this chapter.
+
 ### 1.4 Why Constants Matter
 
-Big-O hides constant factors, but constants dominate at practical scales.
+Big-O hides constant factors, but constants dominate at practical scales. This is the most commonly misunderstood nuance about complexity analysis.
 
 ```
 Algorithm A: O(n)     with constant factor 1000  → 1000n operations
@@ -117,9 +119,9 @@ For n > 1000: Algorithm A is faster
 
 Real examples where constants matter:
 
-- **Insertion sort vs quicksort for small arrays**: Insertion sort is O(n^2) but has tiny constants (no recursion, good cache locality). Most standard library sort implementations switch to insertion sort for arrays under 10-20 elements.
+- **Insertion sort vs quicksort for small arrays**: Insertion sort is O(n^2) but has tiny constants (no recursion, good cache locality). Most standard library sort implementations switch to insertion sort for arrays under 10-20 elements. That's not a bug — it's intentional.
 - **Hash map vs linear scan for small collections**: For fewer than ~10 elements, linear scan through an array beats a hash map because hash computation, memory indirection, and cache misses cost more than scanning a handful of elements.
-- **B-tree fan-out**: A B-tree with node size matching a disk page (4KB) can store ~500 keys per node. A binary search tree stores 1 key per node. Same O(log n) lookup, but the B-tree does log_500(n) disk reads vs log_2(n). For 1 billion keys, that is 3 disk reads vs 30.
+- **B-tree fan-out**: A B-tree with node size matching a disk page (4KB) can store ~500 keys per node. A binary search tree stores 1 key per node. Same O(log n) lookup, but the B-tree does log_500(n) disk reads vs log_2(n). For 1 billion keys, that is 3 disk reads vs 30. The algorithm is the same; the constant is everything. (More on this in Section 3.3 and Ch 24.)
 
 ### 1.5 The Operations That Matter
 
@@ -133,7 +135,7 @@ For backend work, these are the operations you evaluate data structures against:
 | **Delete** | Remove data. Harder than it sounds — tombstones, compaction, fragmentation. |
 | **Iterate (full scan)** | Process every element. Batch jobs, migrations, analytics. |
 
-Different data structures optimize for different operations. There is no structure that is best at everything:
+Different data structures optimize for different operations. There is no structure that is best at everything — if there were, you would only need one:
 
 ```
                Insert    Lookup    Range Scan    Delete    Iterate
@@ -147,15 +149,17 @@ Sorted Array   O(n)      O(log n)  O(log n + k)  O(n)      O(n)
 k = number of elements in the range
 ```
 
+This table is the cheat sheet for every "which database should I use?" conversation. Hash maps win on point lookups. B-trees win on range scans. LSM trees win on writes. You choose based on your workload.
+
 ---
 
 ## 2. Hash-Based Structures
 
-Hash maps are the most important data structure in backend engineering. If you understand nothing else in this chapter, understand hash maps.
+Hash maps are the most important data structure in backend engineering. If you understand nothing else in this chapter, understand hash maps. They are in Redis (literally every data type uses hashing under the hood), in your programming language's standard library, in Kafka's partition assignment, and in the lookup table your CPU uses to find memory pages. They are everywhere, and they are almost always the right first choice.
 
 ### 2.1 How Hash Maps Work Internally
 
-A hash map is an array of "buckets" combined with a hash function:
+Think of a hash map as a perfect filing cabinet. You walk up, say the key, and a very fast clerk computes exactly which drawer to open. No scanning, no searching — just compute and retrieve.
 
 ```
 put(key, value):
@@ -185,13 +189,13 @@ Common hash functions in practice:
 
 With a good hash function and reasonable load factor, most buckets contain 0 or 1 entries. The hash computation is O(1) (fixed work regardless of map size), and jumping to a bucket index is O(1) (array index access). Therefore, the expected lookup time is O(1).
 
-But this is an average. In the worst case, every key hashes to the same bucket, and lookup degenerates to O(n) — scanning a linked list of all entries. This is why hash function quality matters, and why language runtimes use randomized hash seeds to prevent attackers from crafting collision-heavy inputs (hash-flooding DoS attacks).
+But this is an average. In the worst case, every key hashes to the same bucket, and lookup degenerates to O(n) — scanning a linked list of all entries. This is why hash function quality matters, and why language runtimes use randomized hash seeds to prevent attackers from crafting collision-heavy inputs (hash-flooding DoS attacks). Python's dict randomizes its seed at startup for exactly this reason.
 
 **Load factor** = number of entries / number of buckets. When the load factor exceeds a threshold (typically 0.75 in Java, 6.5 average per bucket in Go), the map resizes — doubles the bucket count and rehashes every key. This is the O(n) operation that makes the amortized cost still O(1).
 
 ### 2.3 Hash Collisions: Chaining vs Open Addressing
 
-When two keys hash to the same bucket, you have a collision. Two strategies:
+When two keys hash to the same bucket, you have a collision. Two strategies for dealing with it, and the right choice depends on your hardware:
 
 **Chaining (separate chaining):**
 ```
@@ -221,11 +225,11 @@ Used by: Python dict (open addressing with perturbation),
          Google's Swiss Tables (SIMD-accelerated probing)
 ```
 
-**In practice**: Modern high-performance hash maps use open addressing with SIMD instructions to probe multiple slots simultaneously (Google's SwissTable, adopted by Rust and Abseil C++). The cache-friendliness of open addressing wins on modern hardware.
+**In practice**: Modern high-performance hash maps use open addressing with SIMD instructions to probe multiple slots simultaneously (Google's SwissTable, adopted by Rust and Abseil C++). The cache-friendliness of open addressing wins on modern hardware because cache misses are far more expensive than a few extra comparisons.
 
 ### 2.4 Hash Sets
 
-A hash set is simply a hash map where you only care about the keys (values are ignored or boolean). All the same internals apply.
+A hash set is simply a hash map where you only care about the keys (values are ignored or boolean). All the same internals apply. You already use these constantly, probably without thinking about them.
 
 Use cases you encounter constantly:
 - **Deduplication**: `seen = set()` to skip already-processed records
@@ -242,9 +246,11 @@ for event in event_stream:
     processed_ids.add(event.id)       # O(1) insert
 ```
 
+The alternative — a sorted list with binary search — gives O(log n) membership tests. For a million events, that is the difference between 1 operation and 20. Hash sets are the right tool for this job almost every time.
+
 ### 2.5 Consistent Hashing
 
-Standard hashing (`hash(key) % N`) falls apart when you add or remove servers. If N changes from 4 to 5, nearly every key maps to a different server — cache miss storm, mass data migration.
+Standard hashing (`hash(key) % N`) falls apart when you add or remove servers. If N changes from 4 to 5, nearly every key maps to a different server — cache miss storm, mass data migration. This is the problem that brought down caches across entire tech companies before consistent hashing became standard.
 
 **Consistent hashing** fixes this by mapping both keys and servers onto a ring (0 to 2^32 - 1):
 
@@ -269,7 +275,7 @@ Rule: A key maps to the first server found going clockwise from
       the key's hash position on the ring.
 ```
 
-**Virtual nodes** solve the problem of uneven distribution. Instead of placing each server once on the ring, place it 100-200 times (with different hash values). This smooths out the distribution:
+**Virtual nodes** solve the problem of uneven distribution. Instead of placing each server once on the ring, place it 100-200 times (with different hash values). This smooths out the distribution so no single server holds a disproportionate share of the keyspace:
 
 ```python
 class ConsistentHashRing:
@@ -312,7 +318,7 @@ class ConsistentHashRing:
 
 **Why it minimizes redistribution**: When a server is added, it takes ownership of a portion of the ring from its clockwise neighbor. Only keys in that arc are reassigned — roughly `1/N` of all keys, not all of them. When a server is removed, its keys move to the next clockwise server.
 
-**Used by**: Amazon DynamoDB (partition assignment), Apache Cassandra (token ring), Memcached client-side sharding, Nginx upstream consistent hashing, Akka Cluster Sharding.
+**Used by**: Amazon DynamoDB (partition assignment), Apache Cassandra (token ring), Memcached client-side sharding, Nginx upstream consistent hashing, Akka Cluster Sharding. When you're configuring a Cassandra cluster and wondering how it decides which node owns which rows — this is it.
 
 ### 2.6 Hash-Based Algorithms in Practice
 
@@ -340,11 +346,13 @@ Kafka: Messages with the same key always go to the same partition
 DynamoDB: hash(partition_key) determines which storage node holds the item
 ```
 
+Every time you set a partition key in Kafka, you are doing distributed hash routing. The same algorithm, at scale, across a cluster.
+
 ---
 
 ## 3. Tree Structures in Databases & Systems
 
-Trees are how databases organize data on disk. If you understand B-trees and LSM-trees, you understand how virtually every database works under the hood.
+Trees are how databases organize data on disk. If you understand B-trees and LSM-trees, you understand how virtually every database works under the hood. And because Ch 24 covers database internals in depth, this chapter will give you the mental model — the "why" — and Ch 24 will go deep on implementation details, page formats, and tuning.
 
 ### 3.1 Binary Search Trees (BST)
 
@@ -366,11 +374,11 @@ Balanced BST (height = 3):          Degenerate BST (height = 5):
 Lookup: O(log n) = O(3)             Lookup: O(n) = O(5)
 ```
 
-An unbalanced BST is just a linked list. This is why self-balancing trees exist.
+An unbalanced BST is just a linked list with extra steps. Insert sorted data into a naive BST and you get O(n) everything — which is why databases would never use a plain BST. This is why self-balancing trees exist.
 
 ### 3.2 Red-Black Trees and AVL Trees
 
-Both are self-balancing BSTs that guarantee O(log n) height through rotation operations on insert and delete.
+Both are self-balancing BSTs that guarantee O(log n) height through rotation operations on insert and delete. They are the workhorses of in-memory ordered data structures.
 
 **Red-Black Trees:**
 - Every node is red or black
@@ -390,14 +398,17 @@ Both are self-balancing BSTs that guarantee O(log n) height through rotation ope
 - `std::map`, `std::set` in C++ — typically Red-Black Tree
 - Linux kernel `CFS` (Completely Fair Scheduler) — Red-Black Tree for process scheduling by virtual runtime
 - In-memory ordered indexes in databases
+- Redis sorted sets' backing tree (alongside the skip list — they keep both)
 
-You almost never implement these yourself. You use them through standard library ordered maps/sets when you need sorted iteration, range queries, or finding the min/max efficiently.
+You almost never implement these yourself. You use them through standard library ordered maps/sets when you need sorted iteration, range queries, or finding the min/max efficiently. But understanding them helps you understand why `TreeMap` is slower than `HashMap` on point lookups.
 
 ### 3.3 B-Trees: How Database Indexes Actually Work
 
-B-Trees are the most important data structure in databases. Every time you create an index in Postgres or MySQL, you are building a B-Tree (technically, a B+ Tree).
+B-Trees are the most important data structure in databases. Every time you create an index in Postgres or MySQL, you are building a B-Tree (technically, a B+ Tree). That `CREATE INDEX` statement you run in your migration? This is what happens.
 
 **Why not a binary tree?** Disk I/O. A binary tree with 1 billion entries has height log2(10^9) = 30. That is 30 disk reads per lookup. A B-Tree with a branching factor of 500 (typical for 4KB pages) has height log500(10^9) = 3. Three disk reads to find any record among a billion.
+
+The B-tree is designed around one key insight: disk reads are catastrophically slow compared to memory operations, but reading a large chunk at once is almost free. So pack as many keys as possible into each page and minimize the number of pages you read.
 
 **B-Tree node structure:**
 
@@ -438,15 +449,17 @@ Advantages of B+ Trees:
 3. All lookups go to leaves → more predictable performance
 ```
 
-**This is why `WHERE id BETWEEN 100 AND 200` is fast with an index**: the database finds leaf 100 via the tree, then follows the linked list to leaf 200, reading sequential pages.
+**This is why `WHERE id BETWEEN 100 AND 200` is fast with an index**: the database finds leaf 100 via the tree, then follows the linked list to leaf 200, reading sequential pages. No random access — just a scan.
 
-**This is why `SELECT * FROM users ORDER BY created_at` is fast with an index on `created_at`**: the leaves are already in order, just scan the linked list.
+**This is why `SELECT * FROM users ORDER BY created_at` is fast with an index on `created_at`**: the leaves are already in order, just scan the linked list. The sort is free.
+
+See Ch 24 for a deep dive into how Postgres and MySQL implement B+ trees, their page formats, and how the buffer pool caches work.
 
 ### 3.4 LSM Trees: Write-Optimized Databases
 
-B-Trees are optimized for reads (O(log n) with high fan-out). But every write to a B-Tree requires a random disk seek to find the right page. For write-heavy workloads (logging, time-series, event ingestion), this becomes a bottleneck.
+B-Trees are optimized for reads (O(log n) with high fan-out). But every write to a B-Tree requires a random disk seek to find the right page. For write-heavy workloads — logging, time-series, event ingestion, IoT sensor data — this becomes a bottleneck. You're burning through I/O budget just finding the right place to write.
 
-**Log-Structured Merge Trees (LSM Trees)** optimize for writes by turning random writes into sequential writes:
+**Log-Structured Merge Trees (LSM Trees)** flip the script. Instead of writing to the right place immediately, they write everything sequentially and sort it out later:
 
 ```
 Write path:
@@ -486,7 +499,9 @@ Write path:
 - Remove older versions of updated keys
 - Reduce the number of files to check on reads
 
-**Write amplification**: a single write may be rewritten multiple times as it moves through compaction levels. If there are L levels and each is 10x larger, write amplification is ~10 * L.
+**Write amplification**: a single write may be rewritten multiple times as it moves through compaction levels. If there are L levels and each is 10x larger, write amplification is ~10 * L. This is the price you pay for write speed.
+
+The Bloom filter integration is elegant: before reading any SSTable, Cassandra checks a Bloom filter that tells it "this key is definitely not here" with zero disk I/O. You'll see Bloom filters again in Section 5.1.
 
 ### 3.5 B-Tree vs LSM-Tree
 
@@ -500,11 +515,13 @@ Write path:
 | **Predictable latency** | Yes | No (compaction spikes) |
 | **Used by** | Postgres, MySQL (InnoDB), SQL Server | Cassandra, RocksDB, LevelDB, HBase, ScyllaDB |
 
-**Rule of thumb**: B-Tree for read-heavy, mixed workloads (most web apps). LSM-Tree for write-heavy workloads (logging, metrics, time-series, IoT ingestion).
+**Rule of thumb**: B-Tree for read-heavy, mixed workloads (most web apps). LSM-Tree for write-heavy workloads (logging, metrics, time-series, IoT ingestion). When your write rate is so high that Postgres is struggling, the answer is often "switch to a database built on RocksDB." Now you know why.
+
+Ch 24 covers both structures in depth — including page-level B-tree operations, compaction strategies (leveled vs tiered vs FIFO), and how to tune them for your workload.
 
 ### 3.6 Tries (Prefix Trees)
 
-A trie stores strings character-by-character along tree edges. Common prefix = shared path.
+A trie stores strings character-by-character along tree edges. Common prefix = shared path. It is the reason autocomplete feels instant — the work is done at index time, not query time.
 
 ```
 Storing: "cat", "car", "card", "do", "dog"
@@ -525,13 +542,13 @@ Lookup "cab":  root → c → a → ?  ✗ (no 'b' child)
 
 **Where you encounter tries:**
 - **Autocomplete / typeahead**: traverse the trie to the prefix, then enumerate all descendants
-- **IP routing tables**: longest-prefix match on IP addresses (trie variant called a Patricia/Radix tree)
+- **IP routing tables**: longest-prefix match on IP addresses (trie variant called a Patricia/Radix tree) — your router is running trie lookups on every packet
 - **Spell checking**: traverse the trie to find similar words within edit distance
-- **HTTP routers**: many web frameworks use radix trees for route matching (Go's `httprouter`)
+- **HTTP routers**: many web frameworks use radix trees for route matching (Go's `httprouter`) — this is how your `GET /users/:id` routes are matched
 
 ### 3.7 Skip Lists
 
-A skip list is a probabilistic alternative to balanced BSTs. It is a layered linked list where higher layers skip over elements, enabling O(log n) search.
+A skip list is a probabilistic alternative to balanced BSTs. It is a layered linked list where higher layers skip over elements, enabling O(log n) search — and it is dramatically simpler to implement correctly than a red-black tree.
 
 ```
 Level 3: HEAD ─────────────────────────────────── 50 ──────────── NIL
@@ -549,22 +566,24 @@ To find 35:
 Each element is promoted to the next level with probability p (typically 0.5 or 0.25). This gives O(log n) expected height and O(log n) expected search time.
 
 **Why skip lists matter in practice:**
-- **Redis sorted sets (ZSET)**: Uses a skip list for the ordered index. Chosen over red-black trees because skip lists are simpler to implement, easier to reason about concurrently, and range queries are natural (just walk the bottom level).
+- **Redis sorted sets (ZSET)**: Uses a skip list for the ordered index. Chosen over red-black trees because skip lists are simpler to implement, easier to reason about concurrently, and range queries are natural (just walk the bottom level). Next time you call `ZRANGEBYSCORE`, you're walking a skip list.
 - **LevelDB / RocksDB MemTable**: The in-memory sorted structure before flushing to SSTables. Skip lists allow concurrent reads and writes without global locks.
 - **MemSQL / SingleStore**: Uses lock-free skip lists for in-memory indexes.
 
-Skip lists are easier to make concurrent than balanced BSTs because they avoid complex tree rotations — inserts only modify local pointers.
+Skip lists are easier to make concurrent than balanced BSTs because they avoid complex tree rotations — inserts only modify local pointers. When you see a database advertise "lock-free reads," there is often a skip list underneath.
 
 ---
 
 ## 4. Graph Algorithms in Infrastructure
 
-Graphs are everywhere in backend systems, even when you do not think of them as graphs:
+Graphs are everywhere in backend systems, even when you do not think of them as graphs. Once you start seeing the world as graphs, you cannot stop:
 - **Service dependency graph**: Service A calls Service B, which calls Service C
 - **Database entity-relationship diagram**: Users have Orders, Orders have Items
 - **Network topology**: Routers and switches connected by links
 - **Permission model**: User is member of Group, Group has Role, Role grants Permission
 - **Task dependencies**: Migration B depends on Migration A
+
+That last one is something most engineers have actually debugged — when a migration fails because it ran in the wrong order. That's a topological sort problem.
 
 ### 4.1 Graph Representations
 
@@ -606,9 +625,11 @@ cache      [  0  0  0  0   0    0 ]
 - **Adjacency list**: sparse graphs (most real systems), memory-efficient, better for traversal
 - **Adjacency matrix**: dense graphs, or when you need O(1) edge existence checks (rare in backend work)
 
+In practice, you almost always use adjacency lists. Most real graphs — service dependencies, social graphs, permission hierarchies — are sparse. An adjacency matrix for 1000 services would be 1000×1000 = 1M cells, most of them zero.
+
 ### 4.2 BFS (Breadth-First Search)
 
-BFS explores all nodes at distance 1, then distance 2, then distance 3, and so on. It finds the shortest path in unweighted graphs.
+BFS explores all nodes at distance 1, then distance 2, then distance 3, and so on. It finds the shortest path in unweighted graphs. Think of it as ripples spreading out from a stone dropped in water.
 
 ```python
 from collections import deque
@@ -633,14 +654,14 @@ def bfs_shortest_path(graph, start, target):
 ```
 
 **Where BFS is used:**
-- **Social networks**: "degrees of separation" between users (LinkedIn's connection degree)
-- **Service dependency blast radius**: "if service X goes down, what is affected within 2 hops?"
+- **Social networks**: "degrees of separation" between users (LinkedIn's connection degree, "You and Alice share 3 mutual connections")
+- **Service dependency blast radius**: "if service X goes down, what is affected within 2 hops?" — BFS from X to enumerate the impact
 - **Network routing**: finding the fewest hops between two hosts
-- **Garbage collection**: mark-and-sweep (BFS from root objects to find all reachable objects)
+- **Garbage collection**: mark-and-sweep (BFS from root objects to find all reachable objects — everything not found is garbage)
 
 ### 4.3 DFS (Depth-First Search)
 
-DFS explores as deep as possible along each branch before backtracking. It is simpler to implement (naturally recursive) and uses less memory than BFS for deep graphs.
+DFS explores as deep as possible along each branch before backtracking. It is simpler to implement (naturally recursive) and uses less memory than BFS for deep graphs. Where BFS thinks in rings, DFS thinks in paths.
 
 ```python
 def dfs(graph, node, visited=None):
@@ -676,6 +697,8 @@ def has_cycle(graph):
     )
 ```
 
+The three-color trick is elegant: WHITE means unvisited, GRAY means currently in the DFS stack, BLACK means done. If you ever reach a GRAY node, you have found a back edge — a cycle.
+
 **Where DFS is used:**
 - **Deadlock detection**: model lock waits as a directed graph; a cycle means deadlock
 - **Circular dependency detection**: in module imports, service dependencies, database foreign keys
@@ -685,6 +708,8 @@ def has_cycle(graph):
 ### 4.4 Topological Sort
 
 A topological sort of a directed acyclic graph (DAG) produces a linear ordering where for every edge A → B, A appears before B. Only possible if the graph has no cycles.
+
+You run topological sort every time you run `npm install` — the package manager is solving the dependency graph to determine build order.
 
 ```python
 def topological_sort(graph):
@@ -720,9 +745,11 @@ def topological_sort(graph):
 - **Task schedulers**: Airflow DAGs, CI/CD pipelines with step dependencies
 - **Spreadsheet recalculation**: cells depend on other cells; recalculate in topological order
 
+If `len(result) != len(graph)`, you have a cycle. This is how npm detects circular dependencies.
+
 ### 4.5 Dijkstra's Algorithm
 
-BFS finds shortest paths when all edges have equal weight. Dijkstra handles weighted edges (as long as weights are non-negative):
+BFS finds shortest paths when all edges have equal weight. Dijkstra handles weighted edges (as long as weights are non-negative). Replace "hops" with "latency in milliseconds" and suddenly you're routing packets.
 
 ```python
 import heapq
@@ -751,7 +778,7 @@ def dijkstra(graph, start):
 ```
 
 **Where Dijkstra is used:**
-- **Network routing**: OSPF (Open Shortest Path First) protocol uses Dijkstra to compute shortest paths between routers
+- **Network routing**: OSPF (Open Shortest Path First) protocol uses Dijkstra to compute shortest paths between routers — this runs inside every enterprise network
 - **Cost optimization**: finding the cheapest cloud region-to-region data transfer path
 - **Load balancing**: routing requests through the lowest-latency path
 - **Game servers**: geographic routing to minimize player latency
@@ -760,7 +787,7 @@ def dijkstra(graph, start):
 
 Beyond the DFS coloring approach shown above, cycle detection is critical in:
 
-- **Deadlock detection in databases**: Postgres maintains a wait-for graph. When a transaction waits for a lock held by another, an edge is added. A cycle means deadlock — Postgres aborts one of the transactions.
+- **Deadlock detection in databases**: Postgres maintains a wait-for graph. When a transaction waits for a lock held by another, an edge is added. A cycle means deadlock — Postgres aborts one of the transactions. The next time you see `ERROR: deadlock detected`, Postgres ran a cycle detection algorithm.
 - **Circular dependency prevention**: module systems, microservice dependency validation
 - **Reference counting garbage collection**: cycles of objects pointing to each other will never reach refcount 0. This is why Python uses a separate cycle-detecting GC alongside reference counting.
 
@@ -768,16 +795,18 @@ Beyond the DFS coloring approach shown above, cycle detection is critical in:
 
 ## 5. Probabilistic Data Structures
 
-Sometimes you do not need an exact answer. Probabilistic data structures trade a small, bounded error rate for massive savings in memory and computation.
+Sometimes you do not need an exact answer. Probabilistic data structures trade a small, bounded error rate for massive savings in memory and computation. They are some of the most elegant engineering tools in existence — the kind of thing that makes you say "that's clever" when you first understand how they work.
+
+The trade-off is always the same: you sacrifice exactness to gain scale. A 0.81% error rate is worth it when it's the difference between 12KB and 12GB.
 
 ### 5.1 Bloom Filters
 
-A Bloom filter answers the question: "Is this element in the set?"
+A Bloom filter is like a bouncer with a bad memory — they'll never let the wrong person through, but they might wave someone in who shouldn't be there. More precisely:
 
 - **"No"** — definitely not in the set (100% certain)
 - **"Yes"** — probably in the set (might be a false positive)
 
-**No false negatives, but possible false positives.**
+**No false negatives, but possible false positives.** This asymmetry is what makes Bloom filters useful: you can always trust a "no."
 
 **How it works:**
 
@@ -813,6 +842,8 @@ Check("xyz"):
 - Optimal number of hash functions: `k = (m/n) * ln 2`
 - For p = 1%, n = 1M: m = 9.6M bits (1.2MB), k = 7
 
+Compare that to storing 1M 128-bit hashes exactly: 16MB. The Bloom filter gives you 99% accuracy in 7.5% of the space.
+
 ```python
 import mmh3  # MurmurHash3
 from bitarray import bitarray
@@ -846,9 +877,11 @@ class BloomFilter:
 | **Medium** | Avoids recommending articles a user has already read |
 | **Bitcoin** | SPV (Simplified Payment Verification) nodes use Bloom filters to request relevant transactions without downloading the full blockchain |
 
+The Cassandra case connects directly to LSM trees (Section 3.4): every SSTable has a Bloom filter. Before doing any disk I/O to search an SSTable, Cassandra asks the filter "is this key definitely not here?" If yes, skip the file entirely. This is how Cassandra makes reads tolerable despite having to check multiple levels.
+
 ### 5.2 Count-Min Sketch
 
-Estimates the frequency of elements in a stream using bounded memory.
+Estimates the frequency of elements in a stream using bounded memory. Where a hash map would grow unboundedly as you track more unique keys, a Count-Min Sketch uses a fixed-size grid of counters.
 
 ```
 Structure: d hash functions, each mapping to a row of w counters
@@ -870,14 +903,16 @@ row 3: [ 0   4   0   0   1   0   0 ]  ← h3("cat")=1
 min(3, 2, 4) = 2  (true count might be 2; never underestimates)
 ```
 
+The minimum is the key insight — collisions can only inflate counts, never deflate them. By taking the minimum across all rows, you get the tightest upper bound.
+
 **Where Count-Min Sketch is used:**
-- **Heavy hitters detection**: finding the most frequent API endpoints, most active users, hottest cache keys
+- **Heavy hitters detection**: finding the most frequent API endpoints, most active users, hottest cache keys — "which 1% of users are generating 50% of our traffic?"
 - **Network monitoring**: detecting DDoS by finding source IPs with abnormally high request counts
 - **Database query optimization**: approximate frequency statistics for query planning
 
 ### 5.3 HyperLogLog
 
-Estimates the number of distinct elements (cardinality) in a dataset.
+Estimates the number of distinct elements (cardinality) in a dataset. This is the algorithm powering `SELECT COUNT(DISTINCT user_id)` in systems that care about performance.
 
 **The core insight**: if you hash elements uniformly and count the maximum number of leading zeros in any hash, that correlates with the log2 of the number of distinct elements.
 
@@ -897,6 +932,8 @@ HyperLogLog with m=16384 (2^14) registers:
 - Total memory: 16384 * 6 bits = 12KB
 - Error rate: 1.04 / sqrt(m) ≈ 0.81%
 ```
+
+12KB. For any cardinality, any number of elements. The memory footprint doesn't change whether you've seen 1,000 or 1,000,000,000 distinct values.
 
 **Where HyperLogLog is used:**
 
@@ -918,6 +955,8 @@ PFCOUNT visitors:2026-03-24              # returns ~2
 PFMERGE visitors:week visitors:2026-03-18 visitors:2026-03-19 ... visitors:2026-03-24
 PFCOUNT visitors:week                    # unique visitors across the entire week
 ```
+
+The merge operation is the killer feature: you can compute weekly/monthly uniques from daily HyperLogLogs without storing all the user IDs.
 
 ### 5.4 Cuckoo Filters
 
@@ -942,19 +981,19 @@ Insert("hello"):
                    (may cascade, like cuckoo hashing)
 ```
 
-**Use when**: you need Bloom filter functionality but also need to remove elements (e.g., a distributed blocklist that entries can be removed from).
+**Use when**: you need Bloom filter functionality but also need to remove elements (e.g., a distributed blocklist that entries can be removed from). Bloom filters are static; cuckoo filters are dynamic.
 
 ---
 
 ## 6. Practical Implementations
 
-These are the "system design building blocks" that come up repeatedly. Each one is a small system unto itself, combining multiple data structures.
+These are the "system design building blocks" that come up repeatedly. Each one is a small system unto itself, combining multiple data structures into something that solves a real problem. When you see these in system design interviews, the interviewer wants to know that you understand the underlying mechanics — not just that the pattern exists.
 
 ### 6.1 LRU Cache
 
-An LRU (Least Recently Used) cache evicts the least recently accessed entry when it reaches capacity. It requires O(1) for both `get` and `put`.
+An LRU (Least Recently Used) cache evicts the least recently accessed entry when it reaches capacity. It requires O(1) for both `get` and `put` — and that constraint is what makes the implementation non-obvious.
 
-**The trick**: combine a hash map (O(1) key lookup) with a doubly linked list (O(1) move-to-front and remove-from-tail).
+**The trick**: combine a hash map (O(1) key lookup) with a doubly linked list (O(1) move-to-front and remove-from-tail). Neither structure alone is sufficient. Together, they're O(1) for everything.
 
 ```
 Hash Map:  key → pointer to linked list node
@@ -1021,7 +1060,7 @@ class LRUCache:
 ```
 
 **Where LRU caches are used:**
-- **Database buffer pool**: Postgres/MySQL keep frequently accessed disk pages in memory using an LRU-like policy (Postgres uses a clock-sweep algorithm, a cheaper approximation)
+- **Database buffer pool**: Postgres/MySQL keep frequently accessed disk pages in memory using an LRU-like policy (Postgres uses a clock-sweep algorithm, a cheaper approximation — the full LRU tracking overhead isn't worth it at that scale)
 - **Web application caching**: in-process caches (Guava Cache, Caffeine in Java; `lru-cache` in Node.js)
 - **CPU caches**: hardware LRU approximations for L1/L2/L3 cache eviction
 - **Operating system page cache**: which disk pages to keep in RAM
@@ -1030,7 +1069,7 @@ class LRUCache:
 
 #### Token Bucket
 
-The token bucket is the most common rate limiting algorithm. Imagine a bucket that fills with tokens at a steady rate. Each request consumes a token. If the bucket is empty, the request is denied.
+The token bucket is the most common rate limiting algorithm. Imagine a bucket that fills with tokens at a steady rate. Each request consumes a token. If the bucket is empty, the request is denied (HTTP 429 Too Many Requests).
 
 ```
 Bucket:
@@ -1076,7 +1115,7 @@ class TokenBucket:
         return False
 ```
 
-**Properties**: allows bursts (up to `capacity` requests at once), then rate-limits to `refill_rate` sustained throughput. Most APIs use this because it naturally handles bursty traffic.
+**Properties**: allows bursts (up to `capacity` requests at once), then rate-limits to `refill_rate` sustained throughput. Most APIs use this because it naturally handles bursty traffic. A mobile app that wakes from sleep and fires 5 requests immediately won't be rejected as long as tokens have accumulated.
 
 #### Sliding Window Counter
 
@@ -1133,7 +1172,7 @@ class SlidingWindowCounter:
 
 #### Distributed Rate Limiting with Redis
 
-For multi-server deployments, rate limit state must be shared. Redis is the standard solution:
+For multi-server deployments, rate limit state must be shared. Redis is the standard solution — every application server talks to the same Redis, so rate limit state is consistent across the fleet:
 
 ```python
 # Token bucket in Redis using a Lua script for atomicity
@@ -1165,7 +1204,7 @@ end
 """
 ```
 
-The Lua script runs atomically in Redis — no race conditions between multiple application servers checking and decrementing the counter.
+The Lua script runs atomically in Redis — no race conditions between multiple application servers checking and decrementing the counter. This is critical: without atomicity, two servers could both read "1 token remaining," both allow a request, and you'd end up with -1 tokens.
 
 ### 6.3 Consistent Hashing Ring
 
@@ -1203,7 +1242,7 @@ Remove node D:
 
 ### 6.4 URL Shortener
 
-Two approaches to generating short URLs:
+Two approaches to generating short URLs. This is a classic system design question, but the interesting part is the trade-off between the two approaches.
 
 #### Approach 1: Base62 Encoding from Auto-Increment ID
 
@@ -1268,7 +1307,7 @@ def shorten(long_url):
 
 ### 6.5 Distributed ID Generation
 
-In distributed systems, you cannot rely on a single database auto-increment. Multiple machines need to generate unique IDs independently, often with ordering guarantees.
+In distributed systems, you cannot rely on a single database auto-increment. Multiple machines need to generate unique IDs independently, often with ordering guarantees. The naive solution — a centralized ID generator — is a single point of failure and a bottleneck. Here are three approaches that scale.
 
 #### Snowflake IDs (Twitter's approach)
 
@@ -1347,7 +1386,7 @@ Example: 018e0a3c-5b00-7123-a456-789012345678
 - **Standard format**: works with any system that accepts UUIDs
 - **No coordination**: pure random component ensures uniqueness without a central authority
 
-**UUIDv4's problem with databases**: Random UUIDs cause random B-tree inserts, leading to poor cache utilization, excessive page splits, and index fragmentation. UUIDv7 fixes this by being monotonically increasing.
+**UUIDv4's problem with databases**: Random UUIDs cause random B-tree inserts, leading to poor cache utilization, excessive page splits, and index fragmentation. UUIDv7 fixes this by being monotonically increasing. If you've ever seen a Postgres table with UUID primary keys perform worse than expected — this is why.
 
 #### ULID (Universally Unique Lexicographically Sortable Identifier)
 
@@ -1378,13 +1417,13 @@ Example: 018e0a3c-5b00-7123-a456-789012345678
 | **IDs per ms per node** | 4096 | Unlimited (random) | Unlimited (random) | N/A |
 | **Uniqueness guarantee** | Machine ID + sequence | Probabilistic | Probabilistic | Probabilistic |
 
-**Guidance**: Use Snowflake (or a variant) when you need compact 64-bit IDs and can manage machine ID assignment. Use UUIDv7 when you need standard UUID compatibility. Use ULID when you want string-sortable IDs without UUID format constraints. Avoid UUIDv4 as a primary key in B-tree indexed databases.
+**Guidance**: Use Snowflake (or a variant) when you need compact 64-bit IDs and can manage machine ID assignment. Use UUIDv7 when you need standard UUID compatibility. Use ULID when you want string-sortable IDs without UUID format constraints. Avoid UUIDv4 as a primary key in B-tree indexed databases — every insert is a random B-tree page access.
 
 ---
 
 ## 7. Sorting & Searching in the Real World
 
-You will almost never implement a sorting algorithm. But you must understand them because they determine how your database executes queries, how your files are organized, and where your performance bottlenecks are.
+You will almost never implement a sorting algorithm from scratch. But you must understand them because they determine how your database executes queries, how your files are organized, and where your performance bottlenecks are. When Postgres says `Sort Method: external merge  Disk: 145MB`, you need to know what that means and how to fix it.
 
 ### 7.1 The Sorting Algorithms That Matter
 
@@ -1434,11 +1473,11 @@ Space:   O(n)
 Stable:  Yes
 ```
 
-**Why it is used by Python and Java**: Real-world data is often partially sorted (log entries, time-series data, nearly-sorted lists after a small update). TimSort exploits existing order and achieves near-O(n) performance on such inputs.
+**Why it is used by Python and Java**: Real-world data is often partially sorted (log entries, time-series data, nearly-sorted lists after a small update). TimSort exploits existing order and achieves near-O(n) performance on such inputs. If you're sorting events by timestamp and they're mostly in order already, TimSort will be dramatically faster than pure QuickSort.
 
 ### 7.2 Binary Search
 
-Binary search is the most useful algorithm you will actually write (or debug) in production code. It applies anywhere you have sorted data and need to find a boundary.
+Binary search is the most useful algorithm you will actually write (or debug) in production code. It applies anywhere you have sorted data and need to find a boundary. Once you see it as "finding the boundary," you'll recognize it everywhere.
 
 #### Standard Binary Search
 
@@ -1458,7 +1497,7 @@ def binary_search(arr, target):
 
 #### Finding Boundaries (Lower Bound / Upper Bound)
 
-More useful than exact search in practice. "Find the first element >= X" or "find the last element <= X."
+More useful than exact search in practice. "Find the first element >= X" or "find the last element <= X." This is what database indexes actually do.
 
 ```python
 def lower_bound(arr, target):
@@ -1485,14 +1524,14 @@ def upper_bound(arr, target):
 ```
 
 **Where boundary search is used:**
-- **Database range queries**: B-tree index finds the lower bound, then scans forward
+- **Database range queries**: B-tree index finds the lower bound of the range, then scans forward through the leaf linked list
 - **Time-series data**: "find the first event after timestamp T"
 - **Rate limiting sliding windows**: "find all requests in the last 60 seconds"
 - **Version ranges**: "find the latest version <= 2.5"
 
 #### Binary Search on Answer Space
 
-This is the most powerful and under-appreciated application. Instead of searching in an array, you binary search on the possible answer range.
+This is the most powerful and under-appreciated application. Instead of searching in an array, you binary search on the possible answer range. The key insight: if you can ask "is X too small?" as a yes/no question, you can binary search for the minimum X that works.
 
 ```python
 def min_capacity_to_ship(weights, days):
@@ -1530,7 +1569,7 @@ def min_capacity_to_ship(weights, days):
 
 ### 7.3 External Sorting
 
-When your dataset does not fit in memory (sorting a 100GB file on a machine with 8GB RAM), you use external merge sort:
+When your dataset does not fit in memory (sorting a 100GB file on a machine with 8GB RAM), you use external merge sort. This is what your database does when you don't give it enough memory for a sort operation:
 
 ```
 Phase 1: Create sorted runs
@@ -1600,7 +1639,7 @@ def external_sort(input_file, output_file, memory_limit):
 
 ### 7.4 How Database Sorting Works
 
-When you write `SELECT * FROM orders ORDER BY created_at`, the database has three strategies:
+When you write `SELECT * FROM orders ORDER BY created_at`, the database has three strategies, and understanding which one it chooses tells you a lot about your query's performance:
 
 **1. Index-ordered scan (best case):**
 ```
@@ -1634,13 +1673,13 @@ Fix: Increase work_mem (per-query) or add an index
 SET work_mem = '256MB';
 ```
 
-**This is why "add an index" is the answer to most performance questions.** An index transforms a sort operation from O(n log n) with potential disk I/O into a simple O(n) sequential scan.
+**This is why "add an index" is the answer to most performance questions.** An index transforms a sort operation from O(n log n) with potential disk I/O into a simple O(n) sequential scan. The sort already happened at insert time — you're just reading it.
 
 ---
 
 ## 8. Search Engineering
 
-Search is one of the most common features in production applications, yet most engineers treat it as a black box. Understanding how search engines work — from text analysis to ranking to scaling — is essential for building search experiences that actually work.
+Search is one of the most common features in production applications, yet most engineers treat it as a black box you configure by copying Stack Overflow answers. Understanding how search engines work — from text analysis to ranking to scaling — is what separates engineers who can build search that actually works from engineers who cargo-cult Elasticsearch configs and wonder why results are bad.
 
 ### 8.1 How Search Engines Work
 
@@ -1657,7 +1696,7 @@ Document Ingestion → Analysis → Indexing → Query Processing → Ranking �
 6. RESULTS:      Return top-K documents, optionally with highlights and facets
 ```
 
-**The inverted index** is the core data structure of search. It maps every analyzed term to the documents (and positions) where that term appears:
+**The inverted index** is the core data structure of search. It maps every analyzed term to the documents (and positions) where that term appears. The name "inverted" means you've flipped the relationship: instead of "document → words it contains," you have "word → documents that contain it."
 
 ```
 Inverted Index:
@@ -1678,7 +1717,7 @@ This is why search is fast: instead of scanning every document for your query (O
 
 **Index segments, merging, and immutability (Lucene architecture):**
 
-Lucene (the library behind Elasticsearch and Solr) uses an append-only segment architecture:
+Lucene (the library behind Elasticsearch and Solr) uses an append-only segment architecture — notice the similarity to LSM trees from Section 3.4:
 
 ```
 Write path (similar to LSM-Trees):
@@ -1699,9 +1738,11 @@ Why immutable segments?
 - Trade-off: deletes/updates require marking old doc as deleted + reindexing
 ```
 
+The LSM-tree pattern — write sequentially, compact asynchronously — appears everywhere. Search engines independently arrived at the same architecture as write-optimized databases.
+
 ### 8.2 Text Analysis Pipeline
 
-Text analysis is where most search quality problems live. If your analyzer is wrong, no amount of ranking tuning will fix bad results.
+Text analysis is where most search quality problems live. If your analyzer is wrong, no amount of ranking tuning will fix bad results. Garbage in, garbage out — except the garbage is invisible because everything still appears to work.
 
 **Tokenization** splits text into individual terms:
 
@@ -1806,7 +1847,7 @@ Useful for partial matching and language-agnostic search (CJK languages, compoun
 
 ### 8.3 Ranking Algorithms
 
-Ranking determines result quality. A search engine that finds documents but ranks them badly is useless.
+Ranking determines result quality. A search engine that finds documents but ranks them badly is useless — worse than useless, because it makes people distrust the search. The ranking algorithm is where you compete.
 
 **TF-IDF (Term Frequency - Inverse Document Frequency):**
 
@@ -1833,7 +1874,7 @@ Example with 10,000 documents:
 
 **BM25 (Okapi BM25) — the current standard:**
 
-BM25 improves on TF-IDF with two critical refinements:
+BM25 improves on TF-IDF with two critical refinements that eliminate its worst behaviors:
 
 ```
 BM25(query, doc) = Σ IDF(term) × (TF × (k1 + 1)) / (TF + k1 × (1 - b + b × docLength/avgDocLength))
@@ -1929,7 +1970,7 @@ LTR is overkill for most applications. Start with BM25, add vectors if needed, t
 
 ### 8.4 Elasticsearch / OpenSearch Deep Dive
 
-Elasticsearch is the most widely-deployed search engine. Understanding its architecture is essential.
+Elasticsearch is the most widely-deployed search engine. Understanding its architecture is essential for operating it without surprises.
 
 **Architecture:**
 
@@ -2055,6 +2096,8 @@ Rule of thumb:
   - Use "must_not" for exclusions (hide archived, deleted, blocked content)
 ```
 
+The `filter` vs `must` distinction is a performance lever. Filter clauses are cached at the node level and can be reused across queries. `must` clauses compute scores and can't be cached. Put your date ranges, status filters, and category filters in `filter` — not `must`.
+
 **Query types — when to use which:**
 
 ```
@@ -2105,7 +2148,7 @@ multi_match:   Search across multiple fields.
 }
 ```
 
-Aggregations power: faceted navigation (sidebar filters with counts), dashboards, analytics, and monitoring. They run on the same query scope, so filtering narrows both results and aggregation counts.
+Aggregations power: faceted navigation (sidebar filters with counts), dashboards, analytics, and monitoring. They run on the same query scope, so filtering narrows both results and aggregation counts simultaneously.
 
 **Fuzzy matching for typo tolerance:**
 
@@ -2343,6 +2386,8 @@ Any scale + semantic search needed → Add vector search
   - Pinecone / Weaviate / Qdrant for dedicated vector DB
 ```
 
+Start simple. Adding Elasticsearch to a system with 10K documents is operational overhead for zero benefit.
+
 ### 8.7 Search UX Patterns
 
 Good search engineering is wasted without good search UX. These patterns are battle-tested:
@@ -2449,4 +2494,20 @@ Analyze them weekly and fix the top offenders (add synonyms, fix analysis, add c
 | Search within Postgres | tsvector + GIN index | No extra infra, good enough for < 100K docs |
 | Typo-tolerant instant search | Meilisearch / Typesense | Simple ops, sub-50ms, great defaults |
 
-The structures in this chapter are not interview trivia. They are the building blocks of every database, cache, load balancer, and distributed system you work with. Understanding them means you can read a Postgres `EXPLAIN` plan and know what is happening, choose the right database for your workload, debug performance problems from first principles, and design systems that scale.
+The structures in this chapter are not interview trivia. They are the building blocks of every database, cache, load balancer, and distributed system you work with every day. The B+ tree in Postgres's indexes, the skip list in Redis sorted sets, the Bloom filter in Cassandra's LSM read path, the consistent hashing ring in DynamoDB's partition layer, the HyperLogLog behind `PFCOUNT` — you interact with these data structures constantly, whether you know it or not. Understanding them means you can read a Postgres `EXPLAIN` plan and know what is happening, choose the right database for your workload, debug performance problems from first principles, and design systems that scale. That is what separates engineers who understand their tools from engineers who cargo-cult configurations.
+
+---
+
+## Try It Yourself
+
+Want to put this into practice? The [TicketPulse course](../course/) has hands-on modules that build on these concepts:
+
+- **[L1-M07: Indexing & Query Performance](../course/modules/loop-1/L1-M07-indexing-and-query-performance.md)** — Apply B-tree and hash index knowledge to make TicketPulse's ticket queries 10x faster
+- **[L2-M40: Search Engineering](../course/modules/loop-2/L2-M40-search-engineering.md)** — Build full-text search for TicketPulse events using inverted indexes and relevance scoring
+- **[L3-M65: Consistent Hashing & Distributed Cache](../course/modules/loop-3/L3-M65-consistent-hashing-and-distributed-cache.md)** — Implement consistent hashing to distribute TicketPulse's cache layer across nodes without thundering-herd on reshards
+
+### Quick Exercises
+
+1. **Implement an LRU cache in your language of choice using only a hash map and a doubly-linked list — no library calls — and verify it evicts the correct entry.**
+2. **Profile a slow function in your codebase: add timing instrumentation, measure it under realistic load, then write down its Big-O complexity for both time and space.**
+3. **Find where your codebase uses a bloom filter, B-tree, or hash map — hint: your database uses all three internally. Check `EXPLAIN` output, your cache client docs, and any "exists" check in your application layer.**

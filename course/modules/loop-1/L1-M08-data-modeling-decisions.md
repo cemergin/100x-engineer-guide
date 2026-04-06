@@ -14,7 +14,7 @@
 ## Why This Matters
 Schema design is the single highest-leverage decision in any application. A bad schema creates problems that no amount of indexing, caching, or hardware can fix. A good schema makes queries simple, fast, and correct. You will redesign schemas many times in your career — learning to reason about trade-offs now saves you from painful migrations later.
 
-💡 **Insight:** Instagram's most critical optimization was not code — it was denormalizing their feed to avoid expensive JOINs at read time. Facebook, Twitter, and Uber have all made similar schema-level decisions that dwarfed any code optimization.
+> **Pro tip:** Instagram's most critical optimization was not code — it was denormalizing their feed to avoid expensive JOINs at read time. Facebook, Twitter, and Uber have all made similar schema-level decisions that dwarfed any code optimization.
 
 ## Prereq Check
 
@@ -290,6 +290,22 @@ ORDER BY es.revenue DESC;
 
 ### 📐 Design Challenge
 
+<details>
+<summary>💡 Hint 1: Direction</summary>
+You need two new tables: reviews and review_votes. The reviews table needs a foreign key to events(id), and the "one review per user per event" rule maps to a UNIQUE (event_id, customer_email) constraint. For the rating, use SMALLINT with CHECK (rating BETWEEN 1 AND 5).
+</details>
+
+<details>
+<summary>💡 Hint 2: Approach</summary>
+For soft delete, add an is_deleted BOOLEAN NOT NULL DEFAULT false column. Your indexes should filter on this: CREATE INDEX idx_reviews_event ON reviews (event_id, created_at DESC) WHERE is_deleted = false — this is a partial index that only includes active reviews, matching the access pattern of the event detail page.
+</details>
+
+<details>
+<summary>💡 Hint 3: Almost There</summary>
+For the denormalization question: the event detail page needs AVG(rating) and COUNT(*) on every load. With hundreds of reviews this is cheap, but you could add avg_rating NUMERIC(3,2) and review_count INTEGER to the events table and maintain them with a trigger (AFTER INSERT OR UPDATE ON reviews). The trigger runs UPDATE events SET review_count = (SELECT COUNT(*) ...), avg_rating = (SELECT ROUND(AVG(rating)::numeric, 2) ...) WHERE id = NEW.event_id.
+</details>
+
+
 TicketPulse wants to add user reviews for events. Requirements:
 
 1. Users can write a review for any event they attended (have a confirmed order for)
@@ -298,6 +314,8 @@ TicketPulse wants to add user reviews for events. Requirements:
 4. The event detail page must show: average rating, total reviews, and the most recent 10 reviews
 5. Users can edit their review but not delete it (soft delete only)
 6. Each user can only review an event once
+
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
 
 ### 🛠️ Your Turn
 
@@ -514,6 +532,9 @@ Copy the Mermaid block above and paste it into:
 ```
 
 ---
+
+
+> **What did you notice?** Look back at what you just built. What surprised you? What felt harder than expected? That's where the real learning happened.
 
 ## Part 5: Schema Design Principles Summary (5 min)
 

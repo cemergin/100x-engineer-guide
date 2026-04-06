@@ -63,6 +63,21 @@ For TicketPulse, our pipeline will do:
 
 ## 2. Build: The Workflow YAML
 
+<details>
+<summary>💡 Hint 1: YAML Structure -- on, jobs, steps</summary>
+A GitHub Actions workflow has three levels: `on:` (triggers -- push, pull_request), `jobs:` (parallel units of work), and `steps:` within each job. Each step is either `uses:` (a reusable action like `actions/checkout@v4`) or `run:` (a shell command like `npm ci`). Use `actions/setup-node@v4` with `cache: 'npm'` to cache node_modules between runs.
+</details>
+
+<details>
+<summary>💡 Hint 2: Parallel Jobs and the needs Keyword</summary>
+Jobs run in parallel by default. `lint`, `typecheck`, and `test` can all run simultaneously since they are independent. Use `needs: [lint, typecheck, test]` on the `build` job so it only runs if all three pass. This cuts wall-clock time while still gating the Docker build on all checks.
+</details>
+
+<details>
+<summary>💡 Hint 3: Service Containers for Integration Tests</summary>
+Under the `test` job, add a `services:` block to spin up Postgres and Redis as sidecar containers. Set health check options with `--health-cmd "pg_isready -U ticketpulse"`. The services are accessible at `localhost:5432` and `localhost:6379`. Pass `DATABASE_URL` and `REDIS_URL` as `env:` on the test step.
+</details>
+
 Create the workflow file:
 
 ```bash
@@ -329,6 +344,21 @@ You should see four jobs appear: Lint & Format, Type Check, Test, and Build Dock
 
 ## 5. Debug: Intentionally Break the Pipeline
 
+<details>
+<summary>💡 Hint 1: Trigger a Lint Failure</summary>
+Add `const unusedVariable = 'test';` inside any function in a TypeScript file. The `@typescript-eslint/no-unused-vars` rule will flag it. Push to see the Lint job fail while Type Check and Test may still pass -- but the Build job will not run because of `needs`.
+</details>
+
+<details>
+<summary>💡 Hint 2: Watch It in Real Time</summary>
+Use `gh run watch` to stream pipeline progress in your terminal. Or `gh run view --web` to open the GitHub Actions UI. You will see the red X on the Lint job and the Build job skipped with "Skipped: depends on lint".
+</details>
+
+<details>
+<summary>💡 Hint 3: Fix, Commit, Push, Verify Green</summary>
+Remove the unused variable, commit with a fix message, and push again. The `concurrency: cancel-in-progress: true` setting will cancel the old failing run. Watch the new run go green. This fix-push-check cycle is the core feedback loop of CI.
+</details>
+
 Let us see what happens when the pipeline catches a problem.
 
 ### Break a lint rule
@@ -544,3 +574,8 @@ After this module, TicketPulse should have:
 | **Cache** | Saved state (node_modules, Docker layers) reused between pipeline runs to save time. |
 
 > **Going deeper:** In Loop 2, **L2-M55a (GitHub Actions Mastery)** takes everything here to the next level: reusable workflows across multiple services, matrix strategies, OIDC federation (no more stored secrets), monorepo path filtering, and supply-chain security hardening.
+---
+
+## What's Next
+
+In **Testing Fundamentals** (L1-M16), you'll build on what you learned here and take it further.

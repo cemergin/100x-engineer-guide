@@ -19,7 +19,7 @@ This is THE module that separates senior engineers from junior engineers. Junior
 
 TicketPulse v2 is now a distributed system with multiple services, databases, message queues, and external dependencies. When something breaks, the failure might originate in one service and manifest in another. The ability to systematically find the root cause -- under pressure, at 3 AM, with incomplete information -- is the most valuable skill in backend engineering.
 
-> 💡 **Insight**: "Amazon's CTO Werner Vogels: 'The best way to get good at debugging is to spend time debugging.' This module IS that time."
+> **The bigger picture:** "Amazon's CTO Werner Vogels: 'The best way to get good at debugging is to spend time debugging.' This module IS that time."
 
 ## Prereq Check
 
@@ -350,7 +350,25 @@ This is a cascade from Problem 1. Slow event-service responses mean purchase-ser
 
 ## Part 2: The Three-Problem Debug Exercise
 
+> **Before you continue:** Take a moment to think about how you would approach this before reading the solution. What's your instinct?
+
 ### 🛠️ Build: Diagnose All Three Problems
+
+<details>
+<summary>💡 Hint 1</summary>
+Start with Grafana's RED metrics (Rate, Errors, Duration) for each service in the purchase flow. The service with elevated latency AND errors is the primary suspect. Then open Jaeger, filter for traces with `error=true` and `minDuration=2s`, and look at the waterfall view -- the longest span reveals which downstream call is the bottleneck.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+For the slow database query, use `strace -p <pid> -e trace=read,write -f` on the Postgres process to see I/O operations in real time, or query `pg_stat_activity` to find the slow query: `SELECT pid, now() - pg_stat_activity.query_start AS duration, query FROM pg_stat_activity WHERE state = 'active' ORDER BY duration DESC`. A missing index causes a sequential scan visible in `EXPLAIN ANALYZE`.
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+For the stuck Kafka consumer, use `tcpdump -i any port 9092 -A` to check if the consumer is even making requests to the broker, or if it is stuck in a rebalance loop. Check consumer group lag with `kafka-consumer-groups.sh --describe --group purchase-processor`. If only one partition has lag, a poison message is likely blocking that partition's consumer -- check the consumer logs for repeated exceptions on the same offset.
+</details>
+
 
 Now it is your turn. Set up the three problems in your TicketPulse environment and practice diagnosing them using only observability tools.
 
@@ -423,6 +441,22 @@ Write an incident timeline as you go, documenting:
 - What you found
 - What you concluded
 - What you will check next
+
+
+<details>
+<summary>💡 Hint 1</summary>
+Use `strace -e trace=network -p <pid>` on the event-service container to see if the process is spending time waiting for network I/O (database connections) or disk I/O (sequential scan reading table pages from disk). If you see repeated `recvfrom` calls with long gaps, the database is the bottleneck. If you see rapid `read` calls, the query is doing a full table scan through the buffer cache.
+</details>
+
+<details>
+<summary>💡 Hint 2</summary>
+For the connection pool issue, query Prometheus: `pg_stat_activity_count{datname="ticketpulse"} / pg_settings_max_connections{datname="ticketpulse"}`. If this ratio approaches 1.0, the pool is exhausted. Use `tcpdump -i lo port 5432 -c 100 -w db-traffic.pcap` to capture database traffic and analyze connection patterns -- are connections being held open during slow queries, or are new connections being created and never returned?
+</details>
+
+<details>
+<summary>💡 Hint 3</summary>
+Fix order matters: (1) Fix the missing index first (`CREATE INDEX CONCURRENTLY idx_tickets_event_status ON tickets(event_id, status)`) -- this removes the root cause. (2) The connection pool exhaustion will resolve itself once queries are fast again. (3) Restart the stuck Kafka consumer after fixing the database -- the poison message that referenced a non-existent event needs a dead-letter-queue handler, not a fix to the consumer code.
+</details>
 
 ---
 
@@ -609,6 +643,8 @@ Answer these questions in your engineering journal:
 
 ---
 
+> **What did you notice?** Production debugging requires a fundamentally different approach than local debugging — you cannot attach a debugger or add print statements. How did the observability tools from M45-M46 change your ability to diagnose issues?
+
 ## Checkpoint
 
 Before moving on, verify:
@@ -633,6 +669,14 @@ Before moving on, verify:
 | **5 Whys** | An iterative questioning technique that asks "why" repeatedly to drill down from a symptom to a root cause. |
 | **Correlation** | The practice of linking related signals (logs, metrics, traces) to reconstruct the sequence of events in an incident. |
 | **Triage** | The process of assessing severity and prioritizing which issues to investigate first during an incident. |
+
+---
+
+## What's Next
+
+In **Technical Writing** (L2-M59), you'll sharpen the skill that multiplies your engineering impact — writing RFCs, docs, and incident reports that people actually read.
+
+---
 
 ## Further Reading
 
