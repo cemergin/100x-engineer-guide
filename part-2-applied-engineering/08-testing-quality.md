@@ -23,6 +23,7 @@ The discipline of proving your code works — testing philosophies, test types f
 - Code Quality
 
 ### Related Chapters
+- **TESTING spiral:** → [Ch 34b: Contract-First API & Executable Specs](../part-3-tooling-practice/34b-contract-first-api.md)
 - Chapter 15 (linting/CI enforcement)
 - Chapter 18 (debugging when tests miss bugs)
 - Chapter 4 (performance testing)

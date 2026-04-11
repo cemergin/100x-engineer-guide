@@ -32,7 +32,7 @@ GCP's superpowers: BigQuery as the data warehouse that just works, Cloud Run as 
 - GCP vs AWS Comparison
 
 ### Related Chapters
-- Ch 19 (AWS & Firebase — comparison)
+- Ch 19 (AWS — comparison) / Ch 19b (Firebase — comparison)
 - Ch 7 (infrastructure concepts)
 - Ch 13 (cloud system integration)
 
@@ -719,7 +719,7 @@ gcloud spanner databases create my-db \
 
 ### 4.5 Firestore
 
-Covered in detail in Chapter 19 (Firebase section). Brief recap for the GCP context:
+Covered in detail in Chapter 19b (Firebase Deep Dive). Brief recap for the GCP context:
 
 - **Document database** — collections and documents, real-time listeners, offline support for mobile apps
 - **Native mode** (recommended) — full Firestore with real-time sync and sub-millisecond reads

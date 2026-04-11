@@ -36,6 +36,7 @@ Read these like the engineering thrillers they are. Feel the tension. Then go fi
 - Lessons & Patterns Across All Incidents
 
 ### Related Chapters
+- **OBSERVABILITY spiral:** ← [Ch 36: Beast Mode](../part-2-applied-engineering/36-beast-mode.md) | → [Ch 35: Everything as Code](../part-4-cloud-operations/35-everything-as-code.md)
 - Ch 4 (SRE, incident management, chaos engineering)
 - Ch 7 (deployment strategies that prevent incidents)
 - Ch 18 (monitoring and debugging)

@@ -27,7 +27,7 @@ We're not going to skim the surface. We're going to walk through every layer —
 - Synthesis: How It All Connects
 
 ### Related Chapters
-- Chapter 19 — AWS/Firebase specifics
+- Chapter 19 — AWS specifics / Chapter 19b — Firebase specifics
 - Chapter 4 — reliability/observability theory
 - Chapter 18 — monitoring tools in depth
 - Chapter 2 — data patterns

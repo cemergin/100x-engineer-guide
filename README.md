@@ -35,11 +35,11 @@ A comprehensive, open-source mega-guide covering every paradigm, philosophy, and
 |-----------|-----------|------|
 | **Learn from zero** | Part I: Ch 1 → 2 → 3 → 4 → 5 | Part II, then Part III |
 | **System design interviews** | Ch 1, 22, 3, 23 | Ch 2, 6, 25, Glossary |
-| **Get productive immediately** | Ch 12 (tooling), 20 (env mgmt), 17 (Claude Code) | Ch 15, 14 |
+| **Get productive immediately** | Ch 12/12b (tooling), 20 (env mgmt), 17 (Claude Code) | Ch 15, 14 |
 | **Ship to production** | Ch 13 (cloud), 18 (monitoring), 19 (AWS) | Ch 4, 7, 26 |
 | **Level up to staff+** | Ch 9 (leadership), 29 (career), 10 (emerging) | Ch 27, 16 |
 | **Debug a production issue NOW** | Ch 18 (debugging), 21 (networking), 24 (DB internals) | Ch 26 (war stories) |
-| **Hit the ground running (new team/company)** | Ch 36 (beast mode), 12 (tooling) | Ch 18, 28, 29 |
+| **Hit the ground running (new team/company)** | Ch 36 (beast mode), 12/12b (tooling) | Ch 18, 28, 29 |
 | **Quick lookup** | [Glossary](./appendices/appendix-glossary.md) (250+ terms) | [Resources](./appendices/16-essential-resources.md) (49 papers/books) |
 
 ---
@@ -57,9 +57,10 @@ A comprehensive, open-source mega-guide covering every paradigm, philosophy, and
 | 21 | [Networking & Protocols](./part-1-foundations/21-networking-protocols.md) | Inter→Adv | TCP internals, TLS 1.3 handshake, HTTP lifecycle, DNS, WebSocket, gRPC/protobuf, network debugging |
 | 22 | [Algorithms & Data Structures](./part-1-foundations/22-algorithms-data-structures.md) | Inter→Adv | Hash maps, B-trees, LSM trees, bloom filters, LRU cache, rate limiter, consistent hashing — with code |
 | 24 | [Database Internals](./part-1-foundations/24-database-internals.md) | Advanced | Postgres MVCC/WAL/vacuum/planner, MySQL InnoDB, DynamoDB internals, EXPLAIN ANALYZE, perf tuning |
+| 24b | [SQL Mastery & Graph DBs](./part-1-foundations/24b-sql-mastery-graph-databases.md) | Advanced | Advanced SQL (CTEs, window functions, lateral joins), graph databases, Neo4j/Cypher |
 | 32 | [Software Engineering Principles](./part-1-foundations/32-software-engineering-principles.md) | Beg→Adv | SOLID with real code, DRY/KISS/YAGNI, coupling/cohesion, 10 essential design patterns, clean code, code smells, composition vs inheritance, FP vs OOP |
 
-> **Read order:** 1 → 2 → 3 → 4 → 5 (core sequence), then 21, 22, 24 in any order.
+> **Read order:** 1 → 2 → 3 → 4 → 5 (core sequence), then 21, 22, 24/24b in any order.
 
 ---
 
@@ -74,7 +75,9 @@ A comprehensive, open-source mega-guide covering every paradigm, philosophy, and
 | 9 | [Engineering Leadership](./part-2-applied-engineering/09-engineering-leadership.md) | Advanced | ADRs/RFCs, system thinking, DORA/SPACE metrics, estimation, technical strategy, communication |
 | 10 | [Emerging Paradigms](./part-2-applied-engineering/10-emerging-paradigms.md) | Advanced | AI-native engineering, RAG/agents, edge computing, CRDTs, durable execution, Wasm, FinOps |
 | 23 | [System Design Case Studies](./part-2-applied-engineering/23-system-design-case-studies.md) | Advanced | 10 full designs: URL shortener, chat, payments, video streaming, ride-sharing — with diagrams |
-| 25 | [API Design & DX](./part-2-applied-engineering/25-api-design.md) | Intermediate | REST conventions, error handling, pagination, versioning, idempotency, webhooks, SDK design |
+| 25 | [REST API Design](./part-2-applied-engineering/25-rest-api-design.md) | Intermediate | REST conventions, error handling, pagination, versioning, idempotency |
+| 25b | [API Operations & DX](./part-2-applied-engineering/25b-api-operations-dx.md) | Intermediate | Authentication, webhooks, SDKs, documentation, rate limiting |
+| 25c | [GraphQL Deep Dive](./part-2-applied-engineering/25c-graphql-deep-dive.md) | Intermediate | GraphQL schema design, resolvers, DataLoader, subscriptions, federation |
 | 29 | [Career Engineering](./part-2-applied-engineering/29-career-engineering.md) | All levels | Promotion packets, brag docs, staff+ archetypes, IC vs mgmt, negotiation, influence, brand |
 | 30 | [Data Privacy & Compliance](./part-2-applied-engineering/30-data-privacy-ethics.md) | Intermediate | GDPR implementation, anonymization, crypto-shredding, consent management, HIPAA/SOC2/PCI |
 | 36 | [Beast Mode — Operational Readiness](./part-2-applied-engineering/36-beast-mode.md) | All levels | Operational readiness playbook, system mental models, observability hotlinks, incident readiness, codebase navigation, tribal knowledge |
@@ -87,7 +90,8 @@ A comprehensive, open-source mega-guide covering every paradigm, philosophy, and
 | Ch | Title | Difficulty | What You'll Learn |
 |----|-------|-----------|-------------------|
 | 11 | [Programming Languages](./part-3-tooling-practice/11-programming-languages.md) | Intermediate | Go, Rust, Python, Java/Kotlin, TypeScript, C#, Elixir, Zig — runnable servers, comparison tables |
-| 12 | [Developer Tooling](./part-3-tooling-practice/12-developer-tooling-productivity.md) | Beg→Adv | Linux, bash, SSH, fzf/tmux/rg, Vim/Neovim, VS Code, Git advanced, Docker, Terraform, kubectl |
+| 12 | [Linux, Shell & Editors](./part-3-tooling-practice/12-linux-shell-editors.md) | Beg→Adv | Linux, bash, SSH, fzf/tmux/rg, Vim/Neovim, VS Code |
+| 12b | [Git, Docker, Terraform & K8s](./part-3-tooling-practice/12b-git-docker-terraform-k8s.md) | Beg→Adv | Git advanced, Docker, Terraform, kubectl |
 | 14 | [AI-Powered Engineering](./part-3-tooling-practice/14-ai-powered-engineering.md) | Beg→Inter | AI for project planning, ERD design, code review, debugging, prompt engineering as a skill |
 | 15 | [Codebase Organization](./part-3-tooling-practice/15-codebase-organization.md) | Beg→Adv | Linting setup, CI/CD pipelines, team-size org (solo→100+), monorepo patterns, fitness functions |
 | 17 | [Claude Code Mastery](./part-3-tooling-practice/17-claude-code-mastery.md) | Beg→Adv | Skills/plugins/hooks, MCP servers, agent teams, CLAUDE.md, plan mode, TDD/debugging workflows |
@@ -96,7 +100,9 @@ A comprehensive, open-source mega-guide covering every paradigm, philosophy, and
 | 28 | [Code Reading & Open Source](./part-3-tooling-practice/28-code-reading-oss.md) | Beg→Inter | Navigating unfamiliar codebases, OSS contribution workflow, licensing, building your profile |
 | 33 | [GitHub Actions Core](./part-3-tooling-practice/33-github-actions-core.md) | Inter→Adv | Workflow syntax, reusable workflows, composite actions, matrix strategies, OIDC federation |
 | 33b | [Advanced GitHub Actions](./part-3-tooling-practice/33b-github-actions-advanced.md) | Advanced | Self-hosted runners, monorepo CI, custom actions, security hardening, performance optimization, advanced patterns |
-| 34 | [Spec-Driven Development](./part-3-tooling-practice/34-spec-driven-development.md) | Inter→Adv | RFCs, design docs, contract-first API design (OpenAPI/AsyncAPI), executable specs (BDD/Gherkin), AI-native specs, CLAUDE.md as spec |
+| 34 | [Specs, RFCs & ADRs](./part-3-tooling-practice/34-specs-rfcs-adrs.md) | Inter→Adv | RFCs, design docs, ADRs, the spec-first thesis |
+| 34b | [Contract-First API](./part-3-tooling-practice/34b-contract-first-api.md) | Inter→Adv | OpenAPI, AsyncAPI, Protobuf, BDD/Gherkin, executable specs |
+| 34c | [AI-Native Specs](./part-3-tooling-practice/34c-ai-native-specs.md) | Inter→Adv | CLAUDE.md as spec, AI-native workflows, spec culture, anti-patterns |
 
 ---
 
@@ -133,7 +139,7 @@ A comprehensive, open-source mega-guide covering every paradigm, philosophy, and
 Part I — Foundations (start here):
   Ch 1 → Ch 2 → Ch 3 → Ch 4        (core sequence)
   Ch 5                                (standalone)
-  Ch 21, 22, 24, 32                    (standalone, enrich Part I)
+  Ch 21, 22, 24/24b, 32                (standalone, enrich Part I)
 
 Part II — Applied Engineering (after Part I, any order):
   Ch 6          ← benefits from Ch 1
@@ -144,19 +150,19 @@ Part II — Applied Engineering (after Part I, any order):
   Ch 23         ← benefits from Ch 1, 2, 3, 22
   Ch 25         ← benefits from Ch 3
   Ch 29, 30     ← standalone
-  Ch 36         ← benefits from Ch 12, 18; standalone
+  Ch 36         ← benefits from Ch 12/12b, 18; standalone
 
 Part III — Tooling & Practice (anytime):
-  Ch 11, 12, 14, 15, 27, 28    ← standalone
-  Ch 17                          ← benefits from Ch 12
-  Ch 20                          ← benefits from Ch 12
-  Ch 33                          ← benefits from Ch 7, 15, 8
-  Ch 34                          ← benefits from Ch 27, 25, 9
+  Ch 11, 12/12b, 14, 15, 27, 28 ← standalone
+  Ch 17                          ← benefits from Ch 12/12b
+  Ch 20                          ← benefits from Ch 12/12b
+  Ch 33/33b                      ← benefits from Ch 7, 15, 8
+  Ch 34/34b/34c                  ← benefits from Ch 27, 25, 9
 
 Part IV — Cloud & Operations (after Parts I-II):
   Ch 13         ← benefits from Ch 1-4, 7
   Ch 18         ← benefits from Ch 4
-  Ch 19         ← benefits from Ch 7, 13
+  Ch 19/19b     ← benefits from Ch 7, 13
   Ch 31         ← benefits from Ch 7, 13
   Ch 35         ← benefits from Ch 7, 5
   Ch 26         ← benefits from Ch 4, 7
@@ -250,6 +256,31 @@ This guide is open source. To improve it:
 4. Submit a PR with a description of what you improved
 
 Improvements welcome: corrections, deeper examples, new case studies, updated tool versions, additional resources.
+
+---
+
+## Spiral Map
+
+Every core concept revisits at increasing depth across the guide:
+
+```
+DATABASE:      Ch 2 (modeling) → Ch 24 (internals) → Ch 24b (SQL mastery)
+               → Ch 23 (case studies) → Ch 18 (debugging queries)
+
+SECURITY:      Ch 5 (foundations) → Ch 19 (AWS IAM) → Ch 30 (privacy)
+               → Ch 33b (CI hardening) → Ch 35 (secrets as code)
+
+TESTING:       Ch 8 (fundamentals) → Ch 34b (executable specs) → Ch 33 (CI)
+               → Ch 15 (fitness functions) → Ch 17 (AI-assisted TDD)
+
+ARCHITECTURE:  Ch 3 (patterns) → Ch 9 (ADRs) → Ch 34 (full specs)
+               → Ch 23 (case studies) → Ch 1 (deep theory)
+
+OBSERVABILITY: Ch 4 (SLOs) → Ch 18 (tools) → Ch 36 (on-call)
+               → Ch 26 (war stories) → Ch 35 (as code)
+```
+
+Each chapter's **Related Chapters** section marks its position in these threads with ← (spirals from) and → (spirals to) arrows so you can follow any thread across the guide.
 
 ---
 

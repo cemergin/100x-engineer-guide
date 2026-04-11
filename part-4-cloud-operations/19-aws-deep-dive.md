@@ -30,6 +30,7 @@ You'll also find cross-references back to Chapter 13 (where cloud services conne
 - AWS CLI Cheat Sheet
 
 ### Related Chapters
+- **SECURITY spiral:** ← [Ch 5: Security Engineering](../part-1-foundations/05-security-engineering.md) | → [Ch 30: Data Privacy](../part-2-applied-engineering/30-data-privacy-ethics.md)
 - [Chapter 19b: Firebase Deep Dive](./19b-firebase-deep-dive.md)
 - Chapter 13 (how cloud services connect)
 - Chapter 7 (infrastructure/K8s)

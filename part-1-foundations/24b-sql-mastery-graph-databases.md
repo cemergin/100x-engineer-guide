@@ -28,6 +28,7 @@ The first half covers practical SQL that you will use weekly. Not textbook exerc
 - Graph Databases
 
 ### Related Chapters
+- **DATABASE spiral:** ← [Ch 24: Database Internals](../part-1-foundations/24-database-internals.md) | → [Ch 23: System Design Case Studies](../part-2-applied-engineering/23-system-design-case-studies.md)
 - Ch 2 (database paradigms and data modeling)
 - Ch 24 (database internals, optimization, and operations — the engine that runs these queries)
 - Ch 18 (slow query debugging)

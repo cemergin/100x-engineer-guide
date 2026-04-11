@@ -32,6 +32,7 @@ This chapter is an attempt to shortcut that learning. Seven skill areas. Concret
 - Communication Patterns
 
 ### Related Chapters
+- **ARCHITECTURE spiral:** ← [Ch 3: Architecture Patterns](../part-1-foundations/03-architecture-patterns.md) | → [Ch 34: Specs, RFCs & ADRs](../part-3-tooling-practice/34-specs-rfcs-adrs.md)
 - Chapter 15 (codebase organization at scale)
 - Chapter 4 (SRE metrics)
 - Chapter 3 (architecture decision-making)

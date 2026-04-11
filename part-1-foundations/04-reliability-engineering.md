@@ -23,6 +23,7 @@ Keeping systems alive — how to measure reliability, build resilience into syst
 - Performance Engineering
 
 ### Related Chapters
+- **OBSERVABILITY spiral:** → [Ch 18: Debugging & Monitoring](../part-4-cloud-operations/18-debugging-profiling-monitoring.md)
 - [Ch 1: System Design Paradigms & Philosophies] — failure modes in distributed systems
 - [Ch 18: Debugging & Monitoring Tools] — debugging/monitoring tools
 - [Ch 7: Deployment Strategies] — deployment strategies for reliability

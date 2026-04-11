@@ -35,6 +35,7 @@ Let's build them.
 - Ethical Engineering
 
 ### Related Chapters
+- **SECURITY spiral:** ← [Ch 19: AWS Deep Dive](../part-4-cloud-operations/19-aws-deep-dive.md) | → [Ch 33b: Advanced GitHub Actions](../part-3-tooling-practice/33b-github-actions-advanced.md)
 - Ch 5 (security engineering — encryption, authentication, the security foundation this chapter builds on)
 - Ch 2 (data modeling for privacy)
 - Ch 24 (database operations — crypto-shredding and deletion pipelines live at this layer)

@@ -18,3 +18,9 @@
 **Suggested reading order:** 32 first (or alongside Ch 1), then 1 → 2 → 3 → 4 → 5, then 21, 22, 24 → 24b in any order.
 
 **Narrative:** How distributed systems work → how to store data → how to structure software → how to keep it running → how to keep it safe → how the network works → the algorithms powering it → how databases work inside → practical SQL and graph databases.
+
+## Spiral Connections
+- **DATABASE** thread starts at Ch 2 and passes through Ch 24 and Ch 24b in this Part
+- **SECURITY** thread starts at Ch 5
+- **ARCHITECTURE** thread starts at Ch 3 and ends at Ch 1 (deep theory, the final stop)
+- **OBSERVABILITY** thread starts at Ch 4

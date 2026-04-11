@@ -20,3 +20,8 @@
 | 34c | [AI-Native Specs & Spec Culture](./34c-ai-native-specs.md) | Intermediate→Advanced |
 
 **Narrative:** Choose your language → master your tools → leverage AI → organize your codebase → manage your environment → write clearly → read and contribute to others' code → engineer your CI/CD → spec before you build.
+
+## Spiral Connections
+- **SECURITY** thread passes through Ch 33b (CI/CD security hardening)
+- **TESTING** thread passes through Ch 34b (executable specs), Ch 33 (CI strategies), Ch 15 (fitness functions), and ends at Ch 17 (AI-assisted TDD)
+- **ARCHITECTURE** thread passes through Ch 34 (full spec process)

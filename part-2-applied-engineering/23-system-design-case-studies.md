@@ -34,6 +34,8 @@ Ten systems. Let's go.
 - Case Study: Ride-Sharing Service
 
 ### Related Chapters
+- **DATABASE spiral:** ← [Ch 24b: SQL Mastery](../part-1-foundations/24b-sql-mastery-graph-databases.md) | → [Ch 18: Debugging & Monitoring](../part-4-cloud-operations/18-debugging-profiling-monitoring.md)
+- **ARCHITECTURE spiral:** ← [Ch 34: Specs, RFCs & ADRs](../part-3-tooling-practice/34-specs-rfcs-adrs.md) | → [Ch 1: System Design Paradigms](../part-1-foundations/01-system-design.md)
 - Ch 1 (distributed systems theory — CAP theorem, consistency models)
 - Ch 2 (database selection and modeling)
 - Ch 3 (architecture patterns)

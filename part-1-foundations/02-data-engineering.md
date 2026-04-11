@@ -23,6 +23,7 @@ How to choose, model, query, cache, and pipe data — the storage and retrieval 
 - Data Consistency Patterns
 
 ### Related Chapters
+- **DATABASE spiral:** → [Ch 24: Database Internals](../part-1-foundations/24-database-internals.md)
 - [Ch 1: System Design Paradigms & Philosophies] — consistency models
 - [Ch 3: Software Architecture Patterns] — CQRS/event sourcing bridges architecture and data
 - [Ch 13: Cloud Databases] — cloud databases in practice

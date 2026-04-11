@@ -2,7 +2,7 @@
   CHAPTER: 36
   TITLE: Beast Mode — Operational Readiness from Day One
   PART: II — Applied Engineering
-  PREREQS: None (Ch 12, 18 helpful)
+  PREREQS: None (Ch 12/12b, 18 helpful)
   KEY_TOPICS: operational readiness, onboarding, codebase navigation, observability setup, incident readiness, system mental models, dashboard quicklinks, tribal knowledge extraction
   DIFFICULTY: All levels
   UPDATED: 2026-04-03
@@ -10,7 +10,7 @@
 
 # Chapter 36: Beast Mode — Operational Readiness from Day One
 
-> **Part II — Applied Engineering** | Prerequisites: None (Ch 12, 18 helpful) | Difficulty: All levels
+> **Part II — Applied Engineering** | Prerequisites: None (Ch 12/12b, 18 helpful) | Difficulty: All levels
 
 > *"You need to be ready — your setup, synths, drum machines, sounds, presets. So when you show up at someone's studio you are ready to throw down."* — Nick Hook
 
@@ -27,11 +27,12 @@ The engineering equivalent: your AWS console is bookmarked, your Datadog dashboa
 - Closing: The Beast Mode Checklist
 
 ### Related Chapters
+- **OBSERVABILITY spiral:** ← [Ch 18: Debugging & Monitoring](../part-4-cloud-operations/18-debugging-profiling-monitoring.md) | → [Ch 26: Incident War Stories](../part-4-cloud-operations/26-incident-war-stories.md)
 - Chapter 4 (SRE fundamentals — error budgets, SLOs, the theoretical foundation for operational readiness)
 - Chapter 7 (DevOps & Infrastructure — the tools and pipelines you need access to)
-- Chapter 12 (Software Architecture — understanding system structure)
+- Chapter 12/12b (Developer Tooling — Linux, shell, editors, Git, Docker)
 - Chapter 18 (Debugging, Profiling & Monitoring — the observability tools you will set up here)
-- Chapter 33 (GitHub Actions — CI/CD pipelines you will need to understand)
+- Chapter 33/33b (GitHub Actions — CI/CD pipelines you will need to understand)
 - Chapter 35 (Everything as Code — IaC as the source of truth for your mental model)
 
 ---

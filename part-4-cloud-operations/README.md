@@ -13,3 +13,8 @@
 | 35 | [Everything as Code](./35-everything-as-code.md) | Intermediate→Advanced |
 
 **Narrative:** How all the pieces connect (Ch 13) → how to find and fix problems (Ch 18) → AWS in depth (Ch 19) → Firebase in depth (Ch 19b) → GCP in depth (Ch 31) → codify everything (Ch 35) → learning from others' failures (Ch 26).
+
+## Spiral Connections
+- **DATABASE** thread ends at Ch 18 (debugging slow queries in production)
+- **SECURITY** thread passes through Ch 19 (AWS IAM) and ends at Ch 35 (secrets as code)
+- **OBSERVABILITY** thread passes through Ch 18 (tools), Ch 26 (war stories), and ends at Ch 35 (observability-as-code)

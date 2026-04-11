@@ -25,7 +25,7 @@ The infrastructure layer — how code gets from a developer's machine to product
 
 ### Related Chapters
 - Chapter 3 (architecture deployed)
-- Chapter 12 (Docker/Terraform/kubectl hands-on)
+- Chapter 12b (Docker/Terraform/kubectl hands-on)
 - Chapter 15 (CI/CD pipelines)
 - Chapter 19 (AWS infrastructure)
 - Chapter 35 (Everything as Code — extends IaC to policies, secrets, observability, compliance, GitOps, and platform abstractions)
@@ -416,7 +416,7 @@ Popular production-grade Operators: cert-manager (TLS certificates), Prometheus 
 
 ## 3. CI/CD PHILOSOPHIES
 
-> For hands-on GitHub Actions mastery — reusable workflows, OIDC, self-hosted runners, and more — see **Chapter 33: GitHub Actions Mastery**.
+> For hands-on GitHub Actions mastery — reusable workflows, OIDC, self-hosted runners, and more — see **Chapter 33: GitHub Actions Core** and **Chapter 33b: Advanced GitHub Actions**.
 
 ### The Spectrum: Integration → Delivery → Deployment
 

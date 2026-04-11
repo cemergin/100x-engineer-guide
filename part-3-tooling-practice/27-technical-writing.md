@@ -41,7 +41,7 @@ This chapter changes that. Every document type you need to write as an engineer 
 ### Related Chapters
 - Ch 9 (engineering leadership communication)
 - Ch 15 (codebase organization)
-- Ch 25 (API documentation)
+- Ch 25b (API documentation and developer experience)
 - Ch 29 (career engineering and visibility)
 
 ---
@@ -458,7 +458,7 @@ The best teams treat the README as code: reviewed in PRs, tested in CI (you can 
 
 ## 4. Architecture Decision Records (ADRs)
 
-> **Deeper coverage:** For a more detailed treatment of ADRs alongside RFCs, contract-first API design (OpenAPI/AsyncAPI), executable specs (BDD/Gherkin), and AI-native specifications, see **Chapter 34: Spec-Driven Development**.
+> **Deeper coverage:** For a more detailed treatment of ADRs alongside RFCs, see **Chapter 34: Specs, RFCs & ADRs**. For contract-first API design (OpenAPI/AsyncAPI) and executable specs (BDD/Gherkin), see **Chapter 34b**. For AI-native specifications, see **Chapter 34c**.
 
 Let me tell you about a failure mode that happens in almost every engineering team.
 

@@ -22,6 +22,7 @@ Specifications are the most leveraged artifact an engineer can produce. A single
 - Architecture Decision Records (ADRs)
 
 ### Related Chapters
+- **ARCHITECTURE spiral:** ← [Ch 9: Engineering Leadership](../part-2-applied-engineering/09-engineering-leadership.md) | → [Ch 23: System Design Case Studies](../part-2-applied-engineering/23-system-design-case-studies.md)
 - Ch 34b (Contract-First API & Executable Specs) — OpenAPI, AsyncAPI, Protobuf, BDD/Gherkin
 - Ch 34c (AI-Native Specs & Spec Culture) — CLAUDE.md as spec, AI workflows, anti-patterns, measuring quality
 - Ch 27 (Technical Writing & Documentation) — writing principles, ADR introduction, RFC basics

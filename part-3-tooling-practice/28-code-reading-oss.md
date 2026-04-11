@@ -2,7 +2,7 @@
   CHAPTER: 28
   TITLE: Code Reading & Open Source
   PART: III — Tooling & Practice
-  PREREQS: Chapter 12 (git/tooling)
+  PREREQS: Chapter 12/12b (git/tooling)
   KEY_TOPICS: code reading strategies, navigating large codebases, OSS contribution, pull requests, open source licensing, building a public profile, reverse engineering systems
   DIFFICULTY: Beginner → Intermediate
   UPDATED: 2026-03-24
@@ -10,7 +10,7 @@
 
 # Chapter 28: Code Reading & Open Source
 
-> **Part III — Tooling & Practice** | Prerequisites: Chapter 12 | Difficulty: Beginner → Intermediate
+> **Part III — Tooling & Practice** | Prerequisites: Chapter 12/12b | Difficulty: Beginner → Intermediate
 
 There is a particular kind of engineer who, when asked "how does X actually work," does not reach for a blog post. They open the source code. They clone the repo, fire up their editor, and start following the execution path. Within an hour they know more about how X works than any article could tell them — because they read the truth, not someone's summary of it.
 
@@ -27,7 +27,7 @@ And then there is open source. The most underrated career move in software engin
 - Building Your Engineering Profile
 
 ### Related Chapters
-- Ch 12 (Git, grep, developer tooling)
+- Ch 12 (grep, shell, developer tooling) / Ch 12b (Git)
 - Ch 15 (codebase organization)
 - Ch 27 (documentation)
 - Ch 36 (Beast Mode — getting combat-ready on unfamiliar codebases fast)
