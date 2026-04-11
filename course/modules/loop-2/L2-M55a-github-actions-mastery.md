@@ -2,7 +2,7 @@
 
 > **Loop 2 (Practice)** | Section 2D+: Delivery & Automation | ⏱️ 75 min | 🟢 Core | Prerequisites: L1-M15 (CI/CD Pipeline)
 >
-> **Source:** Chapter 33 of the 100x Engineer Guide
+> **Source:** Chapters 33/33b of the 100x Engineer Guide
 
 > **Before you continue:** Your CI pipeline runs tests and deploys. But what if you needed to run tests across Node 18, 20, and 22? Or deploy to staging first, wait for approval, then deploy to production? How would you model that workflow?
 

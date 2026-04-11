@@ -680,5 +680,5 @@ In **L1-M07: Indexing & Query Performance**, you'll learn why some of these quer
 ## 📚 Further Reading
 - [PostgreSQL Window Functions Documentation](https://www.postgresql.org/docs/current/tutorial-window.html)
 - [Modern SQL — Window Functions](https://modern-sql.com/feature/window-functions)
-- Chapter 24 of the 100x Engineer Guide: Section 9 — SQL Mastery
+- Chapter 24b of the 100x Engineer Guide: SQL Mastery & Graph Databases
 - [Select Star SQL](https://selectstarsql.com/) — Free interactive SQL tutorial

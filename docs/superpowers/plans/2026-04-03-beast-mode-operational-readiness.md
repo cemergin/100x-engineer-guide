@@ -30,7 +30,7 @@ The chapter metadata block must follow this exact format:
   CHAPTER: 36
   TITLE: Beast Mode — Operational Readiness from Day One
   PART: II — Applied Engineering
-  PREREQS: None (Ch 12, 18 helpful)
+  PREREQS: None (Ch 12/12b, 18 helpful)
   KEY_TOPICS: operational readiness, onboarding, codebase navigation, observability setup, incident readiness, system mental models, dashboard quicklinks, tribal knowledge extraction
   DIFFICULTY: All levels
   UPDATED: 2026-04-03
@@ -527,7 +527,7 @@ Update the header stats: change `**35 chapters**` to `**36 chapters**`.
 
 Update the chapter dependency graph to include:
 ```
-  Ch 36         ← benefits from Ch 12, 18; standalone
+  Ch 36         ← benefits from Ch 12/12b, 18; standalone
 ```
 
 In the "Quick Start — Reading Paths" table, add a new row:

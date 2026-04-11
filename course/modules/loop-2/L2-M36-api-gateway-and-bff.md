@@ -889,4 +889,4 @@ In **PostgreSQL Internals** (L2-M37), you'll look under the hood at how PostgreS
 - [Envoy Proxy](https://www.envoyproxy.io/) — High-performance proxy used in service meshes (Istio)
 - Sam Newman, *Building Microservices*, Chapter 7 (API Gateway and BFF patterns)
 - Chapter 3 of the 100x Engineer Guide: Section 3 (API Gateway Pattern, BFF)
-- Chapter 25 of the 100x Engineer Guide: API Design & Developer Experience
+- Chapter 25 of the 100x Engineer Guide: REST API Design (and Ch 25b: API Operations & DX)

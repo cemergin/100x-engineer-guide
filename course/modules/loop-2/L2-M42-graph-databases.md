@@ -2,7 +2,7 @@
 
 > **Loop 2 (Practice)** | Section 2B: Performance & Databases | ⏱️ 60 min | 🟡 Deep Dive | Prerequisites: L2-M37, L2-M34 (Kafka)
 >
-> **Source:** Chapter 24 of the 100x Engineer Guide
+> **Source:** Chapter 24b of the 100x Engineer Guide
 
 ## What You'll Learn
 - When graph databases solve problems that relational databases can't handle well
@@ -822,7 +822,7 @@ Section 2B is complete. You've built a deep understanding of database performanc
 
 ## 📚 Further Reading
 - [Neo4j Getting Started](https://neo4j.com/docs/getting-started/)
-- Chapter 24 of the 100x Engineer Guide: Section 10 — Graph Databases
+- Chapter 24b of the 100x Engineer Guide: SQL Mastery & Graph Databases
 - [Graph Databases (free O'Reilly book)](https://neo4j.com/graph-databases-book/)
 - [Cypher Reference Card](https://neo4j.com/docs/cypher-refcard/current/)
 - [Neo4j + Kafka Integration](https://neo4j.com/labs/kafka/)

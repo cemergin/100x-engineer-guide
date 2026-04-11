@@ -2453,7 +2453,7 @@ Now go build something.
 
 ---
 
-*Next: [Chapter 24 — Production Readiness and Incident Response](24-production-readiness.md)*
+*Next: [Chapter 24 — Database Internals](../part-1-foundations/24-database-internals.md)*
 
 ---
 

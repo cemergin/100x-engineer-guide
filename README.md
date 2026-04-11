@@ -148,7 +148,7 @@ Part II — Applied Engineering (after Part I, any order):
   Ch 9          ← benefits from broad experience
   Ch 10         ← benefits from Ch 1-4
   Ch 23         ← benefits from Ch 1, 2, 3, 22
-  Ch 25         ← benefits from Ch 3
+  Ch 25/25b/25c ← benefits from Ch 3
   Ch 29, 30     ← standalone
   Ch 36         ← benefits from Ch 12/12b, 18; standalone
 
