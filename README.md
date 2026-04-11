@@ -94,7 +94,8 @@ A comprehensive, open-source mega-guide covering every paradigm, philosophy, and
 | 20 | [Dependency & Env Management](./part-3-tooling-practice/20-dependency-env-management.md) | Intermediate | Nix, asdf/mise, nvm/pyenv/rustup, lockfiles, Docker dev envs, devcontainers, reproducible builds |
 | 27 | [Technical Writing](./part-3-tooling-practice/27-technical-writing.md) | Beg→Inter | Diátaxis framework, READMEs, ADRs, RFCs, commit messages, runbooks, postmortems, code comments |
 | 28 | [Code Reading & Open Source](./part-3-tooling-practice/28-code-reading-oss.md) | Beg→Inter | Navigating unfamiliar codebases, OSS contribution workflow, licensing, building your profile |
-| 33 | [GitHub Actions Mastery](./part-3-tooling-practice/33-github-actions-mastery.md) | Inter→Adv | Reusable workflows, composite actions, matrix strategies, OIDC federation, self-hosted runners, monorepo CI, custom actions, security hardening |
+| 33 | [GitHub Actions Core](./part-3-tooling-practice/33-github-actions-core.md) | Inter→Adv | Workflow syntax, reusable workflows, composite actions, matrix strategies, OIDC federation |
+| 33b | [Advanced GitHub Actions](./part-3-tooling-practice/33b-github-actions-advanced.md) | Advanced | Self-hosted runners, monorepo CI, custom actions, security hardening, performance optimization, advanced patterns |
 | 34 | [Spec-Driven Development](./part-3-tooling-practice/34-spec-driven-development.md) | Inter→Adv | RFCs, design docs, contract-first API design (OpenAPI/AsyncAPI), executable specs (BDD/Gherkin), AI-native specs, CLAUDE.md as spec |
 
 ---
@@ -106,12 +107,13 @@ A comprehensive, open-source mega-guide covering every paradigm, philosophy, and
 |----|-------|-----------|-------------------|
 | 13 | [Cloud & System Integration](./part-4-cloud-operations/13-cloud-system-integration.md) | Advanced | VPC networking, queues (Kafka/SQS), event-driven, data flow, migrations, full system walkthrough |
 | 18 | [Debugging & Monitoring](./part-4-cloud-operations/18-debugging-profiling-monitoring.md) | Inter→Adv | Debugging methodology, flame graphs, Datadog, Prometheus+Grafana, ELK, OpenTelemetry, Sentry |
-| 19 | [AWS & Firebase Deep Dive](./part-4-cloud-operations/19-aws-firebase-deep-dive.md) | Inter→Adv | AWS 20 core services, VPC, IAM, cost optimization, 5 reference architectures. Firebase: Firestore, Auth |
+| 19 | [AWS Deep Dive](./part-4-cloud-operations/19-aws-deep-dive.md) | Inter→Adv | AWS 20 core services, VPC, IAM, cost optimization, 5 reference architectures |
+| 19b | [Firebase Deep Dive](./part-4-cloud-operations/19b-firebase-deep-dive.md) | Inter→Adv | Firestore, Auth, Cloud Functions, security rules, scaling Firebase, Firebase vs AWS |
 | 26 | [Incident War Stories](./part-4-cloud-operations/26-incident-war-stories.md) | Intermediate | 9 real outages analyzed: Cloudflare, GitHub, AWS S3, Knight Capital, Facebook BGP, CrowdStrike |
 | 31 | [GCP Deep Dive](./part-4-cloud-operations/31-gcp-deep-dive.md) | Inter→Adv | Compute Engine, Cloud Run, GKE, BigQuery, Spanner, Pub/Sub, Cloud Storage, IAM, cost optimization, GCP vs AWS comparison |
 | 35 | [Everything as Code](./part-4-cloud-operations/35-everything-as-code.md) | Inter→Adv | Policy-as-code (OPA/Kyverno/Checkov), secrets management (Vault/SOPS), DB migrations, observability-as-code, compliance-as-code, IaC testing, GitOps (ArgoCD/Flux), Crossplane, Backstage |
 
-> **Narrative:** How all the pieces connect (Ch 13) → how to find and fix problems (Ch 18) → AWS in depth (Ch 19) → GCP in depth (Ch 31) → codify everything (Ch 35) → learning from others' failures (Ch 26).
+> **Narrative:** How all the pieces connect (Ch 13) → how to find and fix problems (Ch 18) → AWS in depth (Ch 19) → Firebase in depth (Ch 19b) → GCP in depth (Ch 31) → codify everything (Ch 35) → learning from others' failures (Ch 26).
 
 ---
 
