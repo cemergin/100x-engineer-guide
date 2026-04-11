@@ -25,6 +25,7 @@ Chapter 33 covered the foundational building blocks of GitHub Actions — workfl
 - The 100x CI/CD Pipeline
 
 ### Related Chapters
+- **SECURITY spiral:** ← [Ch 30: Data Privacy](../part-2-applied-engineering/30-data-privacy-ethics.md) | → [Ch 35: Everything as Code](../part-4-cloud-operations/35-everything-as-code.md)
 - Chapter 33 — GitHub Actions Core: workflow syntax, reusable workflows, composite actions, matrix strategies, OIDC federation
 - Chapter 7 — DevOps fundamentals and CI/CD concepts
 - Chapter 8 — Testing strategies that CI enforces

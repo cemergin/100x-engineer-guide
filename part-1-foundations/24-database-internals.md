@@ -32,6 +32,7 @@ This chapter opens up the machine. By the end, you'll read EXPLAIN ANALYZE outpu
 - Database Management & Operations
 
 ### Related Chapters
+- **DATABASE spiral:** ← [Ch 2: Data Engineering](../part-1-foundations/02-data-engineering.md) | → [Ch 24b: SQL Mastery](../part-1-foundations/24b-sql-mastery-graph-databases.md)
 - Ch 2 (database paradigms and data modeling — the *what* to this chapter's *how*)
 - Ch 13 (databases in cloud context)
 - Ch 18 (slow query debugging)

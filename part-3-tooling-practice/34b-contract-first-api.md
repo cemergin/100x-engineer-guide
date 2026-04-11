@@ -20,6 +20,7 @@ Contract-first development means you define the interface before writing a singl
 - Specification Languages and Formats
 
 ### Related Chapters
+- **TESTING spiral:** ← [Ch 8: Testing & Quality](../part-2-applied-engineering/08-testing-quality.md) | → [Ch 33: GitHub Actions Core](../part-3-tooling-practice/33-github-actions-core.md)
 - Ch 34 (Specs, RFCs & Architecture Decision Records) — the spec-first thesis, RFCs, ADRs
 - Ch 34c (AI-Native Specs & Spec Culture) — AI-native workflows, anti-patterns, measuring quality
 - Ch 25 (API Design) — REST, GraphQL, gRPC design patterns

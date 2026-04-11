@@ -2,7 +2,7 @@
   CHAPTER: 20
   TITLE: Dependency & Environment Management
   PART: III — Tooling & Practice
-  PREREQS: Chapter 12 (basic tooling)
+  PREREQS: Chapter 12/12b (basic tooling)
   KEY_TOPICS: Nix, NixOS, asdf, mise, nvm, pyenv, rustup, lockfiles, Python packaging (uv, Poetry), Docker dev environments, devcontainers, .env management, monorepo dependencies, reproducible builds
   DIFFICULTY: Intermediate
   UPDATED: 2026-03-24
@@ -10,7 +10,7 @@
 
 # Chapter 20: Dependency & Environment Management
 
-> **Part III — Tooling & Practice** | Prerequisites: Chapter 12 (basic tooling) | Difficulty: Intermediate
+> **Part III — Tooling & Practice** | Prerequisites: Chapter 12/12b (basic tooling) | Difficulty: Intermediate
 
 "It works on my machine" is a war crime. This chapter is your Geneva Convention.
 
@@ -29,7 +29,7 @@ Reproducibility as a superpower — from Nix flakes to version managers to lockf
 - Recommended Stack by Project Type
 
 ### Related Chapters
-- Chapter 12 (Docker/tooling hands-on — where you first met these tools)
+- Chapter 12b (Docker/tooling hands-on — where you first met these tools)
 - Chapter 11 (language-specific package managers)
 - Chapter 15 (monorepo dependency strategies)
 - Chapter 7 (DevOps & deployment — the production side of what you manage here)
@@ -1661,7 +1661,7 @@ All the principles in this chapter converge into a set of concrete recommendatio
 
 ### 10.1 Starter: Node.js Monorepo
 
-This is the stack for a TypeScript full-stack team building a Next.js frontend and Node API backend with shared packages. It's opinionated and tuned for the workflow described in Chapter 12 (where you first saw this kind of project structure).
+This is the stack for a TypeScript full-stack team building a Next.js frontend and Node API backend with shared packages. It's opinionated and tuned for the workflow described in Chapter 12/12b (where you first saw this kind of project structure).
 
 ```
 myapp/

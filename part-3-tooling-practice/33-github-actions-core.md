@@ -23,6 +23,7 @@ From basic YAML to production-grade CI/CD — reusable workflows, OIDC federatio
 - OIDC Federation (The Modern Way)
 
 ### Related Chapters
+- **TESTING spiral:** ← [Ch 34b: Contract-First API & Executable Specs](../part-3-tooling-practice/34b-contract-first-api.md) | → [Ch 15: Codebase Organization](../part-3-tooling-practice/15-codebase-organization.md)
 - Chapter 33b — Advanced GitHub Actions: self-hosted runners, monorepo CI, custom actions, security, performance, and advanced patterns
 - Chapter 7 — DevOps fundamentals and CI/CD concepts
 - Chapter 8 — Testing strategies that CI enforces

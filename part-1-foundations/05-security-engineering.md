@@ -23,6 +23,7 @@ Defense in depth for backend systems — authentication, authorization, common v
 - Compliance & Privacy
 
 ### Related Chapters
+- **SECURITY spiral:** → [Ch 19: AWS Deep Dive](../part-4-cloud-operations/19-aws-deep-dive.md)
 - [Ch 7: Infrastructure Security] — infrastructure security
 - [Ch 19: AWS IAM & Security] — AWS IAM/security
 - [Ch 15: CI/CD Security] — security in CI/CD

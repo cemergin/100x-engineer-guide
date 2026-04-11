@@ -25,11 +25,12 @@ A well-organized codebase is a gift to your future self. This chapter covers the
 - Key Takeaways
 
 ### Related Chapters
+- **TESTING spiral:** ← [Ch 33: GitHub Actions Core](../part-3-tooling-practice/33-github-actions-core.md) | → [Ch 17: Claude Code Mastery](../part-3-tooling-practice/17-claude-code-mastery.md)
 - Chapter 7 — CI/CD concepts (the pipeline theory behind Section 2)
-- Chapter 12 — Git/tooling skills
+- Chapter 12b — Git/tooling skills
 - Chapter 9 — engineering leadership/ADRs
 - Chapter 20 — dependency management
-- Chapter 33 — GitHub Actions Mastery (advanced workflows that build on Section 2)
+- Chapter 33/33b — GitHub Actions (core workflows and advanced patterns that build on Section 2)
 
 ---
 
@@ -370,7 +371,7 @@ Committing `.vscode/settings.json` is one of those small things that saves every
 
 ## 2. CI/CD PIPELINE ARCHITECTURE
 
-> For advanced GitHub Actions patterns — reusable workflows, OIDC federation, matrix strategies, custom actions, monorepo CI, and security hardening — see **Chapter 33: GitHub Actions Mastery**. This section covers the pipeline design philosophy; Chapter 33 goes deep on the implementation mechanics.
+> For advanced GitHub Actions patterns — reusable workflows, OIDC federation, matrix strategies, custom actions, monorepo CI, and security hardening — see **Chapter 33: GitHub Actions Core** and **Chapter 33b: Advanced GitHub Actions**. This section covers the pipeline design philosophy; Chapters 33/33b go deep on the implementation mechanics.
 
 > For foundational CI/CD concepts — the deployment models, environment promotion strategies, and rollback patterns that underpin everything in this section — see **Chapter 7: DevOps for Engineers**.
 
@@ -551,7 +552,7 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 ```
 
-For reusable workflow patterns, composite actions, and secrets federation with OIDC — all the things that make this scale across dozens of repositories — head to Chapter 33.
+For reusable workflow patterns, composite actions, and secrets federation with OIDC — all the things that make this scale across dozens of repositories — head to Chapter 33/33b.
 
 ### 2.3 Optimizing CI Speed
 
@@ -1377,7 +1378,7 @@ A platform team eliminates this tax by providing "golden paths" — opinionated,
 **What a golden path includes:**
 
 - A project template (`create-company-app`) with all tooling pre-configured
-- Shared CI pipeline templates (see Chapter 33 for reusable workflows)
+- Shared CI pipeline templates (see Chapter 33/33b for reusable workflows)
 - Standard observability (logging, metrics, tracing) built into the template
 - Database migration tooling
 - Deployment workflow (push to main -> staging -> production with approvals)
@@ -1878,7 +1879,7 @@ The inverse is also true: senior engineers who consistently skip cleanup, commen
 
 1. **Automate formatting and linting from day one.** The cost of setup is an hour. The cost of not having it is perpetual review friction and inconsistent code. This is the highest-return investment in codebase organization.
 
-2. **CI pipelines should fail fast.** Lint before test, unit before integration. Optimize for developer feedback speed — slow CI destroys flow state and costs you more than the compute savings. See Chapter 7 for pipeline theory and Chapter 33 for advanced GitHub Actions patterns.
+2. **CI pipelines should fail fast.** Lint before test, unit before integration. Optimize for developer feedback speed — slow CI destroys flow state and costs you more than the compute savings. See Chapter 7 for pipeline theory and Chapters 33/33b for GitHub Actions patterns.
 
 3. **Scale your process with your team size.** A solo developer needs a pre-commit hook and CI. A 10-person team needs shared configs, PR templates, and lightweight RFCs. A 100-person team needs architecture fitness functions, a formal RFC process, and a platform team.
 

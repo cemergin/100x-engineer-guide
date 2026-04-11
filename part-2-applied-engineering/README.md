@@ -18,3 +18,10 @@
 | 36 | [Beast Mode — Operational Readiness](./36-beast-mode.md) | All levels |
 
 **Narrative:** How computers execute concurrently → how to deploy and operate → how to prove it works → how to lead the team → what's next → real system designs → great REST APIs → API operations & DX → GraphQL → career growth → data responsibility → hit the ground running.
+
+## Spiral Connections
+- **DATABASE** thread passes through Ch 23 (case studies applying database knowledge)
+- **SECURITY** thread passes through Ch 30 (privacy/compliance)
+- **TESTING** thread starts at Ch 8
+- **ARCHITECTURE** thread passes through Ch 9 (ADRs) and Ch 23 (case studies)
+- **OBSERVABILITY** thread passes through Ch 36 (on-call readiness)

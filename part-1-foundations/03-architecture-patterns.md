@@ -23,6 +23,7 @@ The structural blueprints for software systems — from monoliths to microservic
 - Monolith-to-Microservices
 
 ### Related Chapters
+- **ARCHITECTURE spiral:** → [Ch 9: Engineering Leadership](../part-2-applied-engineering/09-engineering-leadership.md)
 - [Ch 1: System Design Paradigms & Philosophies] — distributed systems theory
 - [Ch 2: Data Engineering Paradigms] — data modeling/CQRS
 - [Ch 7: Deployment Strategies] — deploying these architectures

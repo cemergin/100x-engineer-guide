@@ -32,7 +32,7 @@ This chapter gives you side-by-side runnable HTTP server examples in eight langu
 
 ### Related Chapters
 - Chapter 6 — concurrency models in depth
-- Chapter 12 — language-specific tooling
+- Chapter 12/12b — language-specific tooling
 - Chapter 20 — version/dependency management per language
 
 ---

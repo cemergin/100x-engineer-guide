@@ -31,6 +31,7 @@ This chapter is your foundation. Every other chapter in this guide builds on it.
 - Putting It All Together (end-to-end design walkthrough)
 
 ### Related Chapters
+- **ARCHITECTURE spiral:** ← [Ch 23: System Design Case Studies](../part-2-applied-engineering/23-system-design-case-studies.md)
 - [Ch 2: Data Engineering Paradigms] — data engineering builds on consistency models covered here
 - [Ch 3: Software Architecture Patterns] — architecture patterns apply these concepts in practice
 - [Ch 4: Reliability Engineering & Operations] — reliability operationalizes these designs

@@ -2,7 +2,7 @@
   CHAPTER: 17
   TITLE: Claude Code Mastery
   PART: III — Tooling & Practice
-  PREREQS: Chapter 12 (basic CLI/Git skills)
+  PREREQS: Chapter 12/12b (basic CLI/Git skills)
   KEY_TOPICS: Claude Code, skills, plugins, hooks, MCP servers, agent teams, subagents, CLAUDE.md, plan mode, TDD workflow, CI integration
   DIFFICULTY: Beginner → Advanced
   UPDATED: 2026-03-24
@@ -10,7 +10,7 @@
 
 # Chapter 17: Claude Code Mastery
 
-> **Part III — Tooling & Practice** | Prerequisites: Chapter 12 (basic CLI/Git skills) | Difficulty: Beginner → Advanced
+> **Part III — Tooling & Practice** | Prerequisites: Chapter 12/12b (basic CLI/Git skills) | Difficulty: Beginner → Advanced
 
 Mastering Claude Code as a development multiplier — from basic usage to orchestrating multi-agent teams with custom skills, plugins, and MCP server integrations.
 
@@ -25,8 +25,9 @@ Mastering Claude Code as a development multiplier — from basic usage to orches
 - Tips & Tricks
 
 ### Related Chapters
+- **TESTING spiral:** ← [Ch 15: Codebase Organization](../part-3-tooling-practice/15-codebase-organization.md)
 - Chapter 14 (AI-powered engineering)
-- Chapter 12 (developer tooling)
+- Chapter 12/12b (developer tooling)
 - Chapter 15 (team conventions/CI)
 - Chapter 36 (Beast Mode — pushing Claude Code to its limits)
 

@@ -29,12 +29,14 @@ The thesis is simple and it's one you'll never be able to unlearn: **if a decisi
 - Platform Abstractions
 
 ### Related Chapters
+- **SECURITY spiral:** ← [Ch 33b: Advanced GitHub Actions](../part-3-tooling-practice/33b-github-actions-advanced.md)
+- **OBSERVABILITY spiral:** ← [Ch 26: Incident War Stories](../part-4-cloud-operations/26-incident-war-stories.md)
 - Chapter 7 (Terraform, containers, K8s, CI/CD — the foundation this chapter extends)
 - Chapter 5 (security engineering — secrets, compliance)
 - Chapter 18 (monitoring tools — this chapter codifies their configuration)
 - Chapter 20 (dependency/env management — Nix, reproducible builds)
-- Chapter 33 (GitHub Actions — CI/CD pipelines as code)
-- Chapter 34 (spec-driven development — specs as code)
+- Chapter 33/33b (GitHub Actions — CI/CD pipelines as code)
+- Chapter 34/34b/34c (spec-driven development — specs as code)
 
 ---
 

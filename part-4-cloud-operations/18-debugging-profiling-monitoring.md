@@ -23,6 +23,8 @@ Every bug is a mystery. Every flame graph is a map. And once you know how to rea
 - Incident Debugging Playbook
 
 ### Related Chapters
+- **DATABASE spiral:** ← [Ch 23: System Design Case Studies](../part-2-applied-engineering/23-system-design-case-studies.md)
+- **OBSERVABILITY spiral:** ← [Ch 4: Reliability Engineering](../part-1-foundations/04-reliability-engineering.md) | → [Ch 36: Beast Mode](../part-2-applied-engineering/36-beast-mode.md)
 - Chapter 4 (observability/SRE theory)
 - Chapter 13 (monitoring in system context)
 - Chapter 11 (language-specific debugging)
