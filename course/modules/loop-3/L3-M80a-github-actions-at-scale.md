@@ -2,7 +2,7 @@
 
 > **Loop 3 (Mastery)** | Section 3C+: Platform Engineering | ⏱️ 75 min | 🟢 Core | Prerequisites: L2-M55a (GitHub Actions Mastery), L3-M80 (Building Your Platform)
 >
-> **Source:** Chapter 33 of the 100x Engineer Guide
+> **Source:** Chapter 33b of the 100x Engineer Guide
 
 ## What You'll Learn
 
@@ -1184,7 +1184,7 @@ After building reusable actions and cross-repo workflows, what was the biggest t
 
 ## Further Reading
 
-- **Chapter 33**: CI/CD at Scale -- the full theoretical foundation for this module
+- **Chapter 33/33b**: CI/CD at Scale -- the full theoretical foundation for this module
 - **L3-M78**: DORA Metrics & Team Performance -- deep dive on measuring engineering effectiveness
 - **GitHub Docs: Creating Actions**: docs.github.com/en/actions/creating-actions
 - **actions-runner-controller**: github.com/actions/actions-runner-controller -- the official ARC project

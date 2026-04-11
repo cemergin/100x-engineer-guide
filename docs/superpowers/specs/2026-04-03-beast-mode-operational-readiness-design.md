@@ -25,10 +25,10 @@ This chapter is not about knowing everything. It's about knowing *where to look*
 - **Chapter:** 36
 - **Title:** Beast Mode — Operational Readiness from Day One
 - **Part:** II — Applied Engineering
-- **Prerequisites:** Ch 12 (tooling), Ch 18 (debugging/monitoring) helpful but not required
+- **Prerequisites:** Ch 12/12b (tooling), Ch 18 (debugging/monitoring) helpful but not required
 - **Difficulty:** All levels
 - **Key Topics:** operational readiness, onboarding, codebase navigation, observability setup, incident readiness, system mental models, dashboard quicklinks, tribal knowledge extraction
-- **Cross-references:** Ch 12 (tooling), Ch 18 (debugging/monitoring), Ch 19 (AWS), Ch 26 (incident war stories), Ch 28 (code reading), Ch 29 (career engineering)
+- **Cross-references:** Ch 12/12b (tooling), Ch 18 (debugging/monitoring), Ch 19 (AWS), Ch 26 (incident war stories), Ch 28 (code reading), Ch 29 (career engineering)
 
 ---
 

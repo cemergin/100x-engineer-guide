@@ -2,7 +2,7 @@
 
 > **Loop 3 (Mastery)** | Section 3D: AI & Intelligence | ⏱️ 75 min | 🟢 Core | Prerequisites: L2-M59a (Spec-Driven Development), L3-M77 (Architecture Decision Records), L3-M86 (AI-Powered Engineering)
 >
-> **Source:** Chapter 34 of the 100x Engineer Guide
+> **Source:** Chapter 34c of the 100x Engineer Guide
 
 ## What You'll Learn
 
@@ -848,7 +848,7 @@ After building the spec stack, how did the quality of AI-generated code change w
 
 ## Further Reading
 
-- **Chapter 34**: Spec-Driven Development -- RFCs, contract-first APIs, executable specs, and AI-native specification patterns
+- **Chapters 34/34b/34c**: Specs, RFCs & ADRs / Contract-First API / AI-Native Specs -- the full spec-driven development arc
 - **Chapter 9**: Engineering Leadership -- ADRs, RFCs, and decision documentation (the foundation specs build on)
 - **Chapter 17**: AI-Augmented Engineering -- practical AI tool usage, prompt strategies, and review processes
 - **OpenAPI Specification**: swagger.io/specification/ -- the standard for REST API specifications

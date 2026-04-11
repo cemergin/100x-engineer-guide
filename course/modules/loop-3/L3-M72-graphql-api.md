@@ -2,7 +2,7 @@
 
 > **Loop 3 (Mastery)** | Section 3B: Real-Time & Advanced Features | ⏱️ 75 min | 🟡 Deep Dive | Prerequisites: L2-M36, L3-M67
 >
-> **Source:** Chapter 25 of the 100x Engineer Guide
+> **Source:** Chapter 25c of the 100x Engineer Guide
 
 ## What You'll Learn
 

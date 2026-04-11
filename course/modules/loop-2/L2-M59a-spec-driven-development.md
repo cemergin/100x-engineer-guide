@@ -2,7 +2,7 @@
 
 > **Loop 2 (Practice)** | Section 2E: Security & Quality | ⏱️ 75 min | 🟢 Core | Prerequisites: L2-M59 (Technical Writing)
 >
-> **Source:** Chapter 34 of the 100x Engineer Guide
+> **Source:** Chapters 34/34b of the 100x Engineer Guide
 
 ## What You'll Learn
 
@@ -1494,7 +1494,7 @@ In **Loop 2 Capstone** (L2-M60), you'll bring everything together in the Loop 2 
 
 ## Further Reading
 
-- Chapter 34 of the 100x Engineer Guide (Spec-Driven Development) for the full treatment
+- Chapters 34/34b/34c of the 100x Engineer Guide (Specs, RFCs & ADRs / Contract-First API / AI-Native Specs) for the full treatment
 - [OpenAPI 3.1 Specification](https://spec.openapis.org/oas/v3.1.0) -- the official standard
 - [AsyncAPI Specification](https://www.asyncapi.com/docs/reference/specification/v2.6.0) -- event-driven API specs
 - [Cucumber.js Documentation](https://cucumber.io/docs/installation/javascript/) -- BDD framework for JavaScript/TypeScript
