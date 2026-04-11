@@ -12,8 +12,9 @@
 | 21 | [Networking & Protocols](./21-networking-protocols.md) | Intermediate→Advanced |
 | 22 | [Algorithms & Data Structures](./22-algorithms-data-structures.md) | Intermediate→Advanced |
 | 24 | [Database Internals & Optimization](./24-database-internals.md) | Advanced |
+| 24b | [SQL Mastery & Graph Databases](./24b-sql-mastery-graph-databases.md) | Advanced |
 | 32 | [Software Engineering Principles](./32-software-engineering-principles.md) | Beginner→Advanced |
 
-**Suggested reading order:** 32 first (or alongside Ch 1), then 1 → 2 → 3 → 4 → 5, then 21, 22, 24 in any order.
+**Suggested reading order:** 32 first (or alongside Ch 1), then 1 → 2 → 3 → 4 → 5, then 21, 22, 24 → 24b in any order.
 
-**Narrative:** How distributed systems work → how to store data → how to structure software → how to keep it running → how to keep it safe → how the network works → the algorithms powering it → how databases work inside.
+**Narrative:** How distributed systems work → how to store data → how to structure software → how to keep it running → how to keep it safe → how the network works → the algorithms powering it → how databases work inside → practical SQL and graph databases.
